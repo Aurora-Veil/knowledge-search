@@ -389,7 +389,7 @@ source/viewpoint 索引**不带** `industry` 子句。
 
 | 项 | 说明 |
 |---|---|
-| **搜索 API（本轮）** | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2），FastAPI `app/` 包；`/associations`（§5.3）下一轮 |
+| **搜索 API（本轮）** | ✅ `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）已实现，FastAPI `app/` 包（`app/config.py`、`app/db.py`、`app/serializers.py`、`app/search/{fields,query,rank,response,service,objects}.py`、`app/routers/{search,objects}.py`）；`POST /api/v1/objects` 下一轮（§5.3） |
 | **增量同步** | 写后 `sync_one`（§4.2）；量大再 Change Streams |
 | **`period` 区间过滤** | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续可加归一化年份字段 |
 | **内容去重** | 内容重叠少，暂缓；量级上来再考虑 content-key 去重 |

@@ -8,12 +8,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
-from .routers import search
+from .routers import objects, search
 
 app = FastAPI(
     title="OIRF Knowledge-Graph Search API",
     version="0.1.0",
-    description="MongoDB (authority) + Elasticsearch 知识图谱搜索接口。搜索走 ES，完整对象回 Mongo 补权威字段。",
+    description="MongoDB (authority) + Elasticsearch 知识图谱搜索接口。",
 )
 
 app.add_middleware(
@@ -24,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(search.router)
+app.include_router(objects.router)
 
 
 @app.get("/api/v1/health")

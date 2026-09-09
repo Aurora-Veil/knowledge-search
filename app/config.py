@@ -18,5 +18,12 @@ INDEX_BY_TYPE: dict[str, str] = {
     "viewpoint": "knowledge_viewpoint",
 }
 
+# object_type → Mongo 集合名（注意 evidence 是单数、source/viewpoint 是复数，勿写错）
+COLLECTION_BY_TYPE: dict[str, str] = {
+    "source": "sources",
+    "evidence": "evidence",
+    "viewpoint": "viewpoints",
+}
+
 # §5.0 定稿：project_id 缺省 = 当前项目；显式传跨项目
 DEFAULT_PROJECT_ID = 1
