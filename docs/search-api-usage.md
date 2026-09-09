@@ -43,9 +43,9 @@ JSON，字段均可选，缺省有默认值。
 | `claim_type` | string | 无 | 精确筛 `experience.claim_type`（仅 viewpoint） |
 | `applicable_scenario` | string | 无 | 精确筛 `experience.applicable_scenario`（仅 viewpoint） |
 | `cross_validation_mode` | string | 无 | 精确筛 `experience.cross_validation_mode`（仅 viewpoint） |
-| `responsible_role` | string | 无 | 关联筛：命中 `responsibility[].operator.role`（nested） |
-| `source_ids` | string[] | 无 | 关联筛：引用某材料的对象（evidence 扁平 / viewpoint 嵌套） |
-| `evidence_ids` | string[] | 无 | 关联筛：引用某证据的对象（仅 viewpoint，nested） |
+| `responsible_role` | string | 无 | 职责（审计）筛：命中 `responsibility[].operator.role`（三类通用，nested） |
+| `source_ids` | string[] | 无 | 关联（引用溯源）：引用某材料的对象。仅 **evidence**（扁平 `reasoning.source_ids`）/ **viewpoint**（步骤嵌套 `reasoning.steps.source_ids`） |
+| `evidence_ids` | string[] | 无 | 关联（引用溯源）：引用某证据的对象。仅 **viewpoint**（步骤嵌套 `reasoning.steps.evidence_ids`） |
 | `page` | int | `1` | 页码（从 1 起） |
 | `size` | int | `20` | 每页条数（≤100） |
 | `highlight` | bool | `true` | 是否返回命中高亮（`<em>…</em>`） |
@@ -54,9 +54,10 @@ JSON，字段均可选，缺省有默认值。
 
 - **全文检索**：只对每类型的指定字段做加权匹配（见「4. 字段说明」）；`q` 为空时跳过全文。
 - **精确筛选**：`term/terms` 按 keyword 字段精确匹配，不参与排序。
-- **关联检索**：`source_ids` / `evidence_ids` / `responsible_role` 用于"谁引用了它"这类查询。
+- **关联（引用溯源）**：`source_ids` / `evidence_ids` 用于"谁引用了它"。仅在**适用类型**上生效——`source_ids` 适用于 evidence、viewpoint；`evidence_ids` 仅适用 viewpoint。`type=all` 时只检索适用类型（不适用的类型直接不出结果，而非全量返回）；单类型请求若带了它不支持的关联参数则返回空结果。`source_ids`+`evidence_ids` 同时传，表示"**同一步**推理同时引用了该材料与该证据"。
+- **职责（审计）筛选**：`responsible_role` 命中 `responsibility[].operator.role`，三类通用，不属于对象间关联。
 - **`type=all`**：跨三类型合并的结果集，按相关度排序。
-- `highlight` 只有在 `q` 非空时才有内容；`inner_hits` 只在按 `source_ids`/`evidence_ids`/`responsible_role` 等嵌套字段过滤时返回（标识命中的是哪一条 responsibility / 哪一步 reasoning.steps）。
+- `highlight` 只有在 `q` 非空时才有内容；`inner_hits` 只在按 nested 字段（`responsible_role`/`source_ids`/`evidence_ids`）过滤时返回（标识命中的是哪一条 responsibility / 哪一步 reasoning.steps）。
 
 ### 3.3 示例
 
@@ -95,6 +96,22 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/search \
 ### 3.4 `type=all` 响应要点
 
 `score` 为**跨类型归一化**后的可比分数（0 到 1），`raw_score` 保留各索引原始分。适合跨 source/evidence/viewpoint 混合浏览。
+
+### 3.5 关联检索示例
+
+```bash
+# 引用 source:S001 的对象（type=all 下只返回 evidence + viewpoint，source 不出现）
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"type":"all","project_id":1,"source_ids":["source:S001"]}'
+
+# 引用 evidence:E005 的观点命题（仅 viewpoint）
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"type":"viewpoint","project_id":1,"evidence_ids":["evidence:E005"]}'
+```
+
+命中里 `inner_hits.reasoning.steps` 会标出引用它的那一步（含该步的推理文本 `to`）。
 
 ---
 
