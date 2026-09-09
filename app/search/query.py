@@ -1,90 +1,14 @@
-"""核心：构造发给 Elasticsearch 的搜索语句本体。
+"""纯查询逻辑：构造发给 Elasticsearch 的搜索语句本体。
 
-一切都在这里拼装 ES 查询 DSL；路由层只接参、search.py 只发请求，都不直接拼 DSL。
-
+职责：拼装 ES 查询 DSL（子句原语 + 精确筛选 + 全文 + 组装 query/highlight/source/分页）。
+- 领域数据（字段权重、_source 白名单）从 `fields.py` 读，本模块不含可调参数。
+- 路由层只接参、service.py 只发请求，都不直接拼 DSL。
 """
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping
 
-from ..config import OBJECT_TYPES
-
-# ---------------------------------------------------------------------------
-# 常量：索引无关的权重 / 命中卡片需带回的 _source 字段
-# ---------------------------------------------------------------------------
-
-WEIGHTS: dict[str, list[str]] = {
-    "source": [
-        "identity.name^3",
-        "presentation.title^2",
-        "presentation.publisher.text^2",
-    ],
-    "evidence": [
-        "identity.name^3",
-        "presentation.subject.text^2",
-        "presentation.indicator^2",
-        "presentation.value^2",
-    ],
-    "viewpoint": [
-        "presentation.name^3",
-        "identity.name^2.5",
-        "experience.name^2",
-    ],
-}
-
-# 命中卡片需带回的 _source 字段
-# 纯展示长文本需回数据库取
-_SOURCE_COMMON = [
-    "id",
-    "project_id",
-    "oirf_id",
-    "identity.name",
-    "identity.object_type",
-    "identity.status",
-]
-
-_SOURCE_BY_TYPE: dict[str, list[str]] = {
-    "source": _SOURCE_COMMON
-    + [
-        "presentation.type",
-        "presentation.title",
-        "presentation.uri",
-        "presentation.publisher",
-        "presentation.rights",
-        "experience.level",
-        "experience.label",
-        "experience.confidence_level",
-        "responsibility",
-    ],
-    "evidence": _SOURCE_COMMON
-    + [
-        "presentation.subject",
-        "presentation.type",
-        "presentation.source_type",
-        "presentation.industry",
-        "presentation.indicator",
-        "presentation.value",
-        "presentation.period",
-        "presentation.region",
-        "presentation.unit",
-        "reasoning.source_ids",
-        "experience.confidence_level",
-        "experience.original_publish",
-        "responsibility",
-    ],
-    "viewpoint": _SOURCE_COMMON
-    + [
-        "presentation.name",
-        "presentation.type",
-        "experience.name",
-        "experience.applicable_scenario",
-        "experience.claim_type",
-        "experience.cross_validation_mode",
-        "reasoning.steps",
-        "responsibility",
-    ],
-}
-
+from .fields import SOURCE_BY_TYPE, WEIGHTS
 
 # ---------------------------------------------------------------------------
 # 查询子句构造原语
@@ -106,7 +30,7 @@ def _terms(field: str, values: Any) -> dict[str, Any]:
 
 
 def _nested(path: str, inner: Mapping[str, Any]) -> dict[str, Any]:
-    """nested 查询：包一层走 path 下的数组，并带 inner_hits 返回命中的那个元素（精确其 _source）。"""
+    """nested 查询：包一层走 path 下的数组，并带 inner_hits 返回命中的那个元素（含其 _source）。"""
     return {"nested": {"path": path, "query": dict(inner), "inner_hits": {"_source": True}}}
 
 
@@ -117,7 +41,7 @@ def _nested(path: str, inner: Mapping[str, Any]) -> dict[str, Any]:
 
 def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     """按类型组装 bool.filter 子句列表。type_ 必须为具体类型（source/evidence/viewpoint），
-    type=all 由 search.py 对每个索引分别调用（各自只加其字段表里有的子句）。
+    type=all 由 service.py 对每个索引分别调用（各自只加其字段表里有的子句）。
 
     §5.1.1 关键歧义：`source_ids` 在 evidence 是扁平 keyword（reasoning.source_ids），
     在 viewpoint 是嵌套（reasoning.steps.source_ids）；同一入参按 type_ 映射成不同查询。
@@ -136,7 +60,7 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     # —— evidence（及 type=all 时对 evidence 索引的调用）——
     if type_ == "evidence":
         if p.get("period"):
-            f.append(_term("presentation.period.keyword", p["period"]))
+            f.append(_term("presentation.period.keyword", p["period"]))  # 原字段是 text+standard，必须 .keyword
         if p.get("region"):
             f.append(_term("presentation.region", p["region"]))
         if p.get("industry"):
@@ -160,9 +84,9 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     # —— 关联（类型感知）——
     if p.get("source_ids"):
         if type_ == "evidence":
-            f.append(_terms("reasoning.source_ids", p["source_ids"]))
+            f.append(_terms("reasoning.source_ids", p["source_ids"]))  # 扁平
         elif type_ == "viewpoint":
-            f.append(_nested("reasoning.steps", _terms("reasoning.steps.source_ids", p["source_ids"])))
+            f.append(_nested("reasoning.steps", _terms("reasoning.steps.source_ids", p["source_ids"])))  # 嵌套
 
     if p.get("evidence_ids") and type_ == "viewpoint":
         f.append(_nested("reasoning.steps", _terms("reasoning.steps.evidence_ids", p["evidence_ids"])))
@@ -204,7 +128,7 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
 
     must: list[dict[str, Any]] = []
     q = p.get("q")
-    if q:
+    if q:  # 空 q = 仅过滤
         must.append(_multi_match(q, type_))
 
     filters = build_filters(type_, p)
@@ -215,6 +139,7 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     if filters:
         query["bool"]["filter"] = filters
 
+    # 高亮：打在同一类型 multi_match 的字段上，pre/post 用 <em>…</em>
     highlight_fields = {f.split("^", 1)[0]: {} for f in WEIGHTS[type_]}
     highlight = {
         "pre_tags": ["<em>"],
@@ -228,16 +153,17 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     body: dict[str, Any] = {
         "query": query,
         "highlight": highlight,
-        "source": _SOURCE_BY_TYPE[type_],
+        "source": SOURCE_BY_TYPE[type_],
         "from_": (page - 1) * size,
         "size": size,
         "track_total_hits": True,
     }
 
+    # §5.1：用户在请求里可关掉高亮（默认开）
     if p.get("highlight", True) is False:
         body.pop("highlight")
 
     return body
 
 
-__all__ = ["WEIGHTS", "build_query", "build_filters", "OBJECT_TYPES"]
+__all__ = ["build_query", "build_filters"]

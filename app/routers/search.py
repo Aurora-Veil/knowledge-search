@@ -12,7 +12,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from ..config import DEFAULT_PROJECT_ID
-from ..search.search import search as search_service
+from ..search.service import search as search_service
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
 
