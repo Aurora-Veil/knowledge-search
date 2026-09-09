@@ -1,0 +1,1085 @@
+{
+  "sources": [
+    {
+      "oirf_id": "source:S001",
+      "identity": {
+        "name": "头豹研究院《2024年中国空间计算行业概览（Ⅱ）：空间计算设备产业链拆解（独占版）》",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "2024年中国空间计算行业概览（Ⅱ）：空间计算设备产业链拆解（独占版）",
+        "uri": "www.leadleo.com",
+        "publisher": "头豹研究院",
+        "notes": [
+          "本报告为本次抽取的主材料，材料包中登记为 材料_PPTX_原稿.pptx"
+        ],
+        "rights": "confidential",
+        "summary": "头豹研究院发布的2024年中国空间计算行业概览报告，覆盖空间计算设备形态、出货量、市场主体、成本拆解、显示、光学、芯片、传感交互及企业推荐等内容，报告中多处标注来源为头豹研究院自身整理。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "该报告为头豹研究院原创整理，综合引用 IDC、Wellsenn XR、DSCC 等数据，行业概览类二手资料，置信度中等。"
+      },
+      "id": 1,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R001",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S002",
+      "identity": {
+        "name": "Wellsenn XR 维深 2023年三季度VR与AR产业销量跟踪系列报告",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "Welsenn XR维深2023年三季度VR与AR产业销量跟踪系列报告（附下载）_同比_市场_全球(sohu.com)",
+        "uri": "https://www.sohu.com/a/735527832_121699314",
+        "publisher": "Wellsenn XR",
+        "notes": [
+          "报告另有 PDF 版本：https://wds-service-1258344699.file.myqcloud.com/20/18196/pdf/17034957766032c2df31518376a63fde0a76d4b9ddab3.pdf",
+          "材料中多处标注来源：Welsenn XR"
+        ],
+        "rights": "open",
+        "summary": "Wellsenn XR 关于2023年三季度 VR 与 AR 产业销量的跟踪报告，材料在设备形态对比、出货量、市占率、光学模组等页引用其出货量与市占率数据。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "行业咨询机构的公开销量跟踪报告，被头豹研究院引用，置信度中等。"
+      },
+      "id": 2,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R002",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S003",
+      "identity": {
+        "name": "CECA 中国电子元件行业协会 2022年全球AR/VR设备出货量数据",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "中国电子元件行业协会/中国电子元器件网：2022年全球AR/VR设备出货量同比下滑20.9%，Meta独占80%市场，Pico份额为10%",
+        "uri": "http://www.ic-ceca.org.cn/sczs/1761556.jhtml",
+        "publisher": "中国电子元件行业协会",
+        "notes": [
+          "材料备注与图说引用 2、CECA（中国电子元件行业协会）"
+        ],
+        "rights": "open",
+        "summary": "中国电子元件行业协会发布的2022年全球 AR/VR 设备出货量数据，含同比下滑 20.9%、Meta 独占 80%、Pico 份额 10% 等数据。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "行业协会二手数据，材料仅以备注形式引用，置信度低。"
+      },
+      "id": 3,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R003",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S004",
+      "identity": {
+        "name": "IDC 全球经济压力下AR/VR市场仍展现韧性，新设备推动逆势增长",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "全球经济压力下AR/VR市场仍展现韧性，新设备推动逆势增长_腾讯新闻(qq.com)",
+        "uri": "https://new.qq.com/rain/a/20231222A0870X00",
+        "publisher": "IDC",
+        "notes": [
+          "文章发布于腾讯新闻，材料引用 IDC 数据及 IDC 中国高级分析师赵思泉观点：2023年全年国内市场 VR 一体机新品断档，消费市场出货将明显下滑；明年初 Vision Pro 上市将带动开发者热情"
+        ],
+        "rights": "open",
+        "summary": "IDC 发布并转载于腾讯新闻的 AR/VR 市场分析文章，包含2023年国内市场 VR 出货下滑与新品空窗期分析、Vision Pro 上市影响等观点。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "IDC 官方市场研究观点经媒体转载，置信度中等。"
+      },
+      "id": 4,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R004",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S005",
+      "identity": {
+        "name": "澎湃新闻 元宇宙未至，空间计算先行，下一个时代还将由苹果引领吗？",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "元宇宙未至，空间计算先行，下一个时代还将由苹果引领吗？_澎湃号·湃客_澎湃新闻-The Paper",
+        "uri": "https://www.thepaper.cn/newsDetail_forward_25442600",
+        "publisher": "澎湃新闻",
+        "notes": [
+          "材料引用文中观点：硬件企业特别是苹果专注于引领空间计算时代，Vision Pro 使虚拟空间体验更沉浸，类似 iPhone 在移动计算时代的影响"
+        ],
+        "rights": "open",
+        "summary": "澎湃新闻关于空间计算与苹果 Vision Pro 的评论文章，提供 AR 在 B 端市场巡逻维修与教育等落地场景等观点。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "媒体评论文章，观点性内容为主，置信度低。"
+      },
+      "id": 5,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R005",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S006",
+      "identity": {
+        "name": "Wellsenn XR Vision Pro产业链环节价值量拆解",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "Vision Pro产业链环节价值量拆解_组装_成本_苹果(sohu.com)",
+        "uri": "https://it.sohu.com/a/686505764_121673884",
+        "publisher": "Wellsenn XR",
+        "notes": [
+          "材料注明：价格为第三方市场调研价格，不代表公司实际采购价格"
+        ],
+        "rights": "open",
+        "summary": "Wellsenn XR 对 Apple Vision Pro 硬件成本的产业链价值量拆解，包含各器件价格与成本占比数据。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "行业咨询机构拆解测算数据，材料标注为第三方市场调研价格，置信度中等。"
+      },
+      "id": 6,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R006",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S007",
+      "identity": {
+        "name": "DSCC 显示供应链咨询机构",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "DSCC",
+        "uri": "来源标注：DSCC，IT之家，头豹研究院（slide 11）",
+        "publisher": "DSCC",
+        "notes": [
+          "材料中显示技术迭代页引用 DSCC：2024年Micro OLED市场规模有望达到26亿美元，预期同比增长100%"
+        ],
+        "rights": "unknown",
+        "summary": "DSCC 为显示供应链研究机构，提供 Micro OLED 市场规模预测数据。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "机构名称及数据引用，无直接链接，置信度中等。"
+      },
+      "id": 7,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R007",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S008",
+      "identity": {
+        "name": "IT之家【XR 浮世绘・1】用芯片技术造屏幕，苹果 Vision Pro 这块屏有故事",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "【XR 浮世绘・1】用芯片技术造屏幕，苹果 Vision Pro 这块屏有故事 - IT之家(ithome.com)",
+        "uri": "https://www.ithome.com/0/709/626.htm",
+        "publisher": "IT之家",
+        "notes": [
+          "材料中显示技术演进页引用该文作为显示技术资料来源之一"
+        ],
+        "rights": "open",
+        "summary": "IT之家关于苹果 Vision Pro 屏幕技术（Micro OLED）的报道，为显示技术演进内容提供支撑。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "科技媒体文章，置信度低。"
+      },
+      "id": 8,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R008",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S009",
+      "identity": {
+        "name": "知乎 苹果Vision Pro将对Micro OLED产业布局带来哪些影响？",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "苹果Vision Pro将对Micro OLED产业布局带来哪些影响？ - 知乎(zhihu.com)",
+        "uri": "https://zhuanlan.zhihu.com/p/680377401",
+        "publisher": "知乎",
+        "notes": [
+          "材料中显示技术演进页引用该文"
+        ],
+        "rights": "open",
+        "summary": "知乎专栏关于苹果 Vision Pro 对 Micro OLED 产业布局影响的文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "UGC 平台专栏文章，置信度低。"
+      },
+      "id": 9,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R009",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S010",
+      "identity": {
+        "name": "知乎【显示面板行业】国内面板厂商Micro OLED产线布局进展",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "【显示面板行业】国内面板厂商Micro OLED产线布局进展 - 知乎(zhihu.com)",
+        "uri": "https://zhuanlan.zhihu.com/p/635370887",
+        "publisher": "知乎",
+        "notes": [
+          "材料幻灯片11链接列表引用该文"
+        ],
+        "rights": "open",
+        "summary": "知乎专栏关于国内面板厂商 Micro OLED 产线布局进展的文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "UGC 平台专栏文章，置信度低。"
+      },
+      "id": 10,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R010",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.664787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S011",
+      "identity": {
+        "name": "LEDinside 显示产业研究",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "LEDinside",
+        "uri": "来源标注：LEDinside，头豹研究院（slide 12）",
+        "publisher": "LEDinside",
+        "notes": [
+          "材料中中国 Micro OLED 产线投产和建设情况页引用"
+        ],
+        "rights": "unknown",
+        "summary": "LEDinside 为显示产业研究机构，支撑 Micro OLED 产能建设相关内容。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "机构名称引用，无直接链接与数据细节，置信度低。"
+      },
+      "id": 11,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R011",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S012",
+      "identity": {
+        "name": "知乎 2023年近半，Micro LED发展到哪一步了？",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "2023年近半，Micro LED发展到哪一步了？ - 知乎(zhihu.com)",
+        "uri": "https://zhuanlan.zhihu.com/p/636496838",
+        "publisher": "知乎",
+        "notes": [
+          "材料中 Micro LED 产线建设相关内容引用该文"
+        ],
+        "rights": "open",
+        "summary": "知乎专栏关于 2023 年 Micro LED 技术发展状态的综述文章，涵盖巨量转移等关键技术。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "UGC 平台综述文章，置信度低。"
+      },
+      "id": 12,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R012",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S013",
+      "identity": {
+        "name": "财通证券 光学模组行业研究",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "财通证券（来源标注：光学模组代表企业c来源：财通证券，头豹研究院）",
+        "uri": "来源标注：财通证券，头豹研究院（slide 14）",
+        "publisher": "财通证券",
+        "notes": [
+          "材料中光学模组市场参与者页引用"
+        ],
+        "rights": "unknown",
+        "summary": "财通证券关于光学模组行业的研究，支撑菲涅尔透镜与 Pancake 模组市场参与者信息。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "券商研报名称引用，无直接链接与报告细节，置信度低。"
+      },
+      "id": 13,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R013",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S014",
+      "identity": {
+        "name": "IT之家 歌尔光学发布全新 VR Pancake 模组，适配 4K Micro-OLED 屏幕",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "歌尔光学发布全新 VR Pancake 模组，适配 4K Micro-OLED 屏幕 - IT之家(ithome.com)",
+        "uri": "https://www.ithome.com/0/709/211.htm",
+        "publisher": "IT之家",
+        "notes": [
+          "材料中光学模组市场参与者页引用该文"
+        ],
+        "rights": "open",
+        "summary": "IT之家关于歌尔光学发布 VR Pancake 模组的报道。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "科技媒体文章，置信度低。"
+      },
+      "id": 14,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R014",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S015",
+      "identity": {
+        "name": "腾讯新闻 XR行业深度分析：硬件与生态共振，空间计算平台时代开启",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "XR行业深度分析：硬件与生态共振，空间计算平台时代开启_腾讯新闻(qq.com)",
+        "uri": "https://new.qq.com/rain/a/20230619A01RF800",
+        "publisher": "腾讯新闻",
+        "notes": [
+          "材料中光学模组市场参与者页引用该文"
+        ],
+        "rights": "open",
+        "summary": "腾讯新闻 XR 行业深度分析文章，支撑 Pancake 光学模组市场参与者划分等内容。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "媒体行业分析文章，置信度低。"
+      },
+      "id": 15,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R015",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S016",
+      "identity": {
+        "name": "扩展现实（XR）产业及标准推进委员会和中国通信标准化协会",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "扩展现实（XR）产业及标准推进委员会和中国通信标准化协会",
+        "uri": "来源标注：扩展现实（XR）产业及标准推进委员会和中国通信标准化协会，头豹研究院（slide 16）",
+        "publisher": "扩展现实（XR）产业及标准推进委员会和中国通信标准化协会",
+        "notes": [
+          "材料中 XR 设备底层芯片构成及核心功能页引用"
+        ],
+        "rights": "unknown",
+        "summary": "扩展现实（XR）产业及标准推进委员会和中国通信标准化协会，为 XR 设备底层芯片构成、CPU/GPU 能力需求等标准化内容提供支撑。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "标准化行业协会来源，置信度中等。"
+      },
+      "id": 16,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R016",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S017",
+      "identity": {
+        "name": "腾讯新闻 耀宇视芯发布VST芯片：致敬苹果R1，开启XR双芯时代",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "耀宇视芯发布VST芯片：致敬苹果R1，开启XR“双芯时代”_腾讯新闻(qq.com)",
+        "uri": "https://new.qq.com/rain/a/20240226A02TAF00",
+        "publisher": "腾讯新闻",
+        "notes": [
+          "材料中 XR 专用芯片市场页引用该文"
+        ],
+        "rights": "open",
+        "summary": "腾讯新闻关于耀宇视芯发布 VST 芯片的文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "媒体文章，置信度低。"
+      },
+      "id": 17,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R017",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S018",
+      "identity": {
+        "name": "腾讯新闻 XR专用芯片：终将成就大市场",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "XR专用芯片：终将成就大市场_腾讯新闻(qq.com)",
+        "uri": "https://new.qq.com/rain/a/20221109A02V2100",
+        "publisher": "腾讯新闻",
+        "notes": [
+          "材料中 XR 专用芯片市场页引用该文"
+        ],
+        "rights": "open",
+        "summary": "腾讯新闻关于 XR 专用芯片市场空间的行业分析文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "媒体行业分析文章，置信度低。"
+      },
+      "id": 18,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R018",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S019",
+      "identity": {
+        "name": "Wind 万得金融数据",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "Wind",
+        "uri": "来源标注：wind（slides 17、21），Wind，企业官网（slides 23、24）",
+        "publisher": "Wind",
+        "notes": [
+          "材料中逻辑芯片行业核心参与者、3D视觉感知核心参与者、歌尔股份与奥比中光财务数据等页面引用"
+        ],
+        "rights": "unknown",
+        "summary": "Wind 金融数据终端，支撑上市公司财务、行业参与者等数据。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "金融数据终端来源，置信度中等。"
+      },
+      "id": 19,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R019",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S020",
+      "identity": {
+        "name": "知乎 国内唯一上市MEMS陀螺仪公司分析：打破垄断，把握国产替代机遇",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "国内唯一上市MEMS陀螺仪公司分析：打破垄断，把握国产替代机遇 - 知乎(zhihu.com)",
+        "uri": "https://zhuanlan.zhihu.com/p/650717557",
+        "publisher": "知乎",
+        "notes": [
+          "材料中 MEMS 传感器页引用该文"
+        ],
+        "rights": "open",
+        "summary": "知乎专栏关于国内 MEMS 陀螺仪公司分析的文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "UGC 平台文章，置信度低。"
+      },
+      "id": 20,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R020",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S021",
+      "identity": {
+        "name": "CSDN 技术社区",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "CSDN",
+        "uri": "来源标注：知乎，CSDN，头豹研究院（slide 20）",
+        "publisher": "CSDN",
+        "notes": [
+          "材料中 3D 视觉感知交互页引用"
+        ],
+        "rights": "unknown",
+        "summary": "CSDN 技术社区内容，支撑基于视觉的三维重建等技术内容。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "技术社区内容引用，无直接链接，置信度低。"
+      },
+      "id": 21,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R021",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S022",
+      "identity": {
+        "name": "知乎 基于视觉的三维重建关键技术研究综述",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "知乎——基于视觉的三维重建关键技术研究综述 - 知乎(zhihu.com)",
+        "uri": "https://zhuanlan.zhihu.com/p/420780175",
+        "publisher": "知乎",
+        "notes": [
+          "材料中基于视觉的三维重建页引用该文"
+        ],
+        "rights": "open",
+        "summary": "知乎专栏关于基于视觉的三维重建关键技术的综述文章。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "UGC 平台综述文章，置信度低。"
+      },
+      "id": 22,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R022",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S023",
+      "identity": {
+        "name": "歌尔股份与奥比中光企业官网",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "企业官网（歌尔股份、奥比中光）",
+        "uri": "来源标注：Wind，企业官网，头豹研究院（slides 23、24）",
+        "publisher": "歌尔股份、奥比中光",
+        "notes": [
+          "材料中歌尔股份、奥比中光企业推荐页引用企业官网信息"
+        ],
+        "rights": "unknown",
+        "summary": "歌尔股份与奥比中光企业官网，提供企业业务、产品、成立时间、ESG 综合得分等信息。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "medium",
+        "confidence_reason": "企业官方信息源，置信度中等。"
+      },
+      "id": 23,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R023",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "source:S024",
+      "identity": {
+        "name": "VR陀螺",
+        "object_type": "source",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "type": "secondary_public",
+        "title": "VR陀螺",
+        "uri": "来源标注：Welsenn XR，IDC，VR陀螺，头豹研究院（slide 8）",
+        "publisher": "VR陀螺",
+        "notes": [
+          "材料中空间计算设备市场情况页来源行引用"
+        ],
+        "rights": "unknown",
+        "summary": "VR 行业媒体 VR陀螺，为市场情况页来源之一。"
+      },
+      "reasoning": null,
+      "experience": {
+        "level": null,
+        "label": "二手来源",
+        "level_reason": "无 source_tier.json 可用，按二手公开来源统一填写 label 为二手来源，level 留空",
+        "confidence_level": "low",
+        "confidence_reason": "仅来源行标注名称，无链接与细节，置信度低。"
+      },
+      "id": 24,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R024",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.665787+00:00"
+        }
+      ]
+    }
+  ]
+}

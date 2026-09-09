@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temp / scratch (my inspection scripts, run artifacts)
+_tmp/
+scratch/
+*.log
+
+# Env / secrets
+.env
+.env.*
+!.env.example

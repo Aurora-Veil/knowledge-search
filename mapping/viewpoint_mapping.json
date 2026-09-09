@@ -1,0 +1,71 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "dynamic": false,
+    "properties": {
+      "id":         { "type": "keyword" },
+      "project_id":  { "type": "keyword" },
+      "oirf_id":     { "type": "keyword" },
+
+      "identity": {
+        "type": "object",
+        "properties": {
+          "name":        { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" },
+          "object_type": { "type": "keyword" },
+          "status":      { "type": "keyword" }
+        }
+      },
+
+      "presentation": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" },
+          "type": { "type": "keyword" }
+        }
+      },
+
+      "reasoning": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "nested",
+            "properties": {
+              "source_ids":   { "type": "keyword" },
+              "evidence_ids": { "type": "keyword" }
+            }
+          }
+        }
+      },
+
+      "experience": {
+        "type": "object",
+        "properties": {
+          "name":                  { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" },
+          "applicable_scenario":   { "type": "keyword" },
+          "claim_type":            { "type": "keyword" },
+          "cross_validation_mode": { "type": "keyword" }
+        }
+      },
+
+      "responsibility": {
+        "type": "nested",
+        "properties": {
+          "id":        { "type": "keyword" },
+          "operation": { "type": "keyword" },
+          "operator": {
+            "type": "object",
+            "properties": {
+              "type": { "type": "keyword" },
+              "id":   { "type": "keyword" },
+              "role": { "type": "keyword" }
+            }
+          },
+          "time": { "type": "date" }
+        }
+      }
+    }
+  }
+}

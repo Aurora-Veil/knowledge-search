@@ -1,0 +1,1798 @@
+{
+  "viewpoints": [
+    {
+      "oirf_id": "viewpoint:V001",
+      "identity": {
+        "name": "2023年全球VR设备出货下滑、AR设备表现亮眼",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "2023年全球VR设备出货下滑、AR设备表现亮眼",
+        "content": "2023年全球VR设备出货量明显下滑，前三季度全球出货449万台；AR设备市场表现亮眼，前三季度全球出货31.5万台；全球AR/VR头显设备市场呈现一超多强的竞争态势，中国AR市场竞争活跃。",
+        "type": "行业判断",
+        "explanation": "出货量与市占率数据来自Wellsenn XR与IDC等公开来源，头豹研究院整理口径为前三季度数据，与全年数据口径不同；图表中Meta全球市占率45%与正文约50%存在差异，均按原文保留。",
+        "change_triggers": "若季度数据被全年数据修订或口径变化，结论需相应调整。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S002",
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E005",
+              "evidence:E006",
+              "evidence:E029",
+              "evidence:E030"
+            ],
+            "to": "全球与中国2023年前三季度VR/AR出货量分别为449万台、41万台与31.5万台、12.5万台"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E070",
+              "evidence:E071",
+              "evidence:E072",
+              "evidence:E073"
+            ],
+            "to": "全球AR/VR头显市场一超多强，Meta约50%，中国PICO约58.5%、Xreal雷鸟Rokid合计超70%"
+          }
+        ],
+        "narrative": "综合出货量与市占率证据，2023年VR下滑、AR亮眼，市场一超多强，中国AR市场活跃。"
+      },
+      "experience": {
+        "name": "出货量态势判断",
+        "content": "以Wellsenn XR、IDC公开出货量与市占率数据为基础判断市场态势。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "出货量同时引用Wellsenn XR与IDC并辅以CECA行业数据，多信源交叉印证出货趋势。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 1,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R374",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V002",
+      "identity": {
+        "name": "VR设备出货量下滑源于需求乏力与形态内容缺乏突破",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "VR设备出货量下滑源于需求乏力与形态内容缺乏突破",
+        "content": "全球经济下行导致非刚需消费电子需求乏力，同时VR设备硬件形态和内容生态无明显突破、缺乏持续消费吸引力，共同导致2023年VR出货量下滑。",
+        "type": "因果判断",
+        "explanation": "该判断为头豹研究院基于IDC等渠道信息的归因分析，属解释性结论，无法直接通过数据验证因果关系。",
+        "change_triggers": "若出现爆款VR内容或硬件形态重大革新，原因判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E043",
+              "evidence:E044"
+            ],
+            "to": "VR下滑原因包括需求乏力与硬件形态内容生态无突破"
+          },
+          {
+            "source_ids": [
+              "source:S004"
+            ],
+            "evidence_ids": [
+              "evidence:E025",
+              "evidence:E026"
+            ],
+            "to": "国内市场还面临VR一体机新品断档与厂商降本增效调整"
+          }
+        ],
+        "narrative": "VR出货量下滑由需求端乏力与供给端形态内容缺乏突破共同导致。"
+      },
+      "experience": {
+        "name": "出货下滑归因",
+        "content": "对VR出货量下滑进行多因素归因。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "因果判断",
+        "cross_validation_mode": "不同方法或不同数据体系交叉验证",
+        "cross_validation_mode_descipition": "归因综合出货量数据、行业评论与渠道观点，用不同方法交叉验证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 2,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R375",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V003",
+      "identity": {
+        "name": "AR设备市场增长受益于芯片与光波导突破及消费级产品兴起",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "AR设备市场增长受益于芯片与光波导突破及消费级产品兴起",
+        "content": "高通AI专用芯片发布及光波导技术突破，推动影视媒体等消费级AR眼镜产品兴起，是2023年AR设备市场表现亮眼的主要原因。",
+        "type": "因果判断",
+        "explanation": "该判断为头豹研究院对AR市场增长动因的解释，芯片与光波导突破与出货增长的因果关系无法严格验证。",
+        "change_triggers": "若AR出货增速回落或驱动因素改变，需更新归因。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E045",
+              "evidence:E046",
+              "evidence:E047"
+            ],
+            "to": "AR增长受益于高通AI专用芯片、光波导突破与消费级AR眼镜兴起"
+          }
+        ],
+        "narrative": "AR市场增长动因来自芯片与光学技术突破及消费级产品渗透。"
+      },
+      "experience": {
+        "name": "AR增长归因",
+        "content": "解释AR设备出货量增长的驱动因素。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "因果判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "技术突破与产品动态同时见于多方行业来源，相互印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 3,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R376",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V004",
+      "identity": {
+        "name": "市场参与者多元化竞争加速技术突破与生态创新",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "市场参与者多元化竞争加速技术突破与生态创新",
+        "content": "空间计算设备市场参与主体包括互联网厂商、传统硬件厂商与创新型初创企业，三方竞争逻辑不同，多方竞争加快XR硬件技术突破、内容与应用生态创新，有望加速市场技术普及与产业应用。",
+        "type": "产业链层面",
+        "explanation": "参与者分类与竞争逻辑为头豹研究院归纳，互联网厂商优势在生态、传统硬件厂商优势在产品、初创企业优势在灵活性。",
+        "change_triggers": "若参与者格局发生显著整合或新类型参与者崛起，结论需调整。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E048",
+              "evidence:E049"
+            ],
+            "to": "市场参与主体为互联网厂商、传统硬件厂商和创新型初创企业"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E050",
+              "evidence:E051",
+              "evidence:E053",
+              "evidence:E054",
+              "evidence:E055",
+              "evidence:E056",
+              "evidence:E057",
+              "evidence:E058",
+              "evidence:E059"
+            ],
+            "to": "三类企业的业务逻辑与竞争优势劣势各有不同"
+          }
+        ],
+        "narrative": "多元化主体竞争驱动技术突破与生态创新。"
+      },
+      "experience": {
+        "name": "市场主体格局",
+        "content": "分析空间计算设备市场参与者的构成与竞争逻辑。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "分类与逻辑以头豹研究院整理为主体，属行业结构描述，按整理总结登记。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 4,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R377",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V005",
+      "identity": {
+        "name": "全球空间计算设备市场一超多强、中国市场竞争格局分板块集中",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "全球空间计算设备市场一超多强、中国市场竞争格局分板块集中",
+        "content": "全球AR/VR头显市场一超多强，2023年前三季度Meta市占率约50%，Sony、字节跳动、大朋VR与HTC紧随其后；中国市场VR板块PICO占比约58.5%，AR板块Xreal、雷鸟、Rokid合计超70%，Meta未进入中国市场。",
+        "type": "行业判断",
+        "explanation": "图表显示Meta全球市占率45%而正文表述约50%，存在口径差异，两条均按原文保留；图表中Sony 25%等数值与正文表述存在出入。",
+        "change_triggers": "若市场份额数据被修订或新厂商进入市场，结论需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S002"
+            ],
+            "evidence_ids": [
+              "evidence:E060",
+              "evidence:E061",
+              "evidence:E062",
+              "evidence:E063",
+              "evidence:E064",
+              "evidence:E065"
+            ],
+            "to": "全球市场Meta 45%、Sony 25%、字节跳动6%、大朋VR 2%、HTC 2%、其他6%"
+          },
+          {
+            "source_ids": [
+              "source:S002",
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E071",
+              "evidence:E072",
+              "evidence:E073",
+              "evidence:E074"
+            ],
+            "to": "Meta约50%，中国PICO约58.5%、Xreal雷鸟Rokid合计超70%、Meta未进入中国"
+          }
+        ],
+        "narrative": "全球与中国AR/VR市场竞争格局呈现一超多强与分板块集中特征。"
+      },
+      "experience": {
+        "name": "竞争格局",
+        "content": "描述全球与中国AR/VR头显设备市场的竞争格局。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "市占率数据来自Wellsenn XR、IDC与VR陀螺等多信源并经头豹研究院整理。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 5,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R378",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V006",
+      "identity": {
+        "name": "光学显示与计算存储成本占比高，中国参与厂商毛利率空间有限",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "光学显示与计算存储成本占比高，中国参与厂商毛利率空间有限",
+        "content": "以Apple Vision Pro为例，硬件成本约1,733美元、占售价约49.53%，其中显示屏占硬件成本43.85%、光学15%、计算与存储14.43%；中国厂商参与电池、ODM/OEM、结构件等环节，技术门槛较低，毛利率空间有限。",
+        "type": "产业链层面",
+        "explanation": "成本拆解数据来自Wellsenn XR第三方市场调研价格，不代表公司实际采购价格，占比以该价格为基准计算。",
+        "change_triggers": "若苹果供应链采购价或供应商结构发生变化，成本结构与毛利率空间判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S006"
+            ],
+            "evidence_ids": [
+              "evidence:E095",
+              "evidence:E096",
+              "evidence:E097",
+              "evidence:E098",
+              "evidence:E099",
+              "evidence:E100"
+            ],
+            "to": "Vision Pro硬件成本1733美元、占售价49.53%，显示屏占43.85%，Micro OLED与M2芯片单价350/120美元"
+          },
+          {
+            "source_ids": [
+              "source:S006"
+            ],
+            "evidence_ids": [
+              "evidence:E122",
+              "evidence:E123",
+              "evidence:E127",
+              "evidence:E128",
+              "evidence:E131",
+              "evidence:E132"
+            ],
+            "to": "光学/计算存储/结构件/ODM占比与多国供应商分布，中国厂商参与环节技术门槛低"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E007"
+            ],
+            "to": "计算存储、光学显示和传感交互成本占比约80%"
+          }
+        ],
+        "narrative": "Vision Pro成本集中于光学显示与计算存储，中国厂商参与低门槛环节、毛利率空间有限。"
+      },
+      "experience": {
+        "name": "成本结构分析",
+        "content": "以旗舰产品成本拆解判断产业链价值分布与中国厂商机会。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "测算判断",
+        "cross_validation_mode": "不同方法或不同数据体系交叉验证",
+        "cross_validation_mode_descipition": "成本占比由单价与总价测算得出，并与正文占比表述相互核对。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 6,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R379",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V007",
+      "identity": {
+        "name": "显示技术按短期Fast LCD、中期Micro OLED、长期Micro LED路径迭代",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "显示技术按短期Fast LCD、中期Micro OLED、长期Micro LED路径迭代",
+        "content": "Fast LCD是现阶段XR设备主流显示技术、市场占比超90%；Micro OLED目前应用于高端机型，2024年市场规模有望达26亿美元；Micro LED或成为空间计算设备终极显示技术，但全彩小尺寸尚在实验阶段。",
+        "type": "趋势判断",
+        "explanation": "技术迭代路径为头豹研究院基于DSCC等来源的阶段性判断，各技术渗透速度取决于成本与良率改善。",
+        "change_triggers": "若Micro OLED成本快速下降或Micro LED提前量产，迭代节奏将加快。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E008",
+              "evidence:E133"
+            ],
+            "to": "Fast LCD为主流、占比超90%"
+          },
+          {
+            "source_ids": [
+              "source:S001",
+              "source:S007"
+            ],
+            "evidence_ids": [
+              "evidence:E150",
+              "evidence:E151",
+              "evidence:E152",
+              "evidence:E153",
+              "evidence:E154"
+            ],
+            "to": "Micro OLED优势与高端应用、2024年市场规模26亿美元及同比翻倍"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E010",
+              "evidence:E144",
+              "evidence:E145",
+              "evidence:E146",
+              "evidence:E147",
+              "evidence:E155"
+            ],
+            "to": "Micro LED优势与量产瓶颈"
+          }
+        ],
+        "narrative": "显示技术沿Fast LCD、Micro OLED、Micro LED路径演进。"
+      },
+      "experience": {
+        "name": "显示技术演进",
+        "content": "归纳空间计算设备显示技术的迭代路径与阶段特征。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "技术判断综合DSCC、IT之家等来源与产品发布动态相互印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 7,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R380",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V008",
+      "identity": {
+        "name": "Micro LED或成为终极显示技术但全彩小尺寸量产尚未成熟",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "Micro LED或成为终极显示技术但全彩小尺寸量产尚未成熟",
+        "content": "Micro LED在亮度、功耗续航、使用寿命等维度具备显著优势，能规避OLED有机材料老化问题，但现阶段仅Sony、SDC等少数厂商实现大尺寸批量出货，全彩小尺寸屏幕仍处实验阶段，量产面临芯片、模组与系统三方面难点。",
+        "type": "预测判断",
+        "explanation": "Micro LED技术优势明确，但量产成熟度不足，能否成为主流显示方案取决于关键技术突破。",
+        "change_triggers": "若全彩小尺寸Micro LED实现规模量产，判断将从潜在转为现实。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E010",
+              "evidence:E144",
+              "evidence:E145",
+              "evidence:E146",
+              "evidence:E147",
+              "evidence:E155"
+            ],
+            "to": "Micro LED性能优势与大尺寸出货、全彩实验状态"
+          },
+          {
+            "source_ids": [
+              "source:S012"
+            ],
+            "evidence_ids": [
+              "evidence:E159",
+              "evidence:E160",
+              "evidence:E161"
+            ],
+            "to": "量产三大难点与五大关键技术、激光转移前景"
+          }
+        ],
+        "narrative": "Micro LED具备终极显示潜力但全彩小尺寸量产尚需技术突破。"
+      },
+      "experience": {
+        "name": "Micro LED前景",
+        "content": "判断Micro LED作为终极显示技术的可能性与量产条件。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "预测判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "性能与量产状态由行业综述与头部厂商动态印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 8,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R381",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V009",
+      "identity": {
+        "name": "中国Micro OLED产能建设加快，上游核心材料国产替代空间可观",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "中国Micro OLED产能建设加快，上游核心材料国产替代空间可观",
+        "content": "中国Micro OLED产能建设加快，由于OLED材料技术起步晚、外企技术封锁，玻璃基板、有机发光材料、偏光片等上游核心材料国产替代空间可观；合肥视涯、京东方、安徽熙泰等厂商陆续投建产线。",
+        "type": "趋势判断",
+        "explanation": "产能信息来自LEDinside等来源的不完全统计，产线投产进度存在不确定性。",
+        "change_triggers": "若产能建设延期或材料国产化进度超预期，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S011"
+            ],
+            "evidence_ids": [
+              "evidence:E156",
+              "evidence:E157",
+              "evidence:E158"
+            ],
+            "to": "产能建设加快、材料卡脖子与国产材料供应增加"
+          },
+          {
+            "source_ids": [
+              "source:S011",
+              "source:S012"
+            ],
+            "evidence_ids": [
+              "evidence:E162",
+              "evidence:E163",
+              "evidence:E165",
+              "evidence:E166",
+              "evidence:E169",
+              "evidence:E170",
+              "evidence:E171",
+              "evidence:E172",
+              "evidence:E173",
+              "evidence:E174"
+            ],
+            "to": "合肥视涯、京东方、安徽熙泰、国兆光电、华星光电产能与投资"
+          },
+          {
+            "source_ids": [
+              "source:S012"
+            ],
+            "evidence_ids": [
+              "evidence:E175",
+              "evidence:E176",
+              "evidence:E177",
+              "evidence:E178",
+              "evidence:E179"
+            ],
+            "to": "Micro LED产线投资建设动态"
+          }
+        ],
+        "narrative": "中国Micro OLED产能快速扩张，上游核心材料国产替代空间可观。"
+      },
+      "experience": {
+        "name": "产能建设趋势",
+        "content": "分析中国Micro OLED与Micro LED产能布局与国产化机会。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "产能数据来自LEDinside、知乎专栏等来源的不完全统计并交叉核对。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 9,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R382",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V010",
+      "identity": {
+        "name": "Micro LED量产受芯片、模组与系统难点制约，关键技术突破决定消费级应用",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "Micro LED量产受芯片、模组与系统难点制约，关键技术突破决定消费级应用",
+        "content": "中国Micro LED产线大多处于实验线阶段，量产面临芯片、模组与系统三方面技术难点；外延生长、封装制程、全彩化、检测修复与巨量转移是五个最关键技术，其中激光转移效果更优，未来可能成为巨量转移主流技术。",
+        "type": "因果判断",
+        "explanation": "技术难点与成熟度判断来自行业综述，突破时间表存在不确定性。",
+        "change_triggers": "若核心技术实现突破并规模量产，Micro LED将进入消费级应用。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S012"
+            ],
+            "evidence_ids": [
+              "evidence:E159",
+              "evidence:E160",
+              "evidence:E161"
+            ],
+            "to": "三大难点、五大关键技术及激光转移前景"
+          }
+        ],
+        "narrative": "Micro LED消费级应用取决于关键技术的突破。"
+      },
+      "experience": {
+        "name": "Micro LED量产",
+        "content": "判断Micro LED量产瓶颈与关键技术路线。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "因果判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "该判断基于行业综述的技术事实归纳，按整理总结登记。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 10,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R383",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V011",
+      "identity": {
+        "name": "多片式Pancake成为下一代主流光学方案",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "多片式Pancake成为下一代主流光学方案",
+        "content": "VR光学方案由非球面透镜、菲涅尔透镜和Pancake演进，2022年菲涅尔透镜渗透率约94%；Pancake凭借更轻薄和更高成像质量成为下一代主流方案，华为、Meta、Apple、HTC等头部厂商均已推出Pancake头显。",
+        "type": "趋势判断",
+        "explanation": "Pancake光学效率仅25%、光路每折叠一次损失约50%光效，且当前工艺下FoV约90°，仍需良率与工艺提升。",
+        "change_triggers": "若菲涅尔透镜或新光学方案出现重大技术突破，方案格局可能改变。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S002"
+            ],
+            "evidence_ids": [
+              "evidence:E181",
+              "evidence:E182",
+              "evidence:E183"
+            ],
+            "to": "2022年全球VR光学模组出货结构菲涅尔94%左右、Pancake占比很小"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E011",
+              "evidence:E184",
+              "evidence:E185",
+              "evidence:E186",
+              "evidence:E187",
+              "evidence:E188",
+              "evidence:E189",
+              "evidence:E194",
+              "evidence:E197"
+            ],
+            "to": "菲涅尔与Pancake重量、厚度、价格、光学效率对比"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E199",
+              "evidence:E201",
+              "evidence:E202"
+            ],
+            "to": "头部厂商推出Pancake头显与代表产品"
+          }
+        ],
+        "narrative": "Pancake凭借轻薄与成像优势成为下一代主流光学方案。"
+      },
+      "experience": {
+        "name": "光学方案演进",
+        "content": "判断VR光学方案由菲涅尔向Pancake演进的趋势。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "出货结构与厂商动态来自Wellsenn XR、财通证券等多信源。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 11,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R384",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V012",
+      "identity": {
+        "name": "菲涅尔透镜格局稳定，Pancake模组市场竞争百花齐放",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "菲涅尔透镜格局稳定，Pancake模组市场竞争百花齐放",
+        "content": "菲涅尔透镜市场格局相对稳定，舜宇光学、玉晶光、歌尔股份等头部厂商掌握千万级订单；Pancake模组市场呈现百花齐放格局，光学镜头厂商、显示厂商、整机厂商、ODM/OEM厂商、核心材料厂商均有入局，其中光学镜头厂商技术关联度更高、市场表现突出。",
+        "type": "产业链层面",
+        "explanation": "供应商信息来自财通证券、IT之家等来源，订单规模为定性表述。",
+        "change_triggers": "若Pancake订单格局向少数厂商集中或新进入者改变格局，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S013"
+            ],
+            "evidence_ids": [
+              "evidence:E203",
+              "evidence:E204",
+              "evidence:E205",
+              "evidence:E206",
+              "evidence:E207",
+              "evidence:E208",
+              "evidence:E209",
+              "evidence:E211",
+              "evidence:E212",
+              "evidence:E213",
+              "evidence:E214"
+            ],
+            "to": "舜宇光学、玉晶光、歌尔股份、联合光电等厂商动态"
+          },
+          {
+            "source_ids": [
+              "source:S015"
+            ],
+            "evidence_ids": [
+              "evidence:E215",
+              "evidence:E216"
+            ],
+            "to": "偏光片壁垒与五类参与者"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E013",
+              "evidence:E217"
+            ],
+            "to": "头部光学镜头厂商订单规模与市场表现"
+          }
+        ],
+        "narrative": "菲涅尔格局稳定、Pancake模组竞争百花齐放。"
+      },
+      "experience": {
+        "name": "光学模组市场",
+        "content": "分析菲涅尔与Pancake光学模组的市场竞争格局。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "厂商动态来自财通证券、IT之家、腾讯新闻等并经头豹整理。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 12,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R385",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V013",
+      "identity": {
+        "name": "AR光学多种方案并存，光波导潜力可期但量产受限",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "AR光学多种方案并存，光波导潜力可期但量产受限",
+        "content": "自由曲面、Birdbath等传统AR光学方案体积较大；光波导方案透光率80%-95%、厚度1-2mm，理论发展潜力更大，但受镜片产能与高价限制，量产是当前挑战，市场呈多种方案齐头并进局面。",
+        "type": "预测判断",
+        "explanation": "各方案参数为头豹研究院整理对比，光波导量产前景取决于工艺突破。",
+        "change_triggers": "若光波导量产成本下降，方案格局将向光波导集中。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E218",
+              "evidence:E219"
+            ],
+            "to": "传统方案体积大、光波导潜力与限制"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E220",
+              "evidence:E221",
+              "evidence:E222",
+              "evidence:E223",
+              "evidence:E224",
+              "evidence:E225",
+              "evidence:E226",
+              "evidence:E227",
+              "evidence:E228",
+              "evidence:E229",
+              "evidence:E230",
+              "evidence:E231",
+              "evidence:E232",
+              "evidence:E233",
+              "evidence:E234",
+              "evidence:E235"
+            ],
+            "to": "五种方案透光率、FoV、光学效率与厚度参数"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E236",
+              "evidence:E237",
+              "evidence:E238"
+            ],
+            "to": "各方案定位与量产挑战"
+          }
+        ],
+        "narrative": "AR光学方案多元并存，光波导潜力与量产限制并存。"
+      },
+      "experience": {
+        "name": "AR光学技术路线",
+        "content": "对比AR光学方案参数并判断光波导前景。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "预测判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "参数对比来自头豹研究院整理总结，按整理结论登记。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 13,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R386",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V014",
+      "identity": {
+        "name": "XR专用芯片需求迫切，行业迈入双芯时代",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "XR专用芯片需求迫切，行业迈入双芯时代",
+        "content": "传统消费电子芯片无法满足XR图形处理、功耗管理、传感器支持与定制化需求；传统单芯片方案随VST需求增加引发资源竞争问题；2023年苹果Vision Pro搭载M1主处理器+R1协处理器，XR行业正式迈入双芯时代，耀宇视芯等厂商跟进。",
+        "type": "趋势判断",
+        "explanation": "双芯架构为当前迭代方向，但芯片架构仍在快速演进，M1/M2表述在不同页面存在差异。",
+        "change_triggers": "若出现新的芯片架构范式或双芯方案被单芯片高性能方案取代，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S016"
+            ],
+            "evidence_ids": [
+              "evidence:E239",
+              "evidence:E244",
+              "evidence:E245"
+            ],
+            "to": "XR芯片构成与CPU/GPU能力需求"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E014",
+              "evidence:E240",
+              "evidence:E241",
+              "evidence:E242"
+            ],
+            "to": "专用芯片需求与双芯时代开启"
+          },
+          {
+            "source_ids": [
+              "source:S017"
+            ],
+            "evidence_ids": [
+              "evidence:E243",
+              "evidence:E263"
+            ],
+            "to": "耀宇视芯VST芯片对标苹果R1"
+          }
+        ],
+        "narrative": "XR专用芯片需求迫切，行业进入双芯架构时代。"
+      },
+      "experience": {
+        "name": "芯片架构趋势",
+        "content": "判断XR设备芯片从单芯走向双芯架构的行业趋势。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "芯片架构演进由XR产业标准委员会、腾讯新闻等多来源印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 14,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R387",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V015",
+      "identity": {
+        "name": "芯片市场海外厂商高度垄断，全产业链国产化水平有待提升",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "芯片市场海外厂商高度垄断，全产业链国产化水平有待提升",
+        "content": "全球芯片市场由海外厂商高度垄断，逻辑芯片国产化率仅约9%，英特尔、AMD、英伟达垄断逻辑芯片；DRAM市场三星、海力士、美光合计份额超90%，NAND市场三星、铠侠、海力士合计约60%，中国存储芯片格局未定。",
+        "type": "行业判断",
+        "explanation": "国产化率与市场份额数据来自Wind与头豹研究院整理的行业数据，口径为2021年及材料发布期。",
+        "change_triggers": "若国产芯片份额显著提升，需更新国产化进度判断。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001",
+              "source:S019"
+            ],
+            "evidence_ids": [
+              "evidence:E246",
+              "evidence:E247",
+              "evidence:E248"
+            ],
+            "to": "全球垄断格局与逻辑芯片国产化率9%"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E249",
+              "evidence:E250",
+              "evidence:E251"
+            ],
+            "to": "存储芯片垄断厂商与DRAM/NAND份额"
+          },
+          {
+            "source_ids": [
+              "source:S001",
+              "source:S019"
+            ],
+            "evidence_ids": [
+              "evidence:E252",
+              "evidence:E253"
+            ],
+            "to": "中国逻辑与存储芯片核心参与者"
+          }
+        ],
+        "narrative": "芯片市场海外高度垄断，中国国产化水平有待提升。"
+      },
+      "experience": {
+        "name": "芯片市场格局",
+        "content": "判断全球与国内芯片市场竞争格局与国产化空间。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "份额与国产化率数据来自Wind等行业数据并经头豹整理。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 15,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R388",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V016",
+      "identity": {
+        "name": "XR专用芯片等ASIC芯片为中国芯片产业提供弯道超车机遇",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "XR专用芯片等ASIC芯片为中国芯片产业提供弯道超车机遇",
+        "content": "通用CPU、GPU被Intel、NVIDIA垄断、全球市占率超90%，中国厂商短期难以在通用芯片规模化量产；XR专用芯片等ASIC芯片针对特定应用场景，可绕过通用处理器竞争，专注人工智能等特定需求领域，中国厂商有望借此实现突破。",
+        "type": "预测判断",
+        "explanation": "弯道超车为行业分析判断，海思、百度昆仑芯、寒武纪、地平线等已实现部分ASIC量产。",
+        "change_triggers": "若通用芯片国产化取得突破或ASIC需求不及预期，判断需调整。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S018"
+            ],
+            "evidence_ids": [
+              "evidence:E272",
+              "evidence:E273",
+              "evidence:E274"
+            ],
+            "to": "通用芯片垄断90%与ASIC弯道超车机会、已量产案例"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E267",
+              "evidence:E268",
+              "evidence:E271"
+            ],
+            "to": "制裁推动国产化、市场中低端成效与高通平台设备45款"
+          }
+        ],
+        "narrative": "ASIC芯片是中国芯片产业弯道超车的重要机会。"
+      },
+      "experience": {
+        "name": "芯片国产化机遇",
+        "content": "判断ASIC与XR专用芯片为中国芯片产业带来的突破机会。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "预测判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "观点来自腾讯新闻行业分析并经头豹研究院整理汇总。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 16,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R389",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V017",
+      "identity": {
+        "name": "MEMS传感器为主流技术路径，中国国产替代空间广阔",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "MEMS传感器为主流技术路径，中国国产替代空间广阔",
+        "content": "空间计算核心传感器包括光学、声学与惯性传感器；MEMS传感器凭小型化、高灵敏度、高可靠性、低功耗、低成本优势成为主流技术路径；2022年中国MEMS传感器市场规模726.8亿元，2027年有望突破1,200亿元；十四五规划将其纳入重点突破计划，国产替代空间广阔。",
+        "type": "趋势判断",
+        "explanation": "市场规模与预测来自行业来源，2027年预测存在不确定性。",
+        "change_triggers": "若市场规模增长不及预期或技术路径改变，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E276",
+              "evidence:E277",
+              "evidence:E281"
+            ],
+            "to": "传感器类型、MEMS优势与十四五政策支持"
+          },
+          {
+            "source_ids": [
+              "source:S020"
+            ],
+            "evidence_ids": [
+              "evidence:E278",
+              "evidence:E279",
+              "evidence:E280"
+            ],
+            "to": "2022年726.8亿元、2027年1200亿元、CAGR11.6%"
+          }
+        ],
+        "narrative": "MEMS是传感器主流路径，中国国产替代空间广阔。"
+      },
+      "experience": {
+        "name": "传感技术趋势",
+        "content": "判断MEMS传感器在空间计算中的主流地位与国产化空间。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "不同原始信源相互印证",
+        "cross_validation_mode_descipition": "市场规模数据与政策动态来自行业来源并经头豹整理。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 17,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R390",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V018",
+      "identity": {
+        "name": "惯性传感器海外企业主导，IMU具备新成长曲线潜力",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "惯性传感器海外企业主导，IMU具备新成长曲线潜力",
+        "content": "Bosch、ST、ADI等海外头部企业合计约占中国加速度计份额70%、陀螺仪份额超80%、IMU份额超85%；IMU具备高集成、小型化和低成本优势，将在更多领域渗透替换，企业或凭加速度计与陀螺仪技术积累打开新成长曲线。",
+        "type": "趋势判断",
+        "explanation": "份额数据为头豹研究院整理，企业对应关系以材料列示为准。",
+        "change_triggers": "若国产惯性传感器份额提升或IMU渗透放缓，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E285",
+              "evidence:E286",
+              "evidence:E287"
+            ],
+            "to": "海外企业占中国加速度计70%、陀螺仪80%、IMU85%"
+          },
+          {
+            "source_ids": [
+              "source:S020"
+            ],
+            "evidence_ids": [
+              "evidence:E288"
+            ],
+            "to": "IMU优势与渗透替换趋势"
+          }
+        ],
+        "narrative": "惯性传感器市场海外主导，IMU有望打开新成长曲线。"
+      },
+      "experience": {
+        "name": "惯性传感器格局",
+        "content": "分析中国惯性传感器市场份额与IMU前景。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "份额与趋势为头豹研究院整理总结，按整理结论登记。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 18,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R391",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V019",
+      "identity": {
+        "name": "基于视觉的三维重建成为技术主流，AI与云平台持续赋能",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "基于视觉的三维重建成为技术主流，AI与云平台持续赋能",
+        "content": "接触式三维重建可能破坏对象，基于视觉的三维重建具备速度快、实时性强优势，已成为行业主流，广泛用于自动驾驶、SLAM、虚拟现实、机器人、3D打印等领域；AI以多种形式持续赋能重建，三维重建云平台趋势明显。",
+        "type": "趋势判断",
+        "explanation": "技术趋势来自行业综述，主流地位判断基于应用广度。",
+        "change_triggers": "若新重建技术路线兴起或应用边界变化，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S022"
+            ],
+            "evidence_ids": [
+              "evidence:E289",
+              "evidence:E290",
+              "evidence:E291"
+            ],
+            "to": "视觉三维重建成为主流及优势、应用领域"
+          },
+          {
+            "source_ids": [
+              "source:S022"
+            ],
+            "evidence_ids": [
+              "evidence:E292",
+              "evidence:E293",
+              "evidence:E294"
+            ],
+            "to": "AI赋能形式、云平台趋势与技术分类"
+          }
+        ],
+        "narrative": "基于视觉的三维重建成为主流，AI与云平台持续赋能。"
+      },
+      "experience": {
+        "name": "三维重建技术趋势",
+        "content": "判断三维重建技术路线与AI、云平台演进趋势。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "技术综述来自知乎专栏，按整理总结登记。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 19,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R392",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V020",
+      "identity": {
+        "name": "3D视觉感知交互市场处于培育阶段，一超多追赶、奥比中光领军",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "3D视觉感知交互市场处于培育阶段，一超多追赶、奥比中光领军",
+        "content": "3D视觉感知交互市场仍处市场培育阶段，大多数参与者为初创公司，呈现一超多追赶竞争态势；奥比中光为行业领军者，资本实力与研发专利优势突出；灵明光子、华捷艾米、图漾科技等初创企业凭细分技术突破抢占份额。",
+        "type": "行业判断",
+        "explanation": "竞争格局评价基于研发投入、技术路线与产品布局，缺少统一市场份额数据支撑。",
+        "change_triggers": "若市场从培育期进入放量期、格局发生集中，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E016",
+              "evidence:E017"
+            ],
+            "to": "市场培育阶段与奥比中光领军地位"
+          },
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E295",
+              "evidence:E296",
+              "evidence:E297",
+              "evidence:E298",
+              "evidence:E299",
+              "evidence:E300"
+            ],
+            "to": "灵明光子、华捷艾米、图漾科技等企业动态"
+          }
+        ],
+        "narrative": "3D视觉感知市场一超多追赶，奥比中光为领军者。"
+      },
+      "experience": {
+        "name": "3D视觉竞争格局",
+        "content": "判断3D视觉感知交互市场竞争格局与代表性企业。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "格局判断基于头豹研究院整理的企业动态与产品信息。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 20,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R393",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V021",
+      "identity": {
+        "name": "歌尔股份为声光电精密零部件龙头并深度布局XR产业",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "歌尔股份为声光电精密零部件龙头并深度布局XR产业",
+        "content": "歌尔股份成立于2001年，主营声学、传感器、光电、3D封装模组等精密零组件及智能硬件，研发中心遍布全球；2022年营业收入1,048.94亿元，智能硬件占60.14%；与高通联合推出搭载3P Pancake镜头与Micro OLED的MR参考设计，XR产业布局覆盖VR与AR全链路。",
+        "type": "企业评估",
+        "explanation": "财务数据来自Wind，2022年分业务毛利率未见逐项业务标注，按原文顺序登记。",
+        "change_triggers": "若公司经营业绩或XR业务战略发生重大变化，评估需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S023"
+            ],
+            "evidence_ids": [
+              "evidence:E301",
+              "evidence:E302",
+              "evidence:E303",
+              "evidence:E304",
+              "evidence:E321"
+            ],
+            "to": "歌尔股份业务、研发布局、成立时间与MR参考设计"
+          },
+          {
+            "source_ids": [
+              "source:S019"
+            ],
+            "evidence_ids": [
+              "evidence:E305",
+              "evidence:E306",
+              "evidence:E307",
+              "evidence:E308",
+              "evidence:E309",
+              "evidence:E310",
+              "evidence:E311",
+              "evidence:E312",
+              "evidence:E317",
+              "evidence:E318",
+              "evidence:E319",
+              "evidence:E320"
+            ],
+            "to": "歌尔股份营收、毛利率与构成数据"
+          }
+        ],
+        "narrative": "歌尔股份为声光电精密零部件龙头并深度布局XR。"
+      },
+      "experience": {
+        "name": "企业分析",
+        "content": "评估歌尔股份在空间计算产业链中的定位与实力。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同方法或不同数据体系交叉验证",
+        "cross_validation_mode_descipition": "企业经营数据来自Wind与企业官网，财务与业务信息互为印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 21,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R394",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V022",
+      "identity": {
+        "name": "奥比中光为3D视觉感知整体技术方案提供商并具备百万级量产能力",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "奥比中光为3D视觉感知整体技术方案提供商并具备百万级量产能力",
+        "content": "奥比中光成立于2013年，主营3D视觉感知产品设计研发生产销售，布局结构光、iToF、双目、dToF、Lidar等全领域技术路线，是全球少数实现3D视觉传感器百万级量产的企业之一；2022年营业收入3.5亿元，3D视觉传感器占60.29%，核心客户包括蚂蚁集团、阿里集团等。",
+        "type": "企业评估",
+        "explanation": "财务数据来自Wind，2022年分业务毛利率未见逐项业务标注，按原文顺序登记。",
+        "change_triggers": "若公司业绩或技术路线发生重大变化，评估需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S023"
+            ],
+            "evidence_ids": [
+              "evidence:E322",
+              "evidence:E323",
+              "evidence:E324",
+              "evidence:E325",
+              "evidence:E326",
+              "evidence:E327",
+              "evidence:E331",
+              "evidence:E332"
+            ],
+            "to": "奥比中光产品、技术路线、量产能力与成立时间"
+          },
+          {
+            "source_ids": [
+              "source:S019"
+            ],
+            "evidence_ids": [
+              "evidence:E328",
+              "evidence:E329",
+              "evidence:E330",
+              "evidence:E333",
+              "evidence:E334",
+              "evidence:E335",
+              "evidence:E336",
+              "evidence:E337",
+              "evidence:E342",
+              "evidence:E343",
+              "evidence:E344",
+              "evidence:E345"
+            ],
+            "to": "奥比中光营收、毛利率与构成数据"
+          },
+          {
+            "source_ids": [
+              "source:S023"
+            ],
+            "evidence_ids": [
+              "evidence:E346",
+              "evidence:E347",
+              "evidence:E348",
+              "evidence:E349"
+            ],
+            "to": "核心技术营收占比与客户构成"
+          }
+        ],
+        "narrative": "奥比中光为3D视觉整体方案提供商并具备百万级量产能力。"
+      },
+      "experience": {
+        "name": "企业分析",
+        "content": "评估奥比中光在3D视觉感知领域的技术与市场地位。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "不同方法或不同数据体系交叉验证",
+        "cross_validation_mode_descipition": "企业经营数据来自Wind与企业官网，财务与产品信息互为印证。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 22,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R395",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V023",
+      "identity": {
+        "name": "光学传感器高端市场海外垄断，国产替代空间广阔",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "光学传感器高端市场海外垄断，国产替代空间广阔",
+        "content": "光学传感器高端精密部件生产仍由国外巨头垄断，蔡司、尼康、佳能、Newport、Jenoptik、徕卡、奥林巴斯等国际企业占精密光学市场份额超70%，国产高端光学传感器份额不足30%，产品正向智能化、集成化、系统化发展，为国产替代创造机遇。",
+        "type": "趋势判断",
+        "explanation": "份额数据为头豹研究院整理，国产替代进程取决于技术突破。",
+        "change_triggers": "若国产高端产品份额显著提升，判断需更新。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E282",
+              "evidence:E283"
+            ],
+            "to": "海外巨头份额超70%与国产份额不足30%"
+          }
+        ],
+        "narrative": "光学传感器高端市场海外垄断，国产替代空间广阔。"
+      },
+      "experience": {
+        "name": "光学传感器国产化",
+        "content": "判断光学传感器市场竞争格局与国产替代空间。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "趋势判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "份额判断基于头豹研究院整理总结。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 23,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R396",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    },
+    {
+      "oirf_id": "viewpoint:V024",
+      "identity": {
+        "name": "中国芯片市场中低端已见成效、高端差距仍大、格局未定",
+        "object_type": "viewpoint",
+        "status": "PENDING"
+      },
+      "presentation": {
+        "name": "中国芯片市场中低端已见成效、高端差距仍大、格局未定",
+        "content": "中国芯片市场格局未定，部分厂商市场表现突出，中低端市场已有显著成效，但高端市场与海外厂商仍有较大差距；逻辑芯片企业以Fabless模式为主，部分厂商通过AI芯片实现突破。",
+        "type": "行业判断",
+        "explanation": "格局判断基于市场参与者与产品动态，缺乏统一市占率数据。",
+        "change_triggers": "若中国厂商在高端芯片取得突破，格局将发生变化。"
+      },
+      "reasoning": {
+        "steps": [
+          {
+            "source_ids": [
+              "source:S001"
+            ],
+            "evidence_ids": [
+              "evidence:E267",
+              "evidence:E268",
+              "evidence:E269"
+            ],
+            "to": "制裁推动国产化、中低端成效与高端差距、Fabless模式"
+          }
+        ],
+        "narrative": "中国芯片市场格局未定，中低端有成效、高端差距尚存。"
+      },
+      "experience": {
+        "name": "芯片国产化阶段",
+        "content": "判断中国芯片市场发展所处阶段与格局。",
+        "applicable_scenario": "industry_research",
+        "claim_type": "事实判断",
+        "cross_validation_mode": "无需验证",
+        "cross_validation_mode_descipition": "判断基于头豹研究院整理总结。",
+        "insufficient_evidence_action": "降低观点置信度并标注待人工核验，补充独立信源交叉印证后再定稿"
+      },
+      "id": 24,
+      "project_id": 1,
+      "lifecycle": [],
+      "responsibility": [
+        {
+          "id": "responsibility:R397",
+          "operation": "create",
+          "operator": {
+            "id": "dsh-agent",
+            "type": "ai",
+            "role": "analyst",
+            "name": "DeepSeek-Harness-Agent"
+          },
+          "changes": null,
+          "note": "Agent 抽取创建",
+          "time": "2026-09-03T03:59:39.671786+00:00"
+        }
+      ]
+    }
+  ]
+}
