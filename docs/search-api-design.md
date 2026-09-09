@@ -223,7 +223,7 @@ def sync_one(project_id, oirf_id):
   identity.name^2.5     # 与 presentation.name 重复，保留以防个别文档不一致
   experience.name^2     # 角度/标签词要能上位（如搜"竞争格局"）
   ```
-- **`type=all`**：对三个索引分别按各自的 multi_match 后合并，按 score 排序（权重尺度一致，可合并排名）。
+- **`type=all`**：对三个索引分别按各自的 multi_match 后合并，**按 max-score 归一化分**（`score/max_score` → 0~1）排序——**不能直接比原始 BM25 `_score`**：不同索引规模 `N` 使 idf 标尺不同（evidence 349 条 vs source/viewpoint 24 条，idf 差 ~2 倍；`_explain` 实测 evidence identity.name idf≈4.15 vs source≈1.97，而 boost 同为 ^3、tf 同为 1），字段/权重拓扑亦异。归一化后各类型同标尺、可比排名；原始分另存 `raw_score` 供调试。调 BM25 `k1/b` 治不了（只管 tf 饱和/长度归一，不碰 idf）。
 
 ### 5.1.1 精确筛选（filter）实现
 

@@ -26,7 +26,10 @@ def hit_to_card(hit: dict[str, Any], object_type: str) -> dict[str, Any]:
         "object_type": object_type,
         "project_id": src.get("project_id"),
         "oirf_id": src.get("oirf_id"),
+        # score：单索引 = 原始 BM25；type=all 时由 search._search_all 覆写为归一化分（跨类型可比）
+        # raw_score：始终保留原始 BM25 分（调试/排序）
         "score": hit.get("_score"),
+        "raw_score": hit.get("_score"),
     }
 
     for f in _CARD_FIELDS:
