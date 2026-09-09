@@ -267,6 +267,8 @@ def build_filters(type_, p):
 
 **`type=all` 的正确处理**：不能用单个多索引查询再带 `industry` 这类 evidence 专属条件——source/viewpoint 索引没这字段，`term` 匹配 0，整批被过滤、丢掉其他类型（错误）。正解：对三个索引**各自建查询、结果按 score 合并**，每个索引只加其字段表里有的子句。
 
+> **关联参数的适用类型**（`source_ids`/`evidence_ids` 是"引用/溯源"关系）：`source_ids` 仅适用 evidence（扁平 `reasoning.source_ids`）与 viewpoint（nested `reasoning.steps.source_ids`）；`evidence_ids` 仅适用 viewpoint。`type=all` 时**只查询适用类型**，不适用的类型直接不查（而非无过滤全量混入）；单类型显式请求若带不适用关联过滤 → 返回空结果。`responsible_role` 三类通用，不裁剪。
+
 ```python
 def search(p):
     if p['type'] == 'all':

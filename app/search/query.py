@@ -53,14 +53,20 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
             f.append(_term("experience.cross_validation_mode", p["cross_validation_mode"]))
 
     # source_ids 歧义：evidence 扁平 / viewpoint 嵌套
-    if p.get("source_ids"):
-        if type_ == "evidence":
-            f.append(_terms("reasoning.source_ids", p["source_ids"]))
-        elif type_ == "viewpoint":
-            f.append(_nested("reasoning.steps", _terms("reasoning.steps.source_ids", p["source_ids"])))
+    if p.get("source_ids") and type_ == "evidence":
+        f.append(_terms("reasoning.source_ids", p["source_ids"]))
 
-    if p.get("evidence_ids") and type_ == "viewpoint":
-        f.append(_nested("reasoning.steps", _terms("reasoning.steps.evidence_ids", p["evidence_ids"])))
+    # viewpoint 的 source_ids / evidence_ids 同在 reasoning.steps：
+    # 合并成一个 nested（避免同一路径两个 inner_hits → ES 报 duplicate inner_hits key；
+    # 且单步需同时命中两者才是"该步引用 X 且 Y"）。
+    if type_ == "viewpoint":
+        steps_inner = []
+        if p.get("source_ids"):
+            steps_inner.append(_terms("reasoning.steps.source_ids", p["source_ids"]))
+        if p.get("evidence_ids"):
+            steps_inner.append(_terms("reasoning.steps.evidence_ids", p["evidence_ids"]))
+        if steps_inner:
+            f.append(_nested("reasoning.steps", {"bool": {"filter": steps_inner}}))
 
     if p.get("responsible_role"):
         f.append(_nested("responsibility", _term("responsibility.operator.role", p["responsible_role"])))

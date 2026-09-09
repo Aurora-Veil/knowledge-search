@@ -29,8 +29,10 @@ class SearchRequest(BaseModel):
     applicable_scenario: Optional[str] = None
     cross_validation_mode: Optional[str] = None
 
-    # 关联（类型感知：evidence 扁平 / viewpoint nested）
+    # 职责（审计）筛选：responsibility[].operator.role，三类通用
     responsible_role: Optional[str] = None
+
+    # 关联（引用溯源，类型感知：evidence 扁平 / viewpoint 嵌套）
     source_ids: Optional[List[str]] = None
     evidence_ids: Optional[List[str]] = None
 

@@ -24,4 +24,8 @@ SOURCE_BY_TYPE: dict[str, list[str]] = {
        "experience.claim_type", "experience.cross_validation_mode", "reasoning.steps", "responsibility"],
 }
 
-__all__ = ["WEIGHTS", "SOURCE_BY_TYPE"]
+# 关联（引用溯源）参数只对"能建立该引用"的类型有效。source 是根、不引用材料；evidence 不引用证据。
+ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
+ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
+
+__all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES"]
