@@ -1,4 +1,3 @@
-"""ES / Mongo 客户端获取（模块级单例，FastAPI 生命周期开闭）。"""
 from __future__ import annotations
 
 from elasticsearch import Elasticsearch
@@ -28,7 +27,7 @@ def get_db():
     return get_mongo()[DB_NAME]
 
 
-def close() -> None:  # FastAPI shutdown 时调用
+def close() -> None:
     global _es, _mongo
     if _es is not None:
         _es.close()

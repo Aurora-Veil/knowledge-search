@@ -1,7 +1,4 @@
-"""FastAPI 入口。
-
-运行：`uvicorn app.main:app --reload`（或 `python run.py`）。
-"""
+"""FastAPI 入口（`uvicorn app.main:app` 或 `python run.py`）。"""
 from __future__ import annotations
 
 from fastapi import FastAPI

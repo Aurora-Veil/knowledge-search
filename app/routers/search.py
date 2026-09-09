@@ -1,9 +1,4 @@
-"""统一搜索入口 `POST /api/v1/search`（§5.1）。
-
-- `type`：source | evidence | viewpoint | all（缺省 all）
-- `project_id`：缺省 = 当前项目（config.DEFAULT_PROJECT_ID），显式传则跨项目（§5.0 定稿）
-- 其余为精确筛选 / 关联参数，按类型感知映射到 keyword 字段（见 query.build_filters）
-"""
+"""`POST /api/v1/search`（§5.1）。type 缺省 all；project_id 缺省当前项目。"""
 from __future__ import annotations
 
 from typing import List, Literal, Optional, Union

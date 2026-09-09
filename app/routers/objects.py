@@ -1,8 +1,3 @@
-"""§5.2 完整对象端点：`GET /api/v1/objects/{object_type}/{oirf_id}?project_id=`。
-
-`project_id` 缺省 = 当前项目（config.DEFAULT_PROJECT_ID），与 §5.0 定稿一致；显式传则跨项目。
-必须限定 project_id（同号 oirf_id 跨项目会串号），否则串到别的项目。
-"""
 from __future__ import annotations
 
 from typing import Any, Optional
