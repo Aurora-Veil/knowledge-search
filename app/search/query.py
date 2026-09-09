@@ -2,11 +2,6 @@
 
 一切都在这里拼装 ES 查询 DSL；路由层只接参、search.py 只发请求，都不直接拼 DSL。
 
-设计来源：docs/search-api-design.md §5.1 / §5.1.1。
-- 全文：`multi_match`（type:best_fields, analyzer: ik_smart），按类型给字段^权重（只影响排序，不影响召回）。
-- 精确筛选：`term`/`terms` 打在 keyword 字段，进 `bool.filter`（不计分、可缓存）。
-- `nested`（responsibility / viewpoint 的 reasoning.steps）→ 用 nested 查询包住 + `inner_hits` 让调用方"看到命中的那一条"。
-- 字段路径与 mapping 一一核对过（source/evidence/viewpoint 三份 mapping）。
 """
 from __future__ import annotations
 
@@ -18,7 +13,6 @@ from ..config import OBJECT_TYPES
 # 常量：索引无关的权重 / 命中卡片需带回的 _source 字段
 # ---------------------------------------------------------------------------
 
-# 各类型全文检索字段（field^boost）。build_query(multi_match) 用；权重仅影响排序。
 WEIGHTS: dict[str, list[str]] = {
     "source": [
         "identity.name^3",
@@ -38,10 +32,8 @@ WEIGHTS: dict[str, list[str]] = {
     ],
 }
 
-# 命中卡片需带回的 _source 字段（§5.1 响应：识别键 + 可搜/可筛字段；不含未映射长文本，
-# 纯展示长文本如 raw_texts/notes/summary/content/explanation/*_reason/lifecycle 由 /objects 回 Mongo 取）。
-# 注意：全文检索若用到 `.text` 子字段（subject.text/publisher.text），这里必须带对应基字段（presentation.subject/publisher），
-# 否则 highlight 无从取原文。
+# 命中卡片需带回的 _source 字段
+# 纯展示长文本需回数据库取
 _SOURCE_COMMON = [
     "id",
     "project_id",
@@ -139,12 +131,12 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     if p.get("status"):
         f.append(_term("identity.status", p["status"]))
     if p.get("presentation_type"):
-        f.append(_term("presentation.type", p["presentation_type"]))  # 三类型都有 presentation.type
+        f.append(_term("presentation.type", p["presentation_type"]))
 
     # —— evidence（及 type=all 时对 evidence 索引的调用）——
     if type_ == "evidence":
         if p.get("period"):
-            f.append(_term("presentation.period.keyword", p["period"]))  # 原字段是 text+standard，必须 .keyword
+            f.append(_term("presentation.period.keyword", p["period"]))
         if p.get("region"):
             f.append(_term("presentation.region", p["region"]))
         if p.get("industry"):
@@ -168,9 +160,9 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     # —— 关联（类型感知）——
     if p.get("source_ids"):
         if type_ == "evidence":
-            f.append(_terms("reasoning.source_ids", p["source_ids"]))  # 扁平
+            f.append(_terms("reasoning.source_ids", p["source_ids"]))
         elif type_ == "viewpoint":
-            f.append(_nested("reasoning.steps", _terms("reasoning.steps.source_ids", p["source_ids"])))  # 嵌套
+            f.append(_nested("reasoning.steps", _terms("reasoning.steps.source_ids", p["source_ids"])))
 
     if p.get("evidence_ids") and type_ == "viewpoint":
         f.append(_nested("reasoning.steps", _terms("reasoning.steps.evidence_ids", p["evidence_ids"])))
@@ -212,7 +204,7 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
 
     must: list[dict[str, Any]] = []
     q = p.get("q")
-    if q:  # 空 q = 仅过滤
+    if q:
         must.append(_multi_match(q, type_))
 
     filters = build_filters(type_, p)
@@ -223,7 +215,6 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     if filters:
         query["bool"]["filter"] = filters
 
-    # 高亮：打在同一类型 multi_match 的字段上，pre/post 用 <em>…</em>
     highlight_fields = {f.split("^", 1)[0]: {} for f in WEIGHTS[type_]}
     highlight = {
         "pre_tags": ["<em>"],
@@ -243,7 +234,6 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
         "track_total_hits": True,
     }
 
-    # §5.1：用户在请求里可关掉高亮（默认开）
     if p.get("highlight", True) is False:
         body.pop("highlight")
 
