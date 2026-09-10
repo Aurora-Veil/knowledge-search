@@ -1,4 +1,4 @@
-# ingest.py —— reasoning/ -> Mongo (knowledge_db)
+# ingest.py —— example/ -> Mongo (knowledge_db)
 #
 # id == _id == ObjectId == ES _id
 
@@ -20,7 +20,7 @@ STALE_BACKUPS = ("_bk_sources", "_bk_evidence", "_bk_viewpoints")
 
 
 def build_path(cfg: dict) -> str:
-    return os.path.join(BASE, "reasoning", cfg["file"])
+    return os.path.join(BASE, "example", cfg["file"])
 
 
 def load_docs(cfg: dict) -> list:

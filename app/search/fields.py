@@ -35,7 +35,7 @@ PUBLISHER_FIELD: dict[str, str] = {
 ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
 ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
 
-# experience.confidence_level exists only in source/evidence (structure/source.ts, evidence.ts);
+# experience.confidence_level exists only in source/evidence
 # viewpoint's experience layer uses cross_validation_mode - a term on a missing field is a silent 0 hits
 CONFIDENCE_LEVEL_TYPES = ("source", "evidence")
 
