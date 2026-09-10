@@ -25,7 +25,7 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     f: list[dict[str, Any]] = []
 
-    # 项目范围：project_ids 多项目并集 / project_id 单项目 / 都不传 = 不加过滤（全项目）
+    # project_ids range: [], null = all, int = single
     project_ids = p.get("project_ids")
     if project_ids:
         f.append(_terms("project_id", project_ids))
@@ -77,15 +77,30 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     return f
 
 
-def _multi_match(q: str, type_: str) -> dict[str, Any]:
-    return {
-        "multi_match": {
-            "query": q,
-            "type": "best_fields",
-            "analyzer": "ik_smart",
-            "fields": WEIGHTS[type_],
-        }
+# 召回松紧：or = 任一命中（现状，召回优先）；and = 所有词都要命中（顺序不限）；phrase = 词必须相邻
+MATCH_MODES = ("or", "and", "phrase")
+
+
+def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:
+    """
+    q 的全文子句。字段权重始终取自 WEIGHTS[type_]（三种模式共用同一套已校准权重）。
+    mode 只改变"命中多少词才算命中"，不改变打分：
+      or     -> best_fields（ES 默认 operator=or）
+      and    -> best_fields + operator=and
+      phrase -> type=phrase（相邻短语，等价 match_phrase 的严格模式）
+    """
+    mm: dict[str, Any] = {
+        "query": q,
+        "analyzer": "ik_smart",
+        "fields": WEIGHTS[type_],
     }
+    if mode == "and":
+        mm.update({"type": "best_fields", "operator": "and"})
+    elif mode == "phrase":
+        mm["type"] = "phrase"
+    else:
+        mm["type"] = "best_fields"
+    return {"multi_match": mm}
 
 
 def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
@@ -93,10 +108,15 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     if type_ not in WEIGHTS:
         raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
 
+    # 未知 mode 直接报错，不静默退回 or —— 否则调用方以为收紧了，实际拿到的是宽松结果
+    mode = p.get("mode") or "or"
+    if mode not in MATCH_MODES:
+        raise ValueError(f"unknown mode: {mode!r} (expected one of {list(MATCH_MODES)})")
+
     must: list[dict[str, Any]] = []
     q = p.get("q")
     if q:
-        must.append(_multi_match(q, type_))
+        must.append(_multi_match(q, type_, mode))
 
     filters = build_filters(type_, p)
 
@@ -130,4 +150,4 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     return body
 
 
-__all__ = ["build_query", "build_filters"]
+__all__ = ["build_query", "build_filters", "MATCH_MODES"]

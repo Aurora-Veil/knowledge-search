@@ -14,6 +14,10 @@ router = APIRouter(prefix="/api/v1", tags=["search"])
 class SearchRequest(BaseModel):
     q: Optional[str] = None
     type: Literal["source", "evidence", "viewpoint", "all"] = "all"
+    # 全文匹配松紧（与 app/search/query.py 的 MATCH_MODES 保持一致）：
+    #   or（默认，现状）任一命中 | and 所有词都要命中 | phrase 词必须相邻
+    # q 为空时无意义（不产生全文子句）
+    mode: Literal["or", "and", "phrase"] = "or"
     # 项目范围（都不传 = 全部项目，即全局检索）：
     #   project_id  = 单个项目；project_ids = 多项目并集；两者互斥
     project_id: Optional[int] = None
