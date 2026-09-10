@@ -1,7 +1,7 @@
 # ingest.py —— reasoning/ -> Mongo (knowledge_db)
 #
 # id == _id == ObjectId == ES _id
-#   original id (int) 弃用
+
 import os
 import json
 from pymongo import MongoClient, ASCENDING
