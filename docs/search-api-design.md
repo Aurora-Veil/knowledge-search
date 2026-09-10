@@ -64,7 +64,7 @@
 **id 模型（关键）**：
 - 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**导入时**由 `load`（旧的 `ingest.py`）生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
 - `oirf_id` 只在**单个项目内唯一**；跨项目同号（`source:S001` vs 另一项目的 `source:S001`）靠 `_id` 区分。
-- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**，检索时**必须带 `project_id` 作用域**，否则跨项目同号会串。
+- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**；`oirf_id` **跨项目会重号**，而**检索缺省是全项目**（见 §5.0），所以跨项目结果里**不要用 `oirf_id` 定位对象**——用 `id`（ObjectId，全局唯一），取详情时回传卡片里的 `project_id`。要收窄范围就传 `project_id`（单个）或 `project_ids`（多个）。
 
 ---
 
@@ -350,11 +350,11 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 |---|---|---|
 | **端点形态** | **统一 `POST /api/v1/search`** + `type` 路由（含 `all`） | 不拆三个端点；`type` 决定路由到哪个索引 |
 | **交付范围** | **先做 §5.1 search + §5.2 objects**；`/associations` 下一轮 | 先跑通"搜索 → 点进详情"主链路 |
-| **`project_id` 默认** | **缺省 = 当前项目（`project_id=1`）**；跨项目显式传 | `oirf_id` 项目内唯一，默认当前项目防串号、更省调用 |
+| **项目范围** | **缺省 = 全项目（全局检索）**；`project_id` 单项目；`project_ids` 多项目并集（两者互斥，同传 400） | 多项目是常态需求，默认全局更符合"先搜到、再定位"；跨项目时 `oirf_id` 重号 ⇒ **定位一律用 `id`（ObjectId）**，详情回传 `project_id` |
 
 ### 5.1 统一搜索 `POST /api/v1/search`
 
-按 `type` 路由到对应索引；`type=all` 走 multi-index（每索引各自建查询再合并）。`project_id` **缺省取当前项目（1）**，显式传入则覆盖。
+按 `type` 路由到对应索引；`type=all` 走 multi-index（每索引各自建查询再合并）。**项目范围缺省不设限（= 全项目）**：`project_id` 限定单项目、`project_ids` 取多项目并集（两者互斥，同传报 400；`project_ids` 空数组报 400）。三种情况的差别只在生成的过滤子句——全局**不加** `project_id` 子句，单项目 `term`，多项目 `terms`（`project_id` 是 keyword，取值统一字符串化）。
 
 **请求体**
 
@@ -362,7 +362,8 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 {
   "q": "空间计算",                    // 全文检索词；空=仅过滤
   "type": "evidence",                 // source | evidence | viewpoint | all
-  "project_id": 1,                    // 可选；缺省=当前项目(1)，显式传则跨项目
+  "project_id": 1,                    // 可选：限定单个项目；不传 = 全项目（全局检索）
+  // "project_ids": [1, 2],           // 可选：多项目并集；与 project_id 互斥（二选一，同传 400）
   "status": "PENDING",
   "period": "2024",                   // 命中 presentation.period.keyword
   "region": "全球",
@@ -425,7 +426,8 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 ```python
 def build_filters(type_, p):
     f = []
-    if p.get('project_id') is not None: f.append(term('project_id', p['project_id']))
+    if p.get('project_ids'):              f.append(terms('project_id', p['project_ids']))    # 多项目并集
+    elif p.get('project_id') is not None: f.append(term('project_id', p['project_id']))      # 单项目；都不传 = 全项目
     if p.get('status'):                 f.append(term('identity.status', p['status']))
     if type_ in ('evidence', 'all'):                        # evidence 专属
         if p.get('period'):      f.append(term('presentation.period.keyword', p['period']))
@@ -532,7 +534,7 @@ source/viewpoint 索引**不带** `industry` 子句。
 
 ### 5.2 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}?project_id=`
 
-回 Mongo 取**完整权威字段**（原样 `_source` 不完整处，如完整 `reasoning`、`responsibility`、`identity` 及未映射长文本）。**必须带 `project_id`**（同号对象跨项目会串号）。
+回 Mongo 取**完整权威字段**（原样 `_source` 不完整处，如完整 `reasoning`、`responsibility`、`identity` 及未映射长文本）。**`project_id` 缺省仍为 `1`**——本端点按 `oirf_id` 定位，而 `oirf_id` 只在一个项目内唯一。因此从**全局/多项目检索**结果点进详情时，**必须把卡片里的 `project_id` 传回来**，否则会取到项目 1 的同号对象（静默串号）。
 
 ### 5.3 关联图谱 `GET /api/v1/associations/{object_type}/{oirf_id}?project_id=`
 

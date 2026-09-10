@@ -33,7 +33,8 @@ JSON，字段均可选，缺省有默认值。
 |---|---|---|---|
 | `q` | string | 无 | 全文检索词；空/缺省 = 仅精确筛选 |
 | `type` | `source` / `evidence` / `viewpoint` / `all` | `all` | 要搜的对象类型 |
-| `project_id` | int | `1` | 缺省=当前项目；显式传则查另一项目 |
+| `project_id` | int | 无 | 限定**单个**项目；与 `project_ids` 互斥（同传返回 400） |
+| `project_ids` | int[] | 无 | 限定**多个**项目（并集）；与 `project_id` 互斥，空数组返回 400 |
 | `status` | string | 无 | 精确筛 `identity.status` |
 | `presentation_type` | string | 无 | 精确筛 `presentation.type` |
 | `period` | string | 无 | 精确筛 `presentation.period.keyword`（按精确串匹配） |
@@ -58,6 +59,7 @@ JSON，字段均可选，缺省有默认值。
 - **关联（引用溯源）**：`source_ids` / `evidence_ids` 用于"谁引用了它"。仅在**适用类型**上生效——`source_ids` 适用于 evidence、viewpoint；`evidence_ids` 仅适用 viewpoint。`type=all` 时只检索适用类型（不适用的类型直接不出结果，而非全量返回）；单类型请求若带了它不支持的关联参数则返回空结果。`source_ids`+`evidence_ids` 同时传，表示"**同一步**推理同时引用了该材料与该证据"。
 - **职责（审计）筛选**：`responsible_role` 命中 `responsibility[].operator.role`，三类通用，不属于对象间关联。
 - **`type=all`**：跨三类型合并的结果集，按相关度排序。
+- **项目范围（重要变更）**：`project_id` / `project_ids` **都不传 = 全项目（全局检索）**；`project_id` 限定单项目；`project_ids` 取多项目并集（两者互斥，同传返回 400，空数组返回 400）。⚠️ 跨项目时 **`oirf_id` 会重号**（`source:S001` 每个项目都有）——**不要用它当列表 key 或详情键**，用 `id`（ObjectId，全局唯一）；点详情时把卡片里的 `project_id` 回传给 `/objects`。
 - `highlight` 只有在 `q` 非空时才有内容；`inner_hits` 只在按 nested 字段（`responsible_role`/`source_ids`/`evidence_ids`）过滤时返回（标识命中的是哪一条 responsibility / 哪一步 reasoning.steps）。
 
 ### 3.3 示例
@@ -114,6 +116,27 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/search \
 
 命中里 `inner_hits.reasoning.steps` 会标出引用它的那一步（含该步的推理文本 `to`）。
 
+### 3.6 跨项目 / 全局检索
+
+```bash
+# 全局检索：不传项目参数 = 所有项目
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"q":"空间计算","type":"all"}'
+
+# 多项目并集：项目 1 与 2 一起搜
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"q":"空间计算","type":"all","project_ids":[1,2]}'
+
+# 单项目：只看项目 2
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"q":"空间计算","type":"all","project_id":2}'
+```
+
+三条的差别只在生成的过滤子句：全局**不加** `project_id` 子句、单项目加 `term`、多项目加 `terms`。响应里每条命中都带 `project_id`，**跨项目结果必须靠它 + `id` 定位对象**（`oirf_id` 跨项目会重号）。
+
 ---
 
 ## 4. 字段说明
@@ -140,7 +163,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/search \
 |---|---|---|
 | `object_type` | path | `source` / `evidence` / `viewpoint` |
 | `oirf_id` | path | 如 `source:S001` |
-| `project_id` | query | 可选，缺省 `1`；**必须限定项目**，否则同号 oirf_id 会串到其他项目 |
+| `project_id` | query | 缺省 `1`，但**本端点靠 `oirf_id` 定位、只在一个项目内唯一**：从全局/多项目检索结果点进详情时，**必须传卡片里的 `project_id`**，否则会取到项目 1 的同号对象（串号） |
 
 示例：
 
