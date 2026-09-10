@@ -20,6 +20,9 @@ python run.py            # 等价 uvicorn app.main:app --reload
 | GET  | `/api/v1/health`          | 健康检查 |
 | POST | `/api/v1/search`          | 统一搜索（全文 + 精确筛选 + 关联） |
 | GET  | `/api/v1/objects/...`     | 按 oirf_id 取完整对象（回 Mongo） |
+| GET  | `/api/v1/associations/...` | 关联图谱（观点→证据→材料）——**尚未实现**，设计见 `search-api-design.md` §4.3 |
+
+> 需要"某对象的关联子图"时，现在只能用 §3.5 的 `/search` + `source_ids`/`evidence_ids` 做单跳筛选；专用的 `/api/v1/associations`（`nodes`+`edges`、多跳、带 step 归属）**已定稿但代码为 0 行**。
 
 ---
 
@@ -193,6 +196,8 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/search \
 ```
 
 命中里 `inner_hits.reasoning.steps` 会标出引用它的那一步（含该步的推理文本 `to`）。
+
+> 这两例都是**单跳筛选**（`/search` 能做的关联上限）。要点完整子图（多跳、`nodes`+`edges`、每条边带 step 归属与推理文本），走 `/api/v1/associations`——**设计已定稿、尚未实现**，见 `search-api-design.md` §4.3。
 
 ### 3.6 项目范围示例
 
