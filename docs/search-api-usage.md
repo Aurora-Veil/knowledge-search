@@ -33,6 +33,7 @@ JSON，字段均可选，缺省有默认值。
 |---|---|---|---|
 | `q` | string | 无 | 全文检索词；空/缺省 = 仅精确筛选 |
 | `type` | `source` / `evidence` / `viewpoint` / `all` | `all` | 要搜的对象类型 |
+| `mode` | `or` / `and` / `phrase` | `or` | 全文匹配松紧（仅对 `q` 生效）：`or` 任一命中 / `and` 所有词都命中 / `phrase` 词必须相邻 |
 | `project_id` | int | 无 | 限定**单个**项目；与 `project_ids` 互斥（同传返回 400） |
 | `project_ids` | int[] | 无 | 限定**多个**项目（并集）；与 `project_id` 互斥，空数组返回 400 |
 | `status` | string | 无 | 精确筛 `identity.status` |
@@ -55,6 +56,15 @@ JSON，字段均可选，缺省有默认值。
 ### 3.2 说明
 
 - **全文检索**：只对每类型的指定字段做加权匹配（见「4. 字段说明」）；`q` 为空时跳过全文。
+- **`mode`（召回松紧）**：`q` 分词后要求命中多少才算命中——`or`（默认）任一命中即可；`and` 所有词都要命中（顺序不限）；`phrase` 词必须相邻出现。字段与权重三种模式完全一致，**只改召回、不改打分口径**。实测（`type=all`）：
+
+  | `q` | `or`（默认） | `and` | `phrase` |
+  |---|---|---|---|
+  | `空间计算` | 23 | 13 | 12 |
+  | `空间计算设备` | **73** | **8** | **8** |
+  | `zzz不存在词 空间计算` | **23**（无关词被忽略） | **0** | **0** |
+
+  > `空间计算设备` 在 `or` 下 73 条，多半只是含"设备"；`and`/`phrase` 收成 8 条。带无关词时 `or` 给 23 条（看起来"搜到了"），`and` 给 0——**要用"是否真的搜到"来判断，请显式传 `mode=and`**。`q` 为空时 `mode` 是空操作。
 - **精确筛选**：`term/terms` 按 keyword 字段精确匹配，不参与排序。
 
 **精确筛选参数的生效类型**（`type=all` 时尤其重要：类型专属参数**只作用于对应类型，其他类型照常返回**）
@@ -83,6 +93,11 @@ JSON，字段均可选，缺省有默认值。
 curl -s -X POST http://127.0.0.1:8000/api/v1/search \
   -H "Content-Type: application/json" \
   -d '{"q":"空间计算","type":"evidence","project_id":1,"industry":"空间计算设备","status":"PENDING","size":3}'
+
+# 收紧召回：所有词都要命中（默认 or 会给 73 条，and 给 8 条）
+curl -s -X POST http://127.0.0.1:8000/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"q":"空间计算设备","type":"all","mode":"and"}'
 ```
 
 响应：

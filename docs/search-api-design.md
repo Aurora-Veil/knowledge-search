@@ -362,6 +362,7 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 {
   "q": "空间计算",                    // 全文检索词；空=仅过滤
   "type": "evidence",                 // source | evidence | viewpoint | all
+  "mode": "or",                       // or(默认) | and | phrase —— 全文匹配松紧；只改召回不改权重口径；q 为空时无意义
   "project_id": 1,                    // 可选：限定单个项目；不传 = 全项目（全局检索）
   // "project_ids": [1, 2],           // 可选：多项目并集；与 project_id 互斥（二选一，同传 400）
   "status": "PENDING",
@@ -547,8 +548,16 @@ source/viewpoint 索引**不带** `industry` 子句。
 ## 6. 中文分词与检索细节
 
 - **索引侧** `ik_max_word`（最大切分，召回高）；**查询侧** `ik_smart`（粒度粗，精确）。
-- 精确短语：`match_phrase`；宽松：`match` + `fuzziness: "AUTO"`。
+- **召回松紧 `mode`（已实现）**：三种模式共用同一套字段与权重，只改"命中多少词才算命中"——
+  `or`（默认）`multi_match` 默认 `operator=or`；`and` 加 `operator: "and"`；`phrase` 用 `multi_match` 的 `type: "phrase"`（等价严格 `match_phrase`）。
+  未知 `mode` 直接报 `ValueError`（不静默退回 `or`）。
+- 宽松模糊匹配：`fuzziness: "AUTO"` —— **仍未实现**（中文短查询下收益不明，暂不做）。
 - 过滤/聚合一律用 `keyword` 子字段（`term`/`terms`/`aggs`），不参与分析。
+
+> **召回松紧实测（`type=all`，三类合计）**：`空间计算` → or 23 / and 13 / phrase 12；`空间计算设备` → or **73** / and **8** / phrase **8**；
+> `zzz不存在词 空间计算` → or **23**（无关词被静默忽略）/ and **0** / phrase **0**。
+> 即：默认 `or` 下"搜到 23 条"不代表 23 条都相关——`空间计算` 一个查询词就有 10 条只含「空间」或只含「计算」；
+> 要判断"是否真的搜到"，须显式 `mode=and`（`type=all` 的 and 结果 = 三类各自 and 之和：source 3 + evidence 8 + viewpoint 2 = 13）。
 
 > **权重校准（真实数据实测）**：`identity.name` 是精炼主题摘要句，短关键词下最能命中"真正讲这个"的文档；
 > `value` 常是长描述或纯数字，权重若高于 name，会把"仅在长描述里碰巧含该词"的跑题文档抬上来（如搜「空间计算」时
@@ -594,7 +603,7 @@ python -m app.sync reconcile      # 期望输出：[结论] 零漂移 —— 两
 | 项 | 状态 | 说明 |
 |---|---|---|
 | **同步层（§4）** | ✅ 已落地并实测 | `init` / `full` / `recreate` / `one` / `reconcile` / `load` 六个子命令；实测：全量连跑两遍均 24/349/24（幂等，且与 ES `_count` 一致）、注入必拒文档时报出失败条数与原因并退出码 1、造孤儿/缺失后 `--fix` 自动复核归零 |
-| **搜索 API（§5）** | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`，`q=空间计算` 命中 23 条、nested `inner_hits` 正常），HTTP 路由未做回归；`/associations`（§5.3）未做 |
+| **搜索 API（§5）** | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）。**HTTP 路由已回归**（经 `TestClient` 走真路由：字段名与 mapping 全对齐、10 个加权字段均为 `text`、`nested` 关联与 `inner_hits`、翻页一致性、空结果与非法入参 200/422 分支、项目范围全局/单个/多个）；`mode`（§6 召回松紧）已实现；`/associations`（§5.3）**未做** |
 | **增量同步触发形态** | ⏳ 待做 | 当前是「写库后显式调用 `sync_one`」（§4.1 ②）；量大时换 Change Streams（`pymongo.watch()` 长连接 + 批量缓冲 + 重试） |
 | **种子导入（§4.2）** | ✅ 本轮落地并实测 | `load` 增量 upsert：只增改、内容未变则不写库也不推 ES（实测一致时 1.6s、ES 零写入）、只批量推变动过的（397 条 0.24s vs 逐条 26.85s）；`--prune` 显式删且 ES 同步删；`--reset --yes` 保留旧的清空重灌并自动把 ES 一起重建（`ingest.py --yes` 等价） |
 | **`reconcile --fix` 效率** | ⏳ 已知 | 重灌缺失是逐条 `sync_one`（每条 refresh 一次索引）；量大时改为批量写入后统一 refresh |
