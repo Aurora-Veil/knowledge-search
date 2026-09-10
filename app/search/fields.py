@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-# 全文检索字段（field^boost）：权重只影响排序、不影响召回。调参只改这里。
+# full text search 权重配置，按 type 分组
 WEIGHTS: dict[str, list[str]] = {
     "source": ["identity.name^3", "presentation.title^2", "presentation.publisher.text^2"],
     "evidence": ["identity.name^3", "presentation.subject.text^2", "presentation.indicator^2", "presentation.value^2"],
     "viewpoint": ["presentation.name^3", "identity.name^2.5", "experience.name^2"],
 }
 
-# 命中卡片要带回的 _source 白名单：只含可搜/可筛字段 + 识别键；长文本回 Mongo 取。
-# 全文用 `.text` 子字段（subject.text/publisher.text）时须带基字段（presentation.subject/publisher），高亮才能取原文。
+# _source whitelist -> long text should be fetched from Mongo
+# full text -> .text (subject.text/publisher.text)
 _SOURCE_COMMON = ["id", "project_id", "oirf_id", "identity.name", "identity.object_type", "identity.status"]
 
 SOURCE_BY_TYPE: dict[str, list[str]] = {
@@ -24,7 +24,7 @@ SOURCE_BY_TYPE: dict[str, list[str]] = {
        "experience.claim_type", "experience.cross_validation_mode", "reasoning.steps", "responsibility"],
 }
 
-# 关联（引用溯源）参数只对"能建立该引用"的类型有效。source 是根、不引用材料；evidence 不引用证据。
+# association term
 ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
 ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
 

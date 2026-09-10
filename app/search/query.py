@@ -4,9 +4,8 @@ from typing import Any, Mapping
 
 from .fields import SOURCE_BY_TYPE, WEIGHTS
 
-# 子句原语
 def _term(field: str, value: Any) -> dict[str, Any]:
-    return {"term": {field: str(value)}}  # keyword 存字符串，数字值转 str 保证命中
+    return {"term": {field: str(value)}}
 
 
 def _terms(field: str, values: Any) -> dict[str, Any]:
@@ -15,12 +14,15 @@ def _terms(field: str, values: Any) -> dict[str, Any]:
 
 
 def _nested(path: str, inner: Mapping[str, Any]) -> dict[str, Any]:
-    # inner_hits 返回命中的那个数组元素（含 _source）
     return {"nested": {"path": path, "query": dict(inner), "inner_hits": {"_source": True}}}
 
 
 def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """按类型组装 bool.filter。type_ 必须是具体类型（type=all 由 service 对每索引分别调用）。"""
+    """
+    build bool.filter by type. 
+    type_ must be one of WEIGHTS keys.
+    p is a dict of filter parameters.
+    """
     f: list[dict[str, Any]] = []
 
     project_id = p.get("project_id")
@@ -33,7 +35,7 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
 
     if type_ == "evidence":
         if p.get("period"):
-            f.append(_term("presentation.period.keyword", p["period"]))  # 原字段 text+standard，必须 .keyword
+            f.append(_term("presentation.period.keyword", p["period"]))
         if p.get("region"):
             f.append(_term("presentation.region", p["region"]))
         if p.get("industry"):
@@ -52,13 +54,11 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
         if p.get("cross_validation_mode"):
             f.append(_term("experience.cross_validation_mode", p["cross_validation_mode"]))
 
-    # source_ids 歧义：evidence 扁平 / viewpoint 嵌套
+    # source_ids 
     if p.get("source_ids") and type_ == "evidence":
         f.append(_terms("reasoning.source_ids", p["source_ids"]))
 
-    # viewpoint 的 source_ids / evidence_ids 同在 reasoning.steps：
-    # 合并成一个 nested（避免同一路径两个 inner_hits → ES 报 duplicate inner_hits key；
-    # 且单步需同时命中两者才是"该步引用 X 且 Y"）。
+    # viewpoint source_ids / evidence_ids in reasoning.steps：
     if type_ == "viewpoint":
         steps_inner = []
         if p.get("source_ids"):
@@ -86,13 +86,13 @@ def _multi_match(q: str, type_: str) -> dict[str, Any]:
 
 
 def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
-    """返回可直接 `es.search(index=.., **build_query(...))` 的 kwargs。"""
+    """ return a dict for Elasticsearch query body."""
     if type_ not in WEIGHTS:
         raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
 
     must: list[dict[str, Any]] = []
     q = p.get("q")
-    if q:  # 空 q = 仅过滤
+    if q:
         must.append(_multi_match(q, type_))
 
     filters = build_filters(type_, p)

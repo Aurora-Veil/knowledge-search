@@ -6,7 +6,7 @@ _CARD_FIELDS = ("identity", "presentation", "reasoning", "experience", "responsi
 
 
 def hit_to_card(hit: dict[str, Any], object_type: str) -> dict[str, Any]:
-    """ES hit → 轻卡片。score 单索引=原始 BM25；type=all 时由 service._search_all 覆写为归一化分。"""
+    """ES hit → card dict for API response"""
     src = hit.get("_source") or {}
 
     card: dict[str, Any] = {
@@ -25,6 +25,6 @@ def hit_to_card(hit: dict[str, Any], object_type: str) -> dict[str, Any]:
     if "highlight" in hit:
         card["highlight"] = hit["highlight"]
     if "inner_hits" in hit:
-        card["inner_hits"] = hit["inner_hits"]  # 命中的那个数组元素 _source
-
+        card["inner_hits"] = hit["inner_hits"]
+        
     return card
