@@ -1,4 +1,3 @@
-"""本地启动脚本：`python run.py`（等价 uvicorn app.main:app --reload）。"""
 import uvicorn
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 # 知识图谱搜索 API 使用文档
 
-基于 MongoDB（权威数据）+ Elasticsearch（检索引擎）的搜索接口。默认环境：MongoDB「knowledge_db」、Elasticsearch「knowledge_*」三索引（source / evidence / viewpoint）。
+基于 MongoDB（权威数据）+ Elasticsearch（检索引擎）的搜索接口。
+默认环境：MongoDB「knowledge_db」、Elasticsearch「knowledge_*」三索引（source / evidence / viewpoint）。
 
 - 服务地址：`http://127.0.0.1:8000`
 - OpenAPI 文档（自动生成）：`http://127.0.0.1:8000/docs`

@@ -1,4 +1,4 @@
-"""BSON/原生类型 → 可 JSON 序列化（ObjectId→str、datetime→isoformat、递归 dict/list）。"""
+"""Convert BSON types to JSON-serializable types."""
 from __future__ import annotations
 
 from datetime import datetime

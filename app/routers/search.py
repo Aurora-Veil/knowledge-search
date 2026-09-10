@@ -1,4 +1,4 @@
-"""`POST /api/v1/search`（§5.1）。type 缺省 all；project_id 缺省当前项目。"""
+""" POST /api/v1/search """
 from __future__ import annotations
 
 from typing import List, Literal, Optional, Union
@@ -13,26 +13,26 @@ router = APIRouter(prefix="/api/v1", tags=["search"])
 
 
 class SearchRequest(BaseModel):
-    q: Optional[str] = None                  # 全文检索词；空/缺省 = 仅过滤
+    q: Optional[str] = None
     type: Literal["source", "evidence", "viewpoint", "all"] = "all"
-    project_id: Optional[int] = None         # 缺省 = 当前项目
+    project_id: Optional[int] = None
 
-    # 精确筛选（进 bool.filter，命中 keyword 字段）
+    # exact match
     status: Optional[str] = None
     presentation_type: Optional[str] = None
-    period: Optional[str] = None             # 命中 presentation.period.keyword
+    period: Optional[str] = None             # presentation.period.keyword
     region: Optional[str] = None
     industry: Optional[str] = None
-    source_type: Optional[Union[str, List[str]]] = None   # 单值或多值
+    source_type: Optional[Union[str, List[str]]] = None
     confidence_level: Optional[str] = None
     claim_type: Optional[str] = None
     applicable_scenario: Optional[str] = None
     cross_validation_mode: Optional[str] = None
 
-    # 职责（审计）筛选：responsibility[].operator.role，三类通用
+    # responsibility[].operator.role
     responsible_role: Optional[str] = None
 
-    # 关联（引用溯源，类型感知：evidence 扁平 / viewpoint 嵌套）
+    # relation
     source_ids: Optional[List[str]] = None
     evidence_ids: Optional[List[str]] = None
 
@@ -44,5 +44,5 @@ class SearchRequest(BaseModel):
 @router.post("/search")
 def api_search(req: SearchRequest) -> dict:
     p = req.model_dump(exclude_none=True)
-    p.setdefault("project_id", DEFAULT_PROJECT_ID)  # 缺省当前项目，显式传覆盖
+    p.setdefault("project_id", DEFAULT_PROJECT_ID)
     return search_service(p)
