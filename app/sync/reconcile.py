@@ -1,6 +1,5 @@
-"""对账：比对 ES 与 Mongo 的 _id 集合，列出孤儿（ES 有 Mongo 无）/ 缺失（Mongo 有 ES 无）。
-
-约定：默认只报告，`--fix` 才删孤儿并重灌缺失 —— 这是唯一会改 ES 的路径。
+"""
+Compare ES and Mongo _id sets, listing orphans and missing 
 """
 from __future__ import annotations
 
@@ -18,20 +17,20 @@ SCAN_SIZE = 1000
 
 
 def mongo_ids(type_: str, db=None) -> set[str]:
-    """Mongo 侧全部 _id（字符串形式，与 ES _id 同源）。"""
+    """Mongo _id"""
     coll = resolve_db(db)[COLLECTION_BY_TYPE[type_]]
     return {str(d["_id"]) for d in coll.find({}, {"_id": 1})}
 
 
 def es_ids(type_: str, es=None) -> set[str]:
-    """ES 侧全部 _id（scan 遍历，不依赖条数上限）。"""
+    """ES _id"""
     body = {"query": {"match_all": {}}, "_source": False}
     es = resolve_es(es)
     return {h["_id"] for h in scan(es, index=INDEX_BY_TYPE[type_], query=body, size=SCAN_SIZE)}
 
 
 def compare_type(type_: str, es=None, db=None) -> dict[str, Any]:
-    """单类型对账：两边 _id 集合的差集。索引不存在时单独标注（避免误判成"全部缺失"）。"""
+    """ Single type: compare Mongo _id set and ES _id set """
     es = resolve_es(es)
     index = INDEX_BY_TYPE[type_]
     if not es.indices.exists(index=index):
@@ -52,10 +51,9 @@ def drift_count(reports: Sequence[dict[str, Any]]) -> int:
 
 
 def fix(reports: Sequence[dict[str, Any]], es=None, db=None) -> dict[str, Any]:
-    """删孤儿 + 重灌缺失。
-
-    索引不存在的类型直接跳过：往不存在的索引写会自动建出一个没有正确 mapping 的索引，
-    比"不修"更糟，所以交给 init/recreate 处理。
+    """
+    Delete orphans from ES, reindex missing from Mongo to ES.
+    Return dict with counts of deleted, reindexed, errors, skipped.
     """
     es = resolve_es(es)
     db = resolve_db(db)
@@ -74,7 +72,7 @@ def fix(reports: Sequence[dict[str, Any]], es=None, db=None) -> dict[str, Any]:
                 es.delete(index=index, id=i)
                 deleted += 1
             except NotFoundError:
-                pass  # 对账与删除之间被别处删掉 = 已达成
+                pass
 
         for i in r["missing"]:
             doc = db[COLLECTION_BY_TYPE[t]].find_one({"_id": ObjectId(i)})

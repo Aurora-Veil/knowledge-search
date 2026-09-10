@@ -8,7 +8,11 @@ from ..serializers import to_jsonable
 
 
 def get_object(object_type: str, oirf_id: str, project_id: int) -> Optional[dict[str, Any]]:
-    """full object data"""
+    """
+    full object data
+    not exist → None
+    unvalid type → ValueError
+    """
     if object_type not in COLLECTION_BY_TYPE:
         raise ValueError(f"unknown object_type: {object_type!r} (expected one of {list(COLLECTION_BY_TYPE)})")
 

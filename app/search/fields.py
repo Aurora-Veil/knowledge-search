@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# full text search 权重配置，按 type 分组
+# full text search weights, grouped by type
 WEIGHTS: dict[str, list[str]] = {
     "source": ["identity.name^3", "presentation.title^2", "presentation.publisher.text^2"],
     "evidence": ["identity.name^3", "presentation.subject.text^2", "presentation.indicator^2", "presentation.value^2"],
