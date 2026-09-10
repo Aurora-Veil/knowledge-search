@@ -4,7 +4,7 @@ from typing import Any
 
 from ..config import INDEX_BY_TYPE, OBJECT_TYPES
 from ..db import get_es
-from .fields import ASSOC_EVIDENCE_IDS_TYPES, ASSOC_SOURCE_IDS_TYPES
+from .fields import *
 from .query import build_query
 from .rank import fuse
 from .response import hit_to_card
@@ -22,6 +22,8 @@ def _applicable_types(p: dict[str, Any], base: tuple[str, ...] | list[str] = OBJ
         types &= set(ASSOC_SOURCE_IDS_TYPES)
     if p.get("evidence_ids"):
         types &= set(ASSOC_EVIDENCE_IDS_TYPES)
+    if p.get("publisher"):
+        types &= set(PUBLISHER_FIELD)
     return types
 
 

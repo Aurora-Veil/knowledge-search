@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .fields import CONFIDENCE_LEVEL_TYPES, SOURCE_BY_TYPE, WEIGHTS
+from .fields import *
+
+MATCH_MODES = ("or","and","phrase")
 
 def _term(field: str, value: Any) -> dict[str, Any]:
     return {"term": {field: str(value)}}
-
 
 def _terms(field: str, values: Any) -> dict[str, Any]:
     vals = [str(v) for v in values] if isinstance(values, (list, tuple)) else [str(values)]
@@ -25,16 +26,15 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     f: list[dict[str, Any]] = []
 
-    # project_ids range: [], null = all, int = single
-    project_ids = p.get("project_ids")
-    if project_ids:
-        f.append(_terms("project_id", project_ids))
-    elif p.get("project_id") is not None:
-        f.append(_term("project_id", p["project_id"]))
+    pid = p.get("project_id")
+    if pid not in (None, []):
+        f.append(_terms("project_id", pid))
     if p.get("status"):
         f.append(_term("identity.status", p["status"]))
     if p.get("presentation_type"):
         f.append(_term("presentation.type", p["presentation_type"]))
+    if p.get("publisher") and type_ in PUBLISHER_FIELD:
+        f.append(_terms(PUBLISHER_FIELD[type_], p["publisher"]))
 
     if type_ == "evidence":
         if p.get("period"):
@@ -77,18 +77,7 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     return f
 
 
-# 召回松紧：or = 任一命中（现状，召回优先）；and = 所有词都要命中（顺序不限）；phrase = 词必须相邻
-MATCH_MODES = ("or", "and", "phrase")
-
-
 def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:
-    """
-    q 的全文子句。字段权重始终取自 WEIGHTS[type_]（三种模式共用同一套已校准权重）。
-    mode 只改变"命中多少词才算命中"，不改变打分：
-      or     -> best_fields（ES 默认 operator=or）
-      and    -> best_fields + operator=and
-      phrase -> type=phrase（相邻短语，等价 match_phrase 的严格模式）
-    """
     mm: dict[str, Any] = {
         "query": q,
         "analyzer": "ik_smart",
@@ -102,16 +91,14 @@ def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:
         mm["type"] = "best_fields"
     return {"multi_match": mm}
 
-
 def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     """ return a dict for Elasticsearch query body."""
     if type_ not in WEIGHTS:
         raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
 
-    # 未知 mode 直接报错，不静默退回 or —— 否则调用方以为收紧了，实际拿到的是宽松结果
     mode = p.get("mode") or "or"
     if mode not in MATCH_MODES:
-        raise ValueError(f"unknown mode: {mode!r} (expected one of {list(MATCH_MODES)})")
+        raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
 
     must: list[dict[str, Any]] = []
     q = p.get("q")

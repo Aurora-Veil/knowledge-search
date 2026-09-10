@@ -5,31 +5,30 @@
 
 ---
 
-## ✅ 阶段状态（已落地 / 待做）
+## ✅ 阶段状态
 
 | 阶段 | 状态 | 说明 |
 |---|---|---|
-| 数据库存储 | ✅ 已落地、锁定 | 权威库 `knowledge_db`；3 集合 `project_id` 分区；`pptx_store` 已弃用 |
+| 数据库存储 | ✅ 已落地、锁定 | 权威库 `knowledge_db`；3 集合 `project_id` 分区 |
 | id 模型 | ✅ 已落地 | `id = _id = ObjectId`（全局唯一），**无复合键**；`oirf_id` 仅项目内唯一（`source:S001`） |
 | ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §3 |
-| 同步层（索引 / 全量 / 单条 / 对账 / 种子导入） | 📦 已移出项目 | `app/sync` 归档于 `..\9.8-sync-archive\app-sync\`（代码历史见 §4 横幅）；顶层 `ingest.py`/`full_sync.py` 已回滚为最初版本 |
-| 搜索 API | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`），HTTP 路由未回归；`/associations`（§5.3）未做 |
-| 增量同步触发形态 | ⏸ 随同步层挂起 | 已随 `app/sync` 一起移出项目；库与 ES 均已建好并冻结（24/349/24、零漂移），检索不依赖它。原设计：写库后显式调用 `sync_one`（§4.1 ②），量大再换 Change Streams（§8） |
+| 同步层 | 📦 已移出项目 | 代码归档于 `..\9.8-sync-archive\app-sync\`，本文件的旧同步章节也已随快照归档（`..\9.8-sync-archive\search-api-design.md.snapshot`）。库与 ES 已建好并冻结（24/349/24、零漂移），**检索不依赖它** |
+| 搜索 API | ✅ 已实现并回归 | `POST /api/v1/search`（§4.1）+ `GET /api/v1/objects`（§4.2）；`/associations`（§4.3）未做 |
 
 ---
 
 ## 1. 总体架构
 
 ```
-   ┌────────────┐   写入(权威)   ┌─────────────────┐   同步管道    ┌────────────────────┐
-   │  Client/前端 │ ───────────►  │    写库          │ ───────────► │  Elasticsearch     │
-   └────────────┘               │  Mongo knowledge_db│   full_sync │  knowledge_* 三索引  │
-                                └────────┬────────┘             / sync_one  └─────────▲──────┘
+   ┌────────────┐   写入(权威)   ┌─────────────────┐   同步（已归档）  ┌────────────────────┐
+   │  Client/前端 │ ───────────►  │    写库          │ ─ ─ ─ ─ ─ ─ ─►  │  Elasticsearch     │
+   └────────────┘               │  Mongo knowledge_db│   full_sync    │  knowledge_* 三索引  │
+                                └────────┬────────┘   (已移出项目)     └─────────▲──────┘
                                          │                                                 │ 检索
                                          ▼                                                 ▼
                                  ┌──────────────────────────────────────────────────────────┐
                                  │  FastAPI 应用  /api/v1/search …                          │
-                                 │  · /search        ：查 ES（全文+过滤+聚合+高亮）          │
+                                 │  · /search        ：查 ES（全文 + 精确筛选 + 高亮）        │
                                  │  · /objects       ：按 (object_type, oirf_id, project)   │
                                  │                     回 Mongo 取完整权威字段               │
                                  │  · /associations  ：观点→证据→材料 图谱（ES terms + Mongo）│
@@ -37,8 +36,9 @@
 ```
 
 - **MongoDB = 权威数据源**：唯一存储、对象间关系（`source_ids`/`evidence_ids`）、生命周期与状态。一切增删改写 Mongo。
-- **Elasticsearch = 检索引擎**：全文检索、模糊、过滤聚合、高亮、相关性。**搜索只查 ES**。
+- **Elasticsearch = 检索引擎**：全文检索、过滤聚合、高亮、相关性。**搜索只查 ES**。
 - **接缝**：两个系统用**同一个 `_id`（ObjectId 字符串）**关联——搜索命中 ES 的某条，可凭同 ObjectId 回 Mongo 取完整对象。
+- **同步管道已移出项目**（见阶段状态表）：数据已冻结，检索不需要写库动作；将来要恢复同步，见归档目录。
 
 ---
 
@@ -62,15 +62,26 @@
 ```
 
 **id 模型（关键）**：
-- 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**导入时**由 `load`（旧的 `ingest.py`）生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
+
+- 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**导入时**生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
 - `oirf_id` 只在**单个项目内唯一**；跨项目同号（`source:S001` vs 另一项目的 `source:S001`）靠 `_id` 区分。
-- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**；`oirf_id` **跨项目会重号**，而**检索缺省是全项目**（见 §5.0），所以跨项目结果里**不要用 `oirf_id` 定位对象**——用 `id`（ObjectId，全局唯一），取详情时回传卡片里的 `project_id`。要收窄范围就传 `project_id`（单个）或 `project_ids`（多个）。
+- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**；`oirf_id` **跨项目会重号**，而**检索缺省是全项目**（见 §4.0），所以跨项目结果里**不要用 `oirf_id` 定位对象**——用 `id`（ObjectId，全局唯一），取详情时回传卡片里的 `project_id`。
 
 ---
 
 ## 3. ES 索引与映射（已落地）
 
 **三个隔离索引**（每类一份干净 mapping，避免多态字段冲突）。三份 mapping 都在 `mapping/` 下，全为 `dynamic:false`（未映射字段不索引、但保留在 `_source` 供展示）、`number_of_shards:1`、`number_of_replicas:0`。
+
+**字段可搜性的三类**（决定了它能做全文检索还是精确筛选）：
+
+| 映射类型 | 能力 | 用途 | 查询写法 |
+|---|---|---|---|
+| `text`（ik） | 分词匹配、参与打分 | 全文检索 | `multi_match` |
+| `keyword` | 整串相等、不打分 | 精确筛选 | `term` / `terms` |
+| `nested` | 数组条目内聚 | 精确筛选（数组元素） | `nested` 包住 `term`/`terms` |
+
+> ⚠️ **`keyword` + `.text` 子字段**（source 的 `publisher`、evidence 的 `subject`/`original_publish`）是反过来的写法：**父字段是 keyword（精确筛选用它）**，`.text` 才是分词副本（全文检索用）。全文检索必须写 `…text`；筛选用裸父字段。
 
 ### 3.1 公共字段（三类通用）
 
@@ -82,295 +93,93 @@
 | `identity.name` | text (ik_max_word / ik_smart) | 对象名，可搜 |
 | `identity.object_type` | keyword | source/evidence/viewpoint（由索引隐含） |
 | `identity.status` | keyword | FORMAL/PENDING/DISPUTED/REJECTED |
-| `responsibility` | **nested** | 责任链数组（见 §3.2） |
+| `responsibility` | **nested** | 责任链数组（见下） |
 
 **`responsibility`（nested）**：数组、条目内聚，保留 `operation ↔ operator ↔ time` 同条目完整性。子字段：`id`(keyword)、`operation`(keyword)、`operator{type,id,role}`(keyword)、`time`(date)。`changes`/`note`/`operator.name` 未映射 → 仅 `_source` 展示、不索引。
 
 ### 3.2 source（`knowledge_source`）
 
-| 字段 | 类型 | 可搜性 |
+| 字段 | 类型 | 用途 |
 |---|---|---|
-| `presentation.type` | keyword | 过滤 |
-| `presentation.title` | text (ik) | 全文搜 |
-| `presentation.uri` | keyword | 过滤 |
-| `presentation.publisher` | keyword + `fields.text`(ik) | 过滤 / 全文搜 |
-| `presentation.rights` | keyword | 过滤 |
-| `experience.level` / `label` / `confidence_level` | keyword | 过滤 |
+| `presentation.type` | keyword | 精确筛选 |
+| `presentation.title` | text (ik) | 全文检索 |
+| `presentation.uri` | keyword | 精确筛选 |
+| `presentation.publisher` | **keyword** + `fields.text`(ik) | **裸字段精确筛选（API 参数 `publisher`）/ `.text` 全文检索** |
+| `presentation.rights` | keyword | 精确筛选 |
+| `experience.level` / `label` / `confidence_level` | keyword | 精确筛选 |
 
 > 未映射（仅 `_source` 展示）：`presentation.summary/notes`、`experience.level_reason/confidence_reason`、`lifecycle`。
 
 ### 3.3 evidence（`knowledge_evidence`）
 
-| 字段 | 类型 | 可搜性 |
+| 字段 | 类型 | 用途 |
 |---|---|---|
-| `presentation.subject` | keyword + `fields.text`(ik) | 过滤 / 全文搜 |
-| `presentation.type` | keyword | 过滤 |
-| `presentation.source_type` | keyword | 过滤 |
-| `presentation.industry` | keyword | 过滤 |
-| `presentation.indicator` | text (ik) | 全文搜 |
-| `presentation.value` | text (ik) | 全文搜（核心） |
-| `presentation.period` | text(standard) + `fields.keyword` | 精确过滤用 `.keyword` |
-| `presentation.region` / `unit` | keyword | 过滤 |
+| `presentation.subject` | **keyword** + `fields.text`(ik) | 裸字段精确筛选 / `.text` 全文检索 |
+| `presentation.type` | keyword | 精确筛选 |
+| `presentation.source_type` | keyword | 精确筛选 |
+| `presentation.industry` | keyword | 精确筛选 |
+| `presentation.indicator` | text (ik) | 全文检索 |
+| `presentation.value` | text (ik) | 全文检索（核心） |
+| `presentation.period` | text(standard) + `fields.keyword` | 精确筛选用 `.keyword` |
+| `presentation.region` / `unit` | keyword | 精确筛选 |
 | `reasoning.source_ids` | keyword | 关联（terms） |
-| `experience.confidence_level` | keyword | 过滤 |
-| `experience.original_publish` | keyword + `fields.text`(ik) | 过滤 / 全文搜 |
+| `experience.confidence_level` | keyword | 精确筛选 |
+| `experience.original_publish` | **keyword** + `fields.text`(ik) | **裸字段精确筛选（API 参数 `publisher`）/ `.text` 全文检索** |
 
 > 未映射（仅 `_source` 展示）：`presentation.raw_texts/notes`、`experience.confidence_reason`、`lifecycle`。
 
 ### 3.4 viewpoint（`knowledge_viewpoint`）
 
-| 字段 | 类型 | 可搜性 |
+| 字段 | 类型 | 用途 |
 |---|---|---|
-| `presentation.name` | text (ik) | 全文搜 |
-| `presentation.type` | keyword | 过滤 |
+| `presentation.name` | text (ik) | 全文检索 |
+| `presentation.type` | keyword | 精确筛选 |
 | `reasoning.steps` | **nested** | 见下 |
 | `reasoning.steps.source_ids` / `evidence_ids` | keyword | 关联（nested terms） |
-| `experience.name` | text (ik) | 全文搜 |
-| `experience.applicable_scenario` / `claim_type` / `cross_validation_mode` | keyword | 过滤 |
+| `experience.name` | text (ik) | 全文检索 |
+| `experience.applicable_scenario` / `claim_type` / `cross_validation_mode` | keyword | 精确筛选 |
 
 > `reasoning.steps` 是嵌套数组（每步含 `source_ids/evidence_ids`），用 `nested` 保每步独立；`steps[].to`、`presentation.content/explanation`、`experience.content` 等未映射 → 仅 `_source` 展示。
+> **viewpoint 没有"来源/出版方"字段**——这是 `publisher` 对 viewpoint 采用严格语义（直接不出结果）的原因。
 
 ---
 
-## 4. 同步（Mongo ⇒ ES）
+## 4. 搜索 API
 
-> 📦 **本节已归档**：同步层代码 `app/sync` 已移出项目，归档于 `..\9.8-sync-archive\app-sync\`（git 历史保留至提交 `90d9058`）。
-> 因此**本节以及 §7、§8 中出现的所有 `python -m app.sync …` 命令，在当前项目里都已不可用**（报 `No module named app.sync`）；
-> 顶层 `ingest.py` / `full_sync.py` 已回滚为最初自带连接与常量的版本（两者与 `app/sync` 无关，可独立运行）。
-> 数据现状已冻结：project 1 为 **24/349/24**，Mongo 与 ES 的 `_id` 集合逐类型一致，**检索不依赖本节的任何命令**。
-> 以下内容保留为历史设计说明与当时的实测记录。
+> 核心形态：**三索引**、**无 `text` 汇总字段**（已撤回），按类型 `multi_match`；`reasoning.steps` 与 `responsibility` 为 **`nested`**；`_id` 为 **ObjectId 字符串**。
 
-两个入口等价、接受同一套子命令与开关（`--help` 里是同一张表）：
-
-```bash
-python -m app.sync <子命令>      # 主入口
-python full_sync.py <子命令>     # 兼容旧入口（同一份代码，行为完全一致）
-```
-
-| 子命令 | 开关 | 作用 |
-|---|---|---|
-| `init` | — | 按 `mapping/*.json` 建**缺失**的索引；已存在的一律跳过，绝不动索引定义 |
-| `full` | `[--recreate] [--dry-run]` | 全量灌 Mongo ⇒ ES；默认不动已有索引，`--recreate` 才删索引重建 |
-| `recreate` | `[--dry-run]` | 等价 `full --recreate`：drop → create → 全量重灌 |
-| `one` | `--type --oirf-id [--project-id]` | 写库后单条同步；对象已从 Mongo 删除则从 ES 删除 |
-| `reconcile` | `[--type] [--fix]` | 对账 ES ↔ Mongo；默认只报告，`--fix` 才删孤儿 + 重灌缺失 |
-| `load` | `[--type] [--dry-run] [--prune] [--reset] [--yes] [--no-sync]` | 按 `reasoning/*.json` 增量导入 Mongo（默认只增改、不删），变动顺手推 ES |
-
-> **前置条件**：下面所有命令都要在**仓库根目录**执行（换目录会报 `ModuleNotFoundError: No module named 'app'`）；
-> Windows PowerShell 下先执行 `$env:PYTHONIOENCODING='utf-8'`，否则中文输出会乱码（`[ɾ��]`、`[�ع�]`）——
-> 那只是控制台编码问题，不是命令失败。
-
-### 4.1 四个基本任务（照抄即可）
-
-当前实测数据：project 1，Mongo `sources 24 / evidence 349 / viewpoints 24`，ES 三索引同值（共 397）。
-
-**① 重建索引 + 全量灌**
-
-```bash
-python -m app.sync recreate
-```
-输出（逐索引列出三段动作，末行是**实际入 ES 条数**）：
-```
-[删除] knowledge_source
-[创建] knowledge_source <- mapping/source_mapping.json
-[删除] knowledge_evidence
-[创建] knowledge_evidence <- mapping/evidence_mapping.json
-[删除] knowledge_viewpoint
-[创建] knowledge_viewpoint <- mapping/viewpoint_mapping.json
-[重灌] knowledge_source：实际入 ES 24 条
-[重灌] knowledge_evidence：实际入 ES 349 条
-[重灌] knowledge_viewpoint：实际入 ES 24 条
-[完成] 实际入 ES 397 条（Mongo 权威数据未改动）
-```
-
-日常只灌数据、**不动索引定义**（最常用）：
-
-```bash
-python -m app.sync full
-```
-输出：
-```
-[跳过] knowledge_source 已存在，索引定义未改动
-[跳过] knowledge_evidence 已存在，索引定义未改动
-[跳过] knowledge_viewpoint 已存在，索引定义未改动
-[重灌] knowledge_source：实际入 ES 24 条
-[重灌] knowledge_evidence：实际入 ES 349 条
-[重灌] knowledge_viewpoint：实际入 ES 24 条
-[完成] 实际入 ES 397 条（Mongo 权威数据未改动）
-```
-
-先看会发生什么、不动手：
-
-```bash
-python -m app.sync full --recreate --dry-run
-```
-输出（三个索引各一行，末行是预演汇总）：
-```
-[计划] knowledge_source：将删除（当前存在） → 将按 mapping/source_mapping.json 创建 → 将全量重灌（预计写入 24 条，按 Mongo 现有条数）
-[计划] knowledge_evidence：将删除（当前存在） → 将按 mapping/evidence_mapping.json 创建 → 将全量重灌（预计写入 349 条，按 Mongo 现有条数）
-[计划] knowledge_viewpoint：将删除（当前存在） → 将按 mapping/viewpoint_mapping.json 创建 → 将全量重灌（预计写入 24 条，按 Mongo 现有条数）
-[预演] 未执行任何删除/创建/写入
-```
-
-**② 改一条数据并立即同步（不重灌全量）**
-
-```bash
-# 2.1 改一条：给 evidence:E001 的 identity.name 加后缀（第 2.4 步会还原）
-python -c "from app.db import get_db, close; db = get_db(); d = db.evidence.find_one({'project_id': 1, 'oirf_id': 'evidence:E001'}); old = d['identity']['name']; d['identity']['name'] = old + ' 【已改】'; db.evidence.replace_one({'_id': d['_id']}, d); print('旧值:', old); close()"
-
-# 2.2 只同步这一条
-python -m app.sync one --type evidence --oirf-id evidence:E001
-```
-输出：
-```
-旧值: 空间计算设备包含AR、VR、MR终端
-[已同步] knowledge_evidence _id=<ObjectId 字符串> <- Mongo evidence project_id=1 evidence:E001
-```
-
-```bash
-# 2.3 立刻查 ES：应已是新值
-python -c "from app.db import get_es, close; es = get_es(); r = es.search(index='knowledge_evidence', query={'term': {'oirf_id': 'evidence:E001'}}, size=1); print(r['hits']['hits'][0]['_source']['identity']['name']); close()"
-```
-输出：
-```
-空间计算设备包含AR、VR、MR终端 【已改】
-```
-
-```bash
-# 2.4 还原（去掉后缀，再同步一次）
-python -c "from app.db import get_db, close; db = get_db(); d = db.evidence.find_one({'project_id': 1, 'oirf_id': 'evidence:E001'}); d['identity']['name'] = d['identity']['name'].replace(' 【已改】', ''); db.evidence.replace_one({'_id': d['_id']}, d); close()"
-python -m app.sync one --type evidence --oirf-id evidence:E001
-```
-
-> 上面这些一行命令刻意**只用单引号 + 不含 `$`**，所以 bash 与 PowerShell 都能直接粘贴执行（`$set` 之类的写法会在两个 shell 里被当成变量插值而失效）。
-
-> - `one` 内部会 `refresh` 该索引，所以**紧接着查就是新值**，不用等全量、不用重启服务。
-> - 对象在 Mongo 里**被删掉**后跑同一个命令，输出变成 `[已删除] …（Mongo 已无该对象）`，ES 中该 `_id` 随之消失（`delete` 命中 404 不报错）；两边都没有时输出 `[无需动作]`，退出码仍为 0。
-> - 写库代码里要在写完后立刻生效，就调用同一个函数：`from app.sync.one import sync_one; sync_one(project_id, oirf_id, "evidence")`。
-
-**③ 对账（怀疑两边不一致时）**
-
-```bash
-python -m app.sync reconcile
-```
-一致时：
-```
-[knowledge_source] Mongo 24 条 / ES 24 条 —— 零漂移
-[knowledge_evidence] Mongo 349 条 / ES 349 条 —— 零漂移
-[knowledge_viewpoint] Mongo 24 条 / ES 24 条 —— 零漂移
-[结论] 零漂移 —— 两边 _id 集合逐类型完全一致
-```
-有漂移时指名列出 `_id` 并给两边计数：
-```
-[knowledge_evidence] Mongo 349 条 / ES 350 条
-  孤儿（ES 有 Mongo 无） 1 条：
-    6a9fbd1b270db0c081be6782
-[结论] 漂移 1 处（孤儿 1 / 缺失 0）
-       本次只报告、未改任何数据；要清理：python -m app.sync reconcile --fix
-```
-`--fix` 才会动 ES（删孤儿 + 重灌缺失），修完**自动复核**：
-
-```bash
-python -m app.sync reconcile --fix
-```
-输出（开头还会重印一遍对账明细，末尾两行是修复与复核）：
-```
-[修复] 已删除孤儿 1 条 / 已重灌缺失 0 条
-[复核] 修复后再对账：漂移 0 处（已归零）
-```
-
-> `reconcile` 报告模式**永远不写 ES**；`--fix` 是唯一会改 ES 的路径。单类型对账用 `--type evidence`。
-
-**④ 只看索引生命周期**
-
-```bash
-python -m app.sync init      # 只建缺失的索引；已存在的输出 [跳过] … 索引定义未改动
-```
-
-### 4.2 种子导入 `load`（`reasoning/*.json` ⇒ Mongo）
-
-日常用法（**安全，不需要 `--yes`**）：
-
-```bash
-python -m app.sync load --dry-run    # 先看：将新增 / 更新 / 未变各几条
-python -m app.sync load              # 落库：只增改、默认不删；变动那几条顺手批量推给 ES
-```
-输出（当前数据本来就一致时）：
-```
-[种子] reasoning/*.json 397 条 / Mongo 现状 397 条
-        sources: 种子 24、Mongo 24 → 新增 0、更新 0、未变 24
-        evidence: 种子 349、Mongo 349 → 新增 0、更新 0、未变 349
-        viewpoints: 种子 24、Mongo 24 → 新增 0、更新 0、未变 24
-[计划] 新增 0 / 更新 0 / 未变 397（默认不删；要删加 --prune）
-[落库] sources：无需改动
-...
-[完成] Mongo 24/349/24 条；ES 已同步本次变动
-       核对两边：python -m app.sync reconcile
-```
-
-- 按 `(project_id, oirf_id)` **增量 upsert**：已存在的原地更新（`_id` 不变），缺的才插入
-- **内容未变的文档不写库、也不推 ES** ⇒ 可反复跑（上面这次实测 1.6 秒、ES 零写入）
-- 只比**种子声明的字段**：Mongo 侧的额外字段不会被比较、也不会被删或被覆盖
-- 只把**变动过的那几条**批量推给 ES（实测 397 条：批量 0.24s vs 逐条 26.85s，快 112 倍）
-  ⇒ **导入完不需要再跑 `recreate`**
-
-两个开关：
-
-```bash
-python -m app.sync load --prune       # 额外删掉 Mongo 里"种子已没有"的文档（ES 同步删）
-python -m app.sync load --reset --yes # 旧的清空重灌：drop Mongo 三集合 + 重灌 + 重建重灌 ES
-```
-> 不加 `--prune` 时，报告会明确指出「Mongo 另有 N 条种子没有的，未处理」，不会闷声不管。
-> `--reset` 会**重建 ObjectId**，所以必须跟 ES 一起重建 —— 工具已自动做掉（drop 三索引 → 按 mapping 建 → 全量重灌），跑完两边零漂移。
-
-**旧的 `ingest.py` 仍可用**，它就是 `load --reset` 的兼容包装（`--dry-run` 看计划、`--yes` 才执行、裸跑拒绝）：
-
-```bash
-python ingest.py --dry-run    # 只报「将清空哪些集合（含现有条数）/ 将写入多少条」，不动库
-python ingest.py              # 不带确认 → 拒绝执行并说明会 drop 谁、怎么确认（退出码 1）
-python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
-```
-
-### 4.3 实现与口径
-
-- 代码：`app/sync/{admin,full,one,reconcile,load,cli}.py`。常量、连接、BSON 转换分别只来自 `app/config.py`、`app/db.py`、`app/serializers.to_jsonable`（脚本不再自带副本）。
-- ES 文档 `_id = str(Mongo _id)`（ObjectId 字符串），全局唯一 ⇒ 全量灌天然幂等 upsert，重跑不递增。
-- 计数取自 `bulk` **返回值**（真实入库数），不是 Mongo 的 `count_documents`；失败时打印失败条数与原因，并以退出码 1 结束。
-- 写后同步与对账修复都会 `refresh` 相关索引，因此命令报出的数字与随后查 `_count` 一致。
-
----
-
-## 5. 搜索 API（设计已按最终 mapping 更新）
-
-> 核心差异：**三索引**、**无 `text` 汇总字段**（撤回了），改为按类型 `multi_match`；`reasoning.steps` 与 `responsibility` 为 **`nested`**；`_id` 为 **ObjectId 字符串**。
-
-### 5.0 本次锁定的接口约定（定稿）
+### 4.0 本次锁定的接口约定（定稿）
 
 | 约定 | 值 | 说明 |
 |---|---|---|
 | **端点形态** | **统一 `POST /api/v1/search`** + `type` 路由（含 `all`） | 不拆三个端点；`type` 决定路由到哪个索引 |
-| **交付范围** | **先做 §5.1 search + §5.2 objects**；`/associations` 下一轮 | 先跑通"搜索 → 点进详情"主链路 |
-| **项目范围** | **缺省 = 全项目（全局检索）**；`project_id` 单项目；`project_ids` 多项目并集（两者互斥，同传 400） | 多项目是常态需求，默认全局更符合"先搜到、再定位"；跨项目时 `oirf_id` 重号 ⇒ **定位一律用 `id`（ObjectId）**，详情回传 `project_id` |
+| **交付范围** | **先做 §4.1 search + §4.2 objects**；`/associations` 下一轮 | 先跑通"搜索 → 点进详情"主链路 |
+| **项目范围** | **缺省 = 全项目（全局检索）**；`project_id` 传单值 = 单项目、传数组 = 多项目并集；**传 `[]` 等同不传** | 多项目是常态需求，默认全局更符合"先搜到、再定位"；跨项目时 `oirf_id` 重号 ⇒ **定位一律用 `id`（ObjectId）**，详情回传 `project_id` |
+| **筛选两族** | **集合限定族**（`source_ids`/`evidence_ids`/`publisher`）：类型不适用则**直接不查**；**字段取值族**（`period`/`region`/`confidence_level` 等）：类型无此字段则**忽略该条件、照常返回** | 详见 §4.1.2 |
 
-### 5.1 统一搜索 `POST /api/v1/search`
+### 4.1 统一搜索 `POST /api/v1/search`
 
-按 `type` 路由到对应索引；`type=all` 走 multi-index（每索引各自建查询再合并）。**项目范围缺省不设限（= 全项目）**：`project_id` 限定单项目、`project_ids` 取多项目并集（两者互斥，同传报 400；`project_ids` 空数组报 400）。三种情况的差别只在生成的过滤子句——全局**不加** `project_id` 子句，单项目 `term`，多项目 `terms`（`project_id` 是 keyword，取值统一字符串化）。
+按 `type` 路由到对应索引；`type=all` 时对三个索引**各自建查询再按归一化分合并**。项目范围缺省不设限（= 全项目）：`project_id` 传单值 → `terms` 单元素、传数组 → `terms` 多值、不传或传 `[]` → **不加子句**（`project_id` 是 keyword，取值统一字符串化）。
 
 **请求体**
 
 ```jsonc
 {
-  "q": "空间计算",                    // 全文检索词；空=仅过滤
+  "q": "空间计算",                    // 全文检索词；空=仅筛选
   "type": "evidence",                 // source | evidence | viewpoint | all
   "mode": "or",                       // or(默认) | and | phrase —— 全文匹配松紧；只改召回不改权重口径；q 为空时无意义
-  "project_id": 1,                    // 可选：限定单个项目；不传 = 全项目（全局检索）
-  // "project_ids": [1, 2],           // 可选：多项目并集；与 project_id 互斥（二选一，同传 400）
+  "project_id": 1,                    // 可选：单值=单项目 / 数组=多项目并集 / 不传或 [] = 全项目
   "status": "PENDING",
+  "presentation_type": "历史值",
   "period": "2024",                   // 命中 presentation.period.keyword
   "region": "全球",
   "industry": "空间计算设备",
   "source_type": "secondary_public",
+  "publisher": "澎湃新闻",             // 来源：source→presentation.publisher / evidence→experience.original_publish（keyword 整串）
   "confidence_level": "medium",
+  "claim_type": "态势判断",
+  "applicable_scenario": "…",
+  "cross_validation_mode": "…",
   "responsible_role": "analyst",      // nested：responsibility.operator.role
   "evidence_ids": ["evidence:E001"],  // viewpoint 特有：nested reasoning.steps.evidence_ids
   "source_ids": ["source:S001"],      // terms / nested
@@ -383,8 +192,8 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 **同类全文检索字段（`multi_match`，`type:best_fields`，`analyzer: ik_smart`），带字段权重（`field^boost`）**
 
 > 权重含义：**只影响相关性排序，不影响召回**——某字段命中与否都会进结果，只是权重越高排越前。
-> 已用真实数据实测校准（见 §6 末）。
-> ⚠️ `presentation.subject` / `presentation.publisher` 是 **keyword + `.text` 子字段**：全文检索必须用 `subject.text` / `publisher.text`（裸字段只能精确匹配、不分词）。
+> 已用真实数据实测校准（见 §5 末）。
+> ⚠️ `presentation.subject` / `presentation.publisher` / `experience.original_publish` 是 **keyword + `.text` 子字段**：全文检索必须用 `.text`（裸字段只能精确匹配、不分词）。
 
 - **source**（`identity.name` 已=出版方+标题，最完整干净；title 带域名垃圾后缀）
   ```
@@ -398,7 +207,9 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
   presentation.subject.text^2
   presentation.indicator^2
   presentation.value^2
+  experience.original_publish.text^2   # 来源名，^2 与 subject 同级
   ```
+  > **`original_publish.text` 是"模糊找来源"的入口**：它让 `q=澎湃` 能命中那 1 条来自澎湃新闻的材料（加之前为 0）。但它**只是模糊**——`q=澎湃新闻` 会被 ik 切成「澎湃」+「新闻」而 OR 匹配出 **15 条**（9 条腾讯新闻被带入）。要"只看某来源"必须用 `publisher` 参数（§4.1.2）。
 - **viewpoint**（`presentation.name` 与 `identity.name` 在数据中一字不差（重复内容）；`experience.name` 是判断/角度标签：态势判断/归因/格局/成本结构）
   ```
   presentation.name^3
@@ -407,52 +218,49 @@ python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
   ```
 - **`type=all`**：对三个索引分别按各自的 multi_match 后合并，**按 max-score 归一化分**（`score/max_score` → 0~1）排序——**不能直接比原始 BM25 `_score`**：不同索引规模 `N` 使 idf 标尺不同（evidence 349 条 vs source/viewpoint 24 条，idf 差 ~2 倍；`_explain` 实测 evidence identity.name idf≈4.15 vs source≈1.97，而 boost 同为 ^3、tf 同为 1），字段/权重拓扑亦异。归一化后各类型同标尺、可比排名；原始分另存 `raw_score` 供调试。调 BM25 `k1/b` 治不了（只管 tf 饱和/长度归一，不碰 idf）。
 
-### 5.1.1 精确筛选（filter）实现
+#### 4.1.1 精确筛选（filter）实现
 
 **核心机制**：精确匹配用 `term`（单值）/`terms`（多值），**打在 keyword 字段**上（`term` 对 text 字段基本失效）。全部子句进 `bool.filter`——**不参与打分**（不干扰相关度排序）、**ES 自动缓存**（多条件下重复查更快）。
 
-**可用精确筛选字段（按类型，自 mapping）**
+> ⚠️ **数组参数必须用 `terms`**：`term` 会对入参做 `str()`，把 `["知乎","知乎专栏"]` 变成字符串 `"['知乎', '知乎专栏']"` 去精确匹配 → **静默 0 条**。`_terms()` 同时接受标量与数组，是唯一正确入口。
 
-| 类型 | keyword 精确字段 |
-|---|---|
-| source | `identity.status`、`presentation.type/uri/rights/publisher`、`experience.level/label/confidence_level` |
-| evidence | `identity.status`、`presentation.type/source_type/industry/region/unit/subject`、`presentation.period.keyword`、`reasoning.source_ids`、`experience.confidence_level` |
-| viewpoint | `identity.status`、`presentation.type`、`experience.applicable_scenario/claim_type/cross_validation_mode`、`reasoning.steps.source_ids/evidence_ids`(nested) |
-| 共性 | `project_id`、`identity.object_type`（索引已隐含） |
-
-> ⚠️ `subject`/`publisher` 过滤用**裸 keyword 字段**（全文检索才用 `.text`）。`period` 过滤必须用 **`presentation.period.keyword`**（原字段是 text+standard，不能直接 term）。
-
-**入参 → filter 子句（类型感知）**。关键歧义：`source_ids` 在 evidence 里是**扁平 keyword**（`reasoning.source_ids`）、在 viewpoint 里是**嵌套**（`reasoning.steps.source_ids`）——同一入参按 `type` 映射成不同查询。
+**入参 → filter 子句（类型感知）**。关键歧义：`source_ids` 在 evidence 里是**扁平 keyword**（`reasoning.source_ids`）、在 viewpoint 里是**嵌套**（`reasoning.steps.source_ids`）；`publisher` 在两个类型里映射到**不同字段名**（`presentation.publisher` vs `experience.original_publish`）——同一入参按 `type` 映射成不同查询。
 
 ```python
 def build_filters(type_, p):
     f = []
-    if p.get('project_ids'):              f.append(terms('project_id', p['project_ids']))    # 多项目并集
-    elif p.get('project_id') is not None: f.append(term('project_id', p['project_id']))      # 单项目；都不传 = 全项目
-    if p.get('status'):                 f.append(term('identity.status', p['status']))
-    if type_ in ('evidence', 'all'):                        # evidence 专属
+    pid = p.get('project_id')
+    if pid not in (None, []):                                   # 不传 / [] = 全项目
+        f.append(terms('project_id', pid))                      # 单值 → terms 单元素，多值 → 并集
+    if p.get('status'):            f.append(term('identity.status', p['status']))
+    if p.get('presentation_type'): f.append(term('presentation.type', p['presentation_type']))
+    if p.get('publisher') and type_ in PUBLISHER_FIELD:          # 来源：两类型字段名不同
+        f.append(terms(PUBLISHER_FIELD[type_], p['publisher']))
+    if type_ == 'evidence':                                      # evidence 专属（无此字段的类型忽略这些参数）
         if p.get('period'):      f.append(term('presentation.period.keyword', p['period']))
         if p.get('region'):      f.append(term('presentation.region', p['region']))
         if p.get('industry'):    f.append(term('presentation.industry', p['industry']))
         if p.get('source_type'): f.append(terms('presentation.source_type', p['source_type']))
-    if type_ in ('source', 'evidence'):                     # 置信度：仅这两类经验层有该字段（viewpoint 用 cross_validation_mode）
-        if p.get('confidence_level'): f.append(term('experience.confidence_level', p['confidence_level']))
-    if type_ in ('viewpoint', 'all'):                       # viewpoint 专属
-        if p.get('claim_type'):  f.append(term('experience.claim_type', p['claim_type']))
+    if p.get('confidence_level') and type_ in ('source', 'evidence'):
+        f.append(term('experience.confidence_level', p['confidence_level']))
+    if type_ == 'viewpoint':                                     # viewpoint 专属
+        if p.get('claim_type'):             f.append(term('experience.claim_type', p['claim_type']))
+        if p.get('applicable_scenario'):    f.append(term('experience.applicable_scenario', p['applicable_scenario']))
+        if p.get('cross_validation_mode'):  f.append(term('experience.cross_validation_mode', p['cross_validation_mode']))
     # —— 关联（类型感知）——
-    if p.get('source_ids'):
-        if type_ == 'evidence':    f.append(terms('reasoning.source_ids', p['source_ids']))                     # 扁平
-        elif type_ == 'viewpoint': f.append(nested('reasoning.steps', terms('reasoning.steps.source_ids', p['source_ids'])))  # 嵌套
-    if p.get('evidence_ids') and type_ == 'viewpoint':
-        f.append(nested('reasoning.steps', terms('reasoning.steps.evidence_ids', p['evidence_ids'])))
+    if p.get('source_ids') and type_ == 'evidence':               # 扁平
+        f.append(terms('reasoning.source_ids', p['source_ids']))
+    if type_ == 'viewpoint':                                      # 嵌套：同一步内 AND
+        steps = []
+        if p.get('source_ids'):   steps.append(terms('reasoning.steps.source_ids', p['source_ids']))
+        if p.get('evidence_ids'): steps.append(terms('reasoning.steps.evidence_ids', p['evidence_ids']))
+        if steps: f.append(nested('reasoning.steps', {'bool': {'filter': steps}}))
     if p.get('responsible_role'):
         f.append(nested('responsibility', term('responsibility.operator.role', p['responsible_role'])))
     return f
 ```
 
 **`type=all` 的正确处理**：不能用单个多索引查询再带 `industry` 这类 evidence 专属条件——source/viewpoint 索引没这字段，`term` 匹配 0，整批被过滤、丢掉其他类型（错误）。正解：对三个索引**各自建查询、结果按 score 合并**，每个索引只加其字段表里有的子句。
-
-> **关联参数的适用类型**（`source_ids`/`evidence_ids` 是"引用/溯源"关系）：`source_ids` 仅适用 evidence（扁平 `reasoning.source_ids`）与 viewpoint（nested `reasoning.steps.source_ids`）；`evidence_ids` 仅适用 viewpoint。`type=all` 时**只查询适用类型**，不适用的类型直接不查（而非无过滤全量混入）；单类型显式请求若带不适用关联过滤 → 返回空结果。`responsible_role` 三类通用，不裁剪。
 
 ```python
 def search(p):
@@ -464,35 +272,55 @@ def search(p):
     return es.search(index='knowledge_%s' % p['type'], **build_query(p['type'], p))
 ```
 
-**示例**：入参 `{type:"all", q:"空间计算", project_id:1, industry:"空间计算设备", status:"PENDING"}` → evidence 索引：
-```jsonc
-{ "query": { "bool": { "must": [
-    { "multi_match": { "query": "空间计算", "analyzer": "ik_smart", "type": "best_fields",
-        "fields": ["identity.name^3", "presentation.subject.text^2", "presentation.indicator^2", "presentation.value^2"] } }
-  ], "filter": [
-    { "term": { "project_id": 1 } },
-    { "term": { "identity.status": "PENDING" } },
-    { "term": { "presentation.industry": "空间计算设备" } } ] } } }
+#### 4.1.2 两族筛选语义（重要）
+
+"类型不适用"有两种正确处理，取决于参数限定的是什么：
+
+| 族 | 参数 | 不适用的类型 | 实现 |
+|---|---|---|---|
+| **集合限定族** | `source_ids`、`evidence_ids`、`publisher` | **直接不查该类型**（结果里不出现） | `_applicable_types()` 与类型表取交集 |
+| **字段取值族** | `period`、`region`、`industry`、`source_type`、`confidence_level`、`claim_type`、`applicable_scenario`、`cross_validation_mode` | **忽略该条件、照常返回** | 只在对应 `type_` 分支里加子句 |
+
+理由：前者限定的是"**哪些对象算数**"（没有该属性的对象拿不出结果，返回它等于没筛）；后者限定的是"**某类型的字段取值**"（对没有该字段的类型没有约束力）。
+
+```python
+ASSOC_SOURCE_IDS_TYPES   = ('evidence', 'viewpoint')
+ASSOC_EVIDENCE_IDS_TYPES = ('viewpoint',)
+PUBLISHER_FIELD          = {'source': 'presentation.publisher',
+                            'evidence': 'experience.original_publish'}
+
+def _applicable_types(p, base=('source', 'evidence', 'viewpoint')):
+    types = set(base)
+    if p.get('source_ids'):   types &= set(ASSOC_SOURCE_IDS_TYPES)
+    if p.get('evidence_ids'): types &= set(ASSOC_EVIDENCE_IDS_TYPES)
+    if p.get('publisher'):    types &= set(PUBLISHER_FIELD)
+    return types
 ```
-source/viewpoint 索引**不带** `industry` 子句。
 
-**两个必知坑**：① `period` 有区间值（如 `2023-2027`），`period=2024` 的 term 精确匹配会漏区间——后续加归一化年份字段，当前按精确串匹配并标注。② `terms` 传参：`source_type`/`source_ids`/`evidence_ids` 支持列表（多值），单值亦可。
+- `publisher` 归**集合限定族**：viewpoint 没有来源字段 → `type=all&publisher=…` 时 viewpoint 直接出局。
+- 单类型显式请求若带不适用参数 → 返回 **0 条**（如 `type=source&source_ids=[…]`、`type=viewpoint&publisher=…`）。
+- 实测（project 1，24/349/24）：`type=viewpoint&publisher=澎湃新闻` → 0；`type=all&region=火星` → 48（evidence 筛空，source 24 + viewpoint 24 照回）；`type=all&source_ids=['source:S001']` → 179；`type=viewpoint&source_ids=[…]&evidence_ids=[…]` → 1（同一步内 AND）。
 
-**查询构造其他要点**
-- `must`：`q` 存在时 `multi_match`（字段用加权字段、`type:best_fields`、`analyzer: ik_smart`）。
-- `nested`：凡涉及 `responsibility.*` 或（viewpoint）`reasoning.steps.*` → 用 `nested` 查询包住。
-- **`inner_hits`（保留 nested 的原因）**：用户期望"看到命中的那一条"（`responsibility` 哪条 / `reasoning.steps` 哪步）。当请求按 nested 子字段过滤（`responsible_role`→`responsibility`、`source_ids`/`evidence_ids`→`reasoning.steps`）时，nested 查询加 `"inner_hits": {"_source": true}`，响应命中里带 `inner_hits.<path>` 返回命中的那个数组元素（含 `_source`，如步骤的 `to`/`operator`）。**这一步只有 `nested` 能做**，平铺 `object` 无法返回命中元素，故这两处**保留 nested**。
-- 高亮：`pre_tags/post_tags = <em>...</em>`，字段取所属索引 multi_match 的字段。
-- **聚合/过滤字段（keyword 子字段）**：`presentation.period.keyword`、`presentation.region`、`presentation.industry`、`presentation.source_type`、`experience.confidence_level`、`identity.status` 等——可对 `filter` 精确筛选，也预留给独立聚合端点；**搜索响应不带 facets**（定稿：纯粹结果）。
+**`publisher` 实测锚点**
 
-**响应体（定稿：轻卡片 + score，不带 facets）**
+| 请求 | 结果 | 说明 |
+|---|---|---|
+| `publisher=澎湃新闻` | **2** | source 1 + evidence 1 |
+| `q=空间计算` + `publisher=澎湃新闻` | **2** | 内容 AND 来源（`multi_match` 做不到，必须靠 filter） |
+| `publisher=Wind` | **35** | source 1 + evidence 34 |
+| `publisher=知乎` / `publisher=知乎专栏` | **5** / **19** | 两索引用词不同 |
+| `publisher=["知乎","知乎专栏"]` | **24** | 多选并集（`terms`） |
+| `publisher=澎湃`（不完整值） | **0** | keyword 整串匹配，值必须完整 |
+| `publisher=[]` | **397** | 等同不传（不设限） |
+
+#### 4.1.3 响应体（定稿：轻卡片 + score，不带 facets）
 
 > 每条命中（hit）= **识别键 + 各类可索引（可搜/可筛）字段 + highlight**；**不含未映射长文本**（`presentation.raw_texts/notes/summary/content/explanation`、`experience.*_reason`、`lifecycle`、`responsibility.changes/note/operator.name`）——那些走 `/objects` 回 Mongo 取。规则：**要搜索/要筛选的字段一定带回来；纯展示长文本不占体积。**
 
 ```jsonc
 {
   "total": 15,
-  "page": 1, "size": 20, "took_ms": 8,
+  "page": 1, "size": 20,
   "hits": [
     {
       // 识别键（置顶，方便客户端跳详情/关联）
@@ -500,14 +328,15 @@ source/viewpoint 索引**不带** `industry` 子句。
       "object_type": "evidence",
       "project_id": 1,
       "oirf_id": "evidence:E001",
-      "score": 28.3,                        // 相关度（保留，可显示/按相关度排序/调试）
+      "score": 28.3,                        // 相关度（type=all 时为跨类型归一化分 0~1）
+      "raw_score": 28.3,                    // 该索引原始 BM25 分（调试用）
       // 各类卡片字段（= 索引里能搜/能筛的字段）
       "identity": { "name": "空间计算设备包含AR、VR、MR终端", "object_type": "evidence", "status": "PENDING" },
       "presentation": { "subject": "空间计算设备", "indicator": "设备构成", "value": "AR、VR、MR等终端设备",
                         "period": "2024", "region": "全球" },
       "reasoning": { "source_ids": ["source:S001"] },
-      "experience": { "confidence_level": "medium", "original_publish": "..." },
-      "responsibility": [ { "operation": "create", "operator": { "type": "person", "role": "analyst" }, "time": "..." } ],
+      "experience": { "confidence_level": "medium", "original_publish": "…" },
+      "responsibility": [ { "operation": "create", "operator": { "type": "person", "role": "analyst" }, "time": "…" } ],
       // 命中高亮（把命中的词标出来，前端渲染摘要时用）
       "highlight": {
         "identity.name": ["<em>空间计算</em>设备包含AR、VR、MR终端"],
@@ -519,6 +348,8 @@ source/viewpoint 索引**不带** `industry` 子句。
 ```
 
 > `highlight` 默认开（搜索的"看点"就在这）；`score` 保留做调试/排序。
+> 纯筛选请求（无 `q`）没有 `must` 子句，`score`/`raw_score` 恒为 `0`——正常现象。
+> 高亮字段取自该类型 `WEIGHTS` 去掉 `^boost`，所以新增全文字段（如 `experience.original_publish.text`）会自动进入高亮。
 
 **命中条目 `inner_hits`（按 nested 子字段过滤时附带）**：响应命中里增加 `inner_hits.<path>`，标识是哪一条 `responsibility` / 哪一步 `reasoning.steps` 命中了过滤条件。实测（viewpoint V001，`evidence_ids` 过滤）：
 
@@ -531,28 +362,39 @@ source/viewpoint 索引**不带** `industry` 子句。
   ] } }
 }
 ```
+
 > 这对**关联追踪**（"这条证据被哪一步引用、那一步的推理文本是什么"）特别有用；`to` 等未映射字段在 `_source` 里仍可见（`dynamic:false` 保留）。
 
-### 5.2 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}?project_id=`
+**查询构造其他要点**
+
+- `must`：`q` 存在时 `multi_match`（字段用加权字段、`type:best_fields`、`analyzer: ik_smart`）。
+- `nested`：凡涉及 `responsibility.*` 或（viewpoint）`reasoning.steps.*` → 用 `nested` 查询包住。
+- **`inner_hits`（保留 nested 的原因）**：用户期望"看到命中的那一条"（`responsibility` 哪条 / `reasoning.steps` 哪步）。当请求按 nested 子字段过滤时，nested 查询加 `"inner_hits": {"_source": true}`。**这一步只有 `nested` 能做**，平铺 `object` 无法返回命中元素，故这两处**保留 nested**。
+- 高亮：`pre_tags/post_tags = <em>...</em>`，字段取所属索引 multi_match 的字段。
+- **聚合/过滤字段（keyword）**：`presentation.period.keyword`、`presentation.region`、`presentation.industry`、`presentation.source_type`、`presentation.publisher`、`experience.original_publish`、`experience.confidence_level`、`identity.status` 等——可对 `filter` 精确筛选，也预留给独立聚合端点；**搜索响应不带 facets**（定稿：纯粹结果）。
+- **两个必知坑**：① `period` 有区间值（如 `2023-2027`），`period=2024` 的 term 精确匹配会漏区间——后续加归一化年份字段，当前按精确串匹配并标注。② `terms` 传参：`project_id`/`source_type`/`publisher`/`source_ids`/`evidence_ids` 支持列表（多值），单值亦可。
+
+### 4.2 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}?project_id=`
 
 回 Mongo 取**完整权威字段**（原样 `_source` 不完整处，如完整 `reasoning`、`responsibility`、`identity` 及未映射长文本）。**`project_id` 缺省仍为 `1`**——本端点按 `oirf_id` 定位，而 `oirf_id` 只在一个项目内唯一。因此从**全局/多项目检索**结果点进详情时，**必须把卡片里的 `project_id` 传回来**，否则会取到项目 1 的同号对象（静默串号）。
 
-### 5.3 关联图谱 `GET /api/v1/associations/{object_type}/{oirf_id}?project_id=`
+### 4.3 关联图谱 `GET /api/v1/associations/{object_type}/{oirf_id}?project_id=`（未做）
 
 以 `oirf_id` 为起点，ES `terms`/`nested` 查关联 + Mongo join：
+
 - **viewpoint V001** → `reasoning.steps.evidence_ids`（nested）→ 其证据 → `reasoning.source_ids` → 材料。
 - 全程**限定 `project_id`**，否则 `evidence:S005` 会串到别的项目。
 
 ---
 
-## 6. 中文分词与检索细节
+## 5. 中文分词与检索细节
 
 - **索引侧** `ik_max_word`（最大切分，召回高）；**查询侧** `ik_smart`（粒度粗，精确）。
 - **召回松紧 `mode`（已实现）**：三种模式共用同一套字段与权重，只改"命中多少词才算命中"——
   `or`（默认）`multi_match` 默认 `operator=or`；`and` 加 `operator: "and"`；`phrase` 用 `multi_match` 的 `type: "phrase"`（等价严格 `match_phrase`）。
-  未知 `mode` 直接报 `ValueError`（不静默退回 `or`）。
+  未知 `mode` 直接报 `ValueError`（不静默退回 `or`），HTTP 层表现为 **422**。
 - 宽松模糊匹配：`fuzziness: "AUTO"` —— **仍未实现**（中文短查询下收益不明，暂不做）。
-- 过滤/聚合一律用 `keyword` 子字段（`term`/`terms`/`aggs`），不参与分析。
+- 过滤/聚合一律用 `keyword` 字段（`term`/`terms`/`aggs`），不参与分析。
 
 > **召回松紧实测（`type=all`，三类合计）**：`空间计算` → or 23 / and 13 / phrase 12；`空间计算设备` → or **73** / and **8** / phrase **8**；
 > `zzz不存在词 空间计算` → or **23**（无关词被静默忽略）/ and **0** / phrase **0**。
@@ -564,11 +406,17 @@ source/viewpoint 索引**不带** `industry` 子句。
 > 《三款头显均采用Pancake光学方案》排前）。故 evidence 采用 name 最高。`viewpoint` 的 `presentation.name` 与
 > `identity.name` 数据中一字不差（重复内容），加权即重复；`experience.name` 是判断/角度标签（态势判断/归因/格局/
 > 成本结构），搜角度词（如「竞争格局」）时须能上位，故给 `^2`。`source` 的 `identity.name` 已是「出版方+标题」，
-> 最完整干净，作最高权重。
+> 最完整干净，作最高权重。evidence 的 `experience.original_publish.text` 与 `subject.text` 同级 `^2`：来源是强信号，
+> 但不该压过内容字段。
+
+> **全文检索 vs 来源筛选（为什么不靠 `q` 找来源）**：`q` 打在分词字段上是 OR 匹配，用来找"来源"既漏又滥——
+> evidence 的 349 条材料里，用来源名做 `q` 只能召回 **26 条**（Wind 34 条、知乎专栏 19 条、LEDinside 16 条等
+> **13 个来源完全搜不到**），同时多出 **326 条**假阳性（`q=IDC中国高级分析师赵思泉` → 40 条）。
+> 所以来源有两条独立通路：`q`（模糊，宽）与 `publisher`（精确，严），二者不冲突且可叠加。
 
 ---
 
-## 7. 环境与现状
+## 6. 环境与现状
 
 | 组件 | 容器 / 镜像（以 `docker ps` 为准） | 端口 | 现状（实测） |
 |---|---|---|---|
@@ -577,37 +425,29 @@ source/viewpoint 索引**不带** `industry` 子句。
 | Kibana | `kibana`（kibana:9.5.3） | 5601 | Search 主页需 ES 安全；非必需组件 |
 | 搜索 API | FastAPI（`python run.py`） | 8000 | 非常驻；起来后 `/docs` 是 OpenAPI 页面 |
 
-**数据现状（实测口径）**：project 1；`id = _id = ObjectId`；ES `_id` 与 Mongo `_id` 一一对应，
-`python -m app.sync reconcile` 报**零漂移**（24/349/24）。
+**数据现状（实测口径）**：project 1；`id = _id = ObjectId`；ES `_id` 与 Mongo `_id` 一一对应，逐类型 **24/349/24，零漂移**。
 
-**执行位置与编码**：同步命令都要在**仓库根目录**跑（否则 `ModuleNotFoundError: No module named 'app'`）；
-Windows PowerShell 下建议先 `$env:PYTHONIOENCODING='utf-8'`，否则命令输出的中文会显示成乱码。
+**执行位置与编码**：所有命令都要在**仓库根目录**跑（否则 `ModuleNotFoundError: No module named 'app'`）；
+Windows PowerShell 下建议先 `$env:PYTHONIOENCODING='utf-8'`，否则输出的中文会显示成乱码。
 
-**容器未起时会怎样**：Mongo/ES 都在容器里，未起时同步命令会以连接类异常失败（**不会静默成功**），实测：
+**容器未起时**：Mongo/ES 都在容器里，未起时搜索会以连接类异常失败（**不会静默成功**）：
 
 | 依赖未起 | 异常 |
 |---|---|
 | Elasticsearch | `elasticsearch.ConnectionError` |
 | MongoDB | `pymongo.errors.ServerSelectionTimeoutError`（`No servers found yet`） |
 
-先起容器，再用一条命令确认两边都通且一致：
-
-```bash
-python -m app.sync reconcile      # 期望输出：[结论] 零漂移 —— 两边 _id 集合逐类型完全一致
-```
-
 ---
 
-## 8. 待实现 / 风险
+## 7. 待实现 / 风险
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| **同步层（§4）** | ✅ 已落地并实测 | `init` / `full` / `recreate` / `one` / `reconcile` / `load` 六个子命令；实测：全量连跑两遍均 24/349/24（幂等，且与 ES `_count` 一致）、注入必拒文档时报出失败条数与原因并退出码 1、造孤儿/缺失后 `--fix` 自动复核归零 |
-| **搜索 API（§5）** | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）。**HTTP 路由已回归**（经 `TestClient` 走真路由：字段名与 mapping 全对齐、10 个加权字段均为 `text`、`nested` 关联与 `inner_hits`、翻页一致性、空结果与非法入参 200/422 分支、项目范围全局/单个/多个）；`mode`（§6 召回松紧）已实现；`/associations`（§5.3）**未做** |
-| **增量同步触发形态** | ⏳ 待做 | 当前是「写库后显式调用 `sync_one`」（§4.1 ②）；量大时换 Change Streams（`pymongo.watch()` 长连接 + 批量缓冲 + 重试） |
-| **种子导入（§4.2）** | ✅ 本轮落地并实测 | `load` 增量 upsert：只增改、内容未变则不写库也不推 ES（实测一致时 1.6s、ES 零写入）、只批量推变动过的（397 条 0.24s vs 逐条 26.85s）；`--prune` 显式删且 ES 同步删；`--reset --yes` 保留旧的清空重灌并自动把 ES 一起重建（`ingest.py --yes` 等价） |
-| **`reconcile --fix` 效率** | ⏳ 已知 | 重灌缺失是逐条 `sync_one`（每条 refresh 一次索引）；量大时改为批量写入后统一 refresh |
-| **有漂移时的退出码** | ⏳ 待定 | 现在 `reconcile` 有漂移仍返回 `exit=0`（漂移=发现，不是失败）；若要拿它当 cron 健康检查，需改成非 0 |
+| **搜索 API（§4）** | ✅ 已实现并回归 | `POST /api/v1/search`（§4.1）+ `GET /api/v1/objects`（§4.2）。HTTP 路由经 `TestClient` 走真路由回归：字段名与 mapping 全对齐、加权字段均为 `text`、`nested` 关联与 `inner_hits`、翻页一致性、`publisher` 单值/多选/严格语义、`project_id` 各形态（不传/`[]`/单值/数组/`0`）、空结果与非法入参 200/422 分支。`/associations`（§4.3）**未做** |
+| **两族筛选语义统一** | ⏳ 待定 | 现在"集合限定族"（严格）与"字段取值族"（忽略）并存（§4.1.2）。语义各自成立，但调用方需要记两张表；将来若统一，需连带评估 `region`/`period` 等参数的行为变化 |
 | **`period` 区间过滤** | ⏳ 待做 | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续加归一化年份字段 |
+| **聚合 / facets** | ⏳ 待定 | 搜索响应定稿不带 facets；keyword 字段已就绪，需要"来源取值下拉""地区分布"这类前端能力时再加独立端点（`publisher` 的取值列表就是第一批候选） |
+| **`sort` 排序参数** | ⏳ 待定 | 当前只能按相关度排序，不支持按时间/名称排序 |
+| **深分页** | ⏳ 暂缓 | 当前 `from/size` 够用；量大改用 `search_after`。注意 `type=all` 是"每池取 page×size 再合并切片"，本质有截断 |
+| **`type=all` 头部并列** | ⏳ 已知 | 每池归一化后各自的第一名都是 1.0，并列时顺序取决于稳定排序，客户端不应依赖 |
 | **内容去重** | ⏳ 暂缓 | 内容重叠少；量级上来再考虑 content-key 去重 |
-| **深分页** | ⏳ 暂缓 | 当前 `from/size` 够用；量大改用 `search_after` |

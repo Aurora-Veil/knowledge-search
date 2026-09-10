@@ -3,7 +3,8 @@ from __future__ import annotations
 # full text search weights, grouped by type
 WEIGHTS: dict[str, list[str]] = {
     "source": ["identity.name^3", "presentation.title^2", "presentation.publisher.text^2"],
-    "evidence": ["identity.name^3", "presentation.subject.text^2", "presentation.indicator^2", "presentation.value^2"],
+    "evidence": ["identity.name^3", "presentation.subject.text^2", 
+                 "presentation.indicator^2", "presentation.value^2", "experience.original_publish.text^2"],
     "viewpoint": ["presentation.name^3", "identity.name^2.5", "experience.name^2"],
 }
 
@@ -24,6 +25,12 @@ SOURCE_BY_TYPE: dict[str, list[str]] = {
        "experience.claim_type", "experience.cross_validation_mode", "reasoning.steps", "responsibility"],
 }
 
+# publisher field for each type
+PUBLISHER_FIELD: dict[str, str] = {
+    "source": "presentation.publisher",
+    "evidence": "experience.original_publish",
+}
+
 # association term
 ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
 ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
@@ -33,4 +40,4 @@ ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
 CONFIDENCE_LEVEL_TYPES = ("source", "evidence")
 
 __all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES",
-           "CONFIDENCE_LEVEL_TYPES"]
+           "CONFIDENCE_LEVEL_TYPES", "PUBLISHER_FIELD"]
