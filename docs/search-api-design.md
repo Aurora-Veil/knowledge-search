@@ -12,9 +12,9 @@
 | 数据库存储 | ✅ 已落地、锁定 | 权威库 `knowledge_db`；3 集合 `project_id` 分区；`pptx_store` 已弃用 |
 | id 模型 | ✅ 已落地 | `id = _id = ObjectId`（全局唯一），**无复合键**；`oirf_id` 仅项目内唯一（`source:S001`） |
 | ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §3 |
-| 同步层（索引 / 全量 / 单条 / 对账 / 种子导入） | ✅ 已落地并实测 | `app/sync` 六个子命令，见 §4；实测 project 1 为 24/349/24、对账零漂移 |
+| 同步层（索引 / 全量 / 单条 / 对账 / 种子导入） | 📦 已移出项目 | `app/sync` 归档于 `..\9.8-sync-archive\app-sync\`（代码历史见 §4 横幅）；顶层 `ingest.py`/`full_sync.py` 已回滚为最初版本 |
 | 搜索 API | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`），HTTP 路由未回归；`/associations`（§5.3）未做 |
-| 增量同步触发形态 | ⏳ 待做 | 当前为「写库后显式调用 `sync_one`」（§4.1 ②）；量大再换 Change Streams（§8） |
+| 增量同步触发形态 | ⏸ 随同步层挂起 | 已随 `app/sync` 一起移出项目；库与 ES 均已建好并冻结（24/349/24、零漂移），检索不依赖它。原设计：写库后显式调用 `sync_one`（§4.1 ②），量大再换 Change Streams（§8） |
 
 ---
 
@@ -133,6 +133,12 @@
 ---
 
 ## 4. 同步（Mongo ⇒ ES）
+
+> 📦 **本节已归档**：同步层代码 `app/sync` 已移出项目，归档于 `..\9.8-sync-archive\app-sync\`（git 历史保留至提交 `90d9058`）。
+> 因此**本节以及 §7、§8 中出现的所有 `python -m app.sync …` 命令，在当前项目里都已不可用**（报 `No module named app.sync`）；
+> 顶层 `ingest.py` / `full_sync.py` 已回滚为最初自带连接与常量的版本（两者与 `app/sync` 无关，可独立运行）。
+> 数据现状已冻结：project 1 为 **24/349/24**，Mongo 与 ES 的 `_id` 集合逐类型一致，**检索不依赖本节的任何命令**。
+> 以下内容保留为历史设计说明与当时的实测记录。
 
 两个入口等价、接受同一套子命令与开关（`--help` 里是同一张表）：
 

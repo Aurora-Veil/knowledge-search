@@ -1,6 +1,7 @@
 # full_sync.py —— 用最终 mapping 建三个索引，并从 Mongo(权威库) 全量灌到 ES
 #
 import json
+import os
 from datetime import datetime
 
 from pymongo import MongoClient
