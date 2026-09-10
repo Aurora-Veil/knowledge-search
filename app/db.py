@@ -39,13 +39,11 @@ def close() -> None:
         _mongo = None
 
 
-# 「调用方传了就用它（测试可注入），否则用进程内单例」的判定只此一处。
-# 关键：不能用 `es or get_es()` / `db or get_db()` —— pymongo 的 Database/Collection
-# 显式禁用了真值测试（`Database.__bool__` 会抛 NotImplementedError），
-# 一旦调用方把数据库对象传进来，`or` 就会把整条路径炸掉。
-def resolve_es(es: Elasticsearch | None = None) -> Elasticsearch:
-    return get_es() if es is None else es
-
-
-def resolve_db(db: Any = None) -> Any:
-    return get_db() if db is None else db
+# 暂无调用方（原调用方 app/sync 已移出项目）——先注释保留，需要时取消注释。
+# 注意 `from typing import Any` 目前只为下面这段保留。
+# def resolve_es(es: Elasticsearch | None = None) -> Elasticsearch:
+#     return get_es() if es is None else es
+#
+#
+# def resolve_db(db: Any = None) -> Any:
+#     return get_db() if db is None else db
