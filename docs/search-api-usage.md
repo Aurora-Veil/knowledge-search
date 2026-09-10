@@ -56,6 +56,21 @@ JSON，字段均可选，缺省有默认值。
 
 - **全文检索**：只对每类型的指定字段做加权匹配（见「4. 字段说明」）；`q` 为空时跳过全文。
 - **精确筛选**：`term/terms` 按 keyword 字段精确匹配，不参与排序。
+
+**精确筛选参数的生效类型**（`type=all` 时尤其重要：类型专属参数**只作用于对应类型，其他类型照常返回**）
+
+| 参数 | source | evidence | viewpoint | 说明 |
+|---|:--:|:--:|:--:|---|
+| `status` / `presentation_type` | ✅ | ✅ | ✅ | `identity.status` / `presentation.type` |
+| `period` / `region` / `industry` / `source_type` | — | ✅ | — | evidence 专属；`period` 是**精确串**匹配，区间值会漏（`2023-2027` 匹配不到 `period=2024`） |
+| `confidence_level` | ✅ | ✅ | — | viewpoint 经验层无此字段：对它传该参数**不报错也不筛**（返回全部 viewpoint） |
+| `claim_type` / `applicable_scenario` / `cross_validation_mode` | — | — | ✅ | viewpoint 专属 |
+| `responsible_role` | ✅ | ✅ | ✅ | nested `responsibility`，三类通用 |
+| `source_ids` | ⛔ | ✅ | ✅ | **只查适用类型**：`type=all` 时 source 不参与；单类型 `type=source` 带它 → 返回 0 |
+| `evidence_ids` | ⛔ | ⛔ | ✅ | 同上；`type=evidence` 带它 → 返回 0 |
+| `project_id` / `project_ids` | ✅ | ✅ | ✅ | 见下面「项目范围」 |
+
+> 实测锚点（project 1，24/349/24）：`type=all&region=火星` → 48（evidence 筛空，source 24 + viewpoint 24 照回）；`type=viewpoint&confidence_level=medium` → 24；`type=source&source_ids=[…]` → 0；`type=all&source_ids=["source:S001"]` → 179；`type=viewpoint&source_ids=[…]&evidence_ids=[…]` → 1（同一步内 AND）。
 - **关联（引用溯源）**：`source_ids` / `evidence_ids` 用于"谁引用了它"。仅在**适用类型**上生效——`source_ids` 适用于 evidence、viewpoint；`evidence_ids` 仅适用 viewpoint。`type=all` 时只检索适用类型（不适用的类型直接不出结果，而非全量返回）；单类型请求若带了它不支持的关联参数则返回空结果。`source_ids`+`evidence_ids` 同时传，表示"**同一步**推理同时引用了该材料与该证据"。
 - **职责（审计）筛选**：`responsible_role` 命中 `responsibility[].operator.role`，三类通用，不属于对象间关联。
 - **`type=all`**：跨三类型合并的结果集，按相关度排序。
