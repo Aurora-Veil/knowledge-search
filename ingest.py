@@ -6,16 +6,18 @@
 #   结果：id == _id == ObjectId == ES _id（全局唯一），无需复合键。
 import os
 import json
-from pymongo import MongoClient, ASCENDING
 
-MONGO_URI = "mongodb://localhost:27017"
-DB_NAME   = "knowledge_db"                                   # 权威库
+from pymongo import ASCENDING
+
+from app.config import COLLECTION_BY_TYPE                     # 集合名唯一来源
+from app.db import close, get_db                              # 连接唯一来源
+
 BASE      = os.path.dirname(os.path.abspath(__file__))        # 本脚本所在目录（项目根）
 
 ENTITIES = {
-    "source":    {"file": "source.json",    "collection": "sources",    "key": "sources"},
-    "evidence":  {"file": "evidence.json",  "collection": "evidence",   "key": "evidence"},
-    "viewpoint": {"file": "viewpoint.json", "collection": "viewpoints", "key": "viewpoints"},
+    "source":    {"file": "source.json",    "collection": COLLECTION_BY_TYPE["source"],    "key": "sources"},
+    "evidence":  {"file": "evidence.json",  "collection": COLLECTION_BY_TYPE["evidence"],  "key": "evidence"},
+    "viewpoint": {"file": "viewpoint.json", "collection": COLLECTION_BY_TYPE["viewpoint"], "key": "viewpoints"},
 }
 
 # 旧的复合主键迁移备份，id 模型已变更，已失效，清库时一并删除
@@ -62,14 +64,13 @@ def ingest_entity(db, name: str) -> int:
 
 
 def main() -> None:
-    client = MongoClient(MONGO_URI)
     try:
-        db = client[DB_NAME]
+        db = get_db()
         clear_all(db)
         for name in ENTITIES:
             print(f"{ENTITIES[name]['collection']}: count = {ingest_entity(db, name)}")
     finally:
-        client.close()
+        close()
 
 
 if __name__ == "__main__":
