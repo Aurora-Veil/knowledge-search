@@ -14,7 +14,7 @@
 | ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §3 |
 | 同步层 | 📦 已移出项目 | 代码归档于 `..\9.8-sync-archive\app-sync\`，本文件的旧同步章节也已随快照归档（`..\9.8-sync-archive\search-api-design.md.snapshot`）。库与 ES 已建好并冻结（24/349/24、零漂移），**检索不依赖它** |
 | 搜索 API | ✅ 已实现并回归 | `POST /api/v1/search`（§4.1）+ `GET /api/v1/objects`（§4.2） |
-| 关联图谱 API | 📝 设计定稿、**未实现** | `GET /api/v1/associations`（§4.3）：接口形状、查询计划、实测边界与验收锚点已定稿，代码 0 行 |
+| 关联图谱 API | ✅ 已实现并回归 | `GET /api/v1/associations/{object_type}/{oirf_id}`（§4.3）：三层 DAG 邻域遍历（`hops`/`direction`/`types`/`include`/`limit`），纯 ES、0 次 Mongo |
 
 ---
 
@@ -66,7 +66,7 @@
 
 - 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**导入时**生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
 - `oirf_id` 只在**单个项目内唯一**；跨项目同号（`source:S001` vs 另一项目的 `source:S001`）靠 `_id` 区分。
-- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**；`oirf_id` **跨项目会重号**，而**检索缺省是全项目**（见 §4.0），所以跨项目结果里**不要用 `oirf_id` 定位对象**——用 `id`（ObjectId，全局唯一），取详情时回传卡片里的 `project_id`。
+- 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**；`oirf_id` **跨项目会重号**，而**检索缺省是全项目**（见 §4.0），所以跨项目结果里**单靠 `oirf_id` 定位不到对象**——取详情必须带上卡片里的 `project_id`（当前 §4.2 契约），或用全局唯一的 `id`（ObjectId）。
 
 ---
 
@@ -154,8 +154,8 @@
 | 约定 | 值 | 说明 |
 |---|---|---|
 | **端点形态** | **统一 `POST /api/v1/search`** + `type` 路由（含 `all`） | 不拆三个端点；`type` 决定路由到哪个索引 |
-| **交付范围** | **§4.1 search + §4.2 objects 已交付**；**§4.3 associations 已定稿、未实现** | 先跑通"搜索 → 点进详情"主链路；图谱端点设计见 §4.3 |
-| **项目范围** | **缺省 = 全项目（全局检索）**；`project_id` 传单值 = 单项目、传数组 = 多项目并集；**传 `[]` 等同不传** | 多项目是常态需求，默认全局更符合"先搜到、再定位"；跨项目时 `oirf_id` 重号 ⇒ **定位一律用 `id`（ObjectId）**，详情回传 `project_id` |
+| **交付范围** | **§4.1 search + §4.2 objects + §4.3 associations 均已交付** | 搜索 → 点进详情 → 关联子图，主链路齐 |
+| **项目范围** | **缺省 = 全项目（全局检索）**；`project_id` 传单值 = 单项目、传数组 = 多项目并集；**传 `[]` 等同不传** | 多项目是常态需求，默认全局更符合"先搜到、再定位"；跨项目时 `oirf_id` 重号 ⇒ **单靠 `oirf_id` 定位不到对象**，取详情须带 `project_id`（§4.2），或用全局唯一的 `id` |
 | **筛选两族** | **集合限定族**（`source_ids`/`evidence_ids`/`publisher`）：类型不适用则**直接不查**；**字段取值族**（`period`/`region`/`confidence_level` 等）：类型无此字段则**忽略该条件、照常返回** | 详见 §4.1.2 |
 
 ### 4.1 统一搜索 `POST /api/v1/search`
@@ -377,11 +377,24 @@ def _applicable_types(p, base=('source', 'evidence', 'viewpoint')):
 
 ### 4.2 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}?project_id=`
 
-回 Mongo 取**完整权威字段**（原样 `_source` 不完整处，如完整 `reasoning`、`responsibility`、`identity` 及未映射长文本）。**`project_id` 缺省仍为 `1`**——本端点按 `oirf_id` 定位，而 `oirf_id` 只在一个项目内唯一。因此从**全局/多项目检索**结果点进详情时，**必须把卡片里的 `project_id` 传回来**，否则会取到项目 1 的同号对象（静默串号）。
+回 Mongo 取**完整对象**——即 `/search` 卡片里被 `SOURCE_BY_TYPE` **投影掉**的那些字段（观点的正文 `presentation.content`/`explanation`/`reasoning.narrative`、证据的原文引文 `presentation.raw_texts`、source 的 `presentation.summary` 等，见下表）。
 
-### 4.3 关联图谱 `GET /api/v1/associations/{object_type}/{oirf_id}`（**设计定稿 · 未实现**）
+> `project_id` **必填**（不传 → 422）。本端点靠 `oirf_id` 定位，而 `oirf_id` 只在**一个项目内**唯一——没有缺省值，因为缺省就是替调用方猜项目，猜错会**静默**取到别的项目的同号对象。调用方从检索结果点进详情时，把卡片里的 `project_id` 原样传回即可。
 
-> 本节是**设计记录**：接口形状、查询计划、实测边界均已确定，**代码未写**。文中数字全部是在冻结数据（project 1，24/349/24）上的**实测值**，实现后逐条对表即可（§4.3.6）。
+**投影掉的是什么（实测）**：单条平均字节数 / 卡片占比
+
+| 类型 | 完整 | 卡片 | 卡片占 | 卡片丢掉的字段 |
+|---|---|---|---|---|
+| source | 1264 B | 805 B | 64% | `presentation.summary`/`notes`、`experience.level_reason`/`confidence_reason`、`lifecycle`（都是"说明性长文本"；另有 `reasoning` 键但**恒为 `null`**，24/24 无内容） |
+| evidence | 1079 B | 852 B | 79% | `presentation.raw_texts`（原文引文）、`presentation.notes`、`experience.confidence_reason`、`lifecycle` |
+| viewpoint | 2205 B | 1255 B | 57% | `presentation.content`（正文）/`explanation`（口径说明）/`change_triggers`、`experience.content`/`insufficient_evidence_action`/`cross_validation_mode_descipition`、`reasoning.narrative`（推理叙述）、`lifecycle` |
+
+> ⚠️ **别把"回 Mongo"理解成"ES 里没有这些字段"**：实测 ES `_source` 与 Mongo 文档（去掉 `_id`）**逐条完全相同**（397/397，0 处差异）——ES 存的就是完整文档，卡片不全纯粹是 `/search` 自己加了投影。保留回 Mongo 的理由是**架构口径**（Mongo = 权威数据源，ES = 检索引擎），不是字段缺失。
+> 该等式依赖 `full_sync` 写的是完整 `_source`；若将来同步改成白名单投影，这条就不再成立。
+
+### 4.3 关联图谱 `GET /api/v1/associations/{object_type}/{oirf_id}`（已实现）
+
+> 实现：`app/search/associations.py`（邻域遍历，纯 ES）+ `app/routers/associations.py`（HTTP）。文中数字均为冻结数据（project 1，24/349/24）上的**实测值**；§4.3.6 的锚点已逐条**走真路由**复现。
 
 #### 4.3.1 关联形状（实测，决定了一切开法）
 
@@ -428,10 +441,12 @@ def _applicable_types(p, base=('source', 'evidence', 'viewpoint')):
 
 | 约定 | 值 | 依据 |
 |---|---|---|
-| **`project_id`** | **必填，缺失 → 422**（**不**沿用 §4.2 的缺省 `1`） | `oirf_id` 只项目内唯一，缺省即**静默串号** |
+| **`project_id`** | **必填，缺失 → 422**（与 §4.2 口径一致：**没有缺省值**） | `oirf_id` 只项目内唯一，缺省即**静默串号** |
 | **返回形态** | **`nodes` + `edges`**，非链 | 见 §4.3.1（steps 数组 + 5/53 冲突） |
 | **边方向** | **恒定按语义（引用方向）**；`direction` 只决定从哪端走，反向结果里边仍写作 `from=viewpoint:V001, to=evidence:E005` | 客户端一套渲染代码 |
-| **分页** | **不用 `page`/`size`**（子图跨页会碎）；用 `limit` + `truncated` | 见下"体积" |
+| **分页** | **不用 `page`/`size`**（子图跨页会碎）；用 `limit` + `truncated`（**分桶列表**，`[]` 即无截断） | 见下"体积" |
+| **边的范围** | `hops` **同时约束节点距离与边的发现深度**：`hops=1` 得到的是以 root 为中心的**星**，`hops=2` 才是子图 | 实测 V001 `out`：hops=1 → **11** 条边（全是 root 的）；hops=2 → **19** 条（多出 8 条 `evidence→source`，靠扩展第 1 跳证据得到） |
+| **边端点自洽** | 只返回**两端都在** `{root} ∪ nodes` 内的边 | 被 `limit`/`types` 筛掉的节点不能留半边，否则客户端拼不出图 |
 | **`limit` 桶粒度** | **每个 `(direction, type)` 桶各 `limit`**，**不是**每个 `direction` 一个桶 | 实测：单桶 + 按类型排序 → `limit=50` 时 **50 条全是 evidence，19 个 viewpoint 全丢**（S001 的 `in`，而"谁用了这份材料"正靠 viewpoint 回答） |
 | **空引用** | **显式返回 `missing[]`**，不静默丢 | 否则"edges 数 ≠ nodes 数"会被当 bug |
 | **`rel` 取值** | 仅 `step_evidence` / `step_source` / `evidence_source` | 就这三条边 |
@@ -440,14 +455,14 @@ def _applicable_types(p, base=('source', 'evidence', 'viewpoint')):
 | **`score`** | 节点**不带 `score`** | 纯遍历无相关度，免得被误当排序用 |
 | **nodes 排序** | **确定性**（`object_type, oirf_id`） | 否则两次调用顺序不同，无法 diff 验证 |
 
-**体积（实测）**：单条 `card` 均值 **1158B**（最大 2607B），`ref` 均值 **191B**（最大 267B）——**约 6×**。
+**体积（接口实测，整响应体含 `edges`）**——`source:S001`、`direction=in&hops=1&limit=200`（179 节点 + 189 条边）：
 
-| 子图 | 节点 | `card` | `ref` |
-|---|---|---|---|
-| `viewpoint:V001` `out hops=1` | 10 | 11.3KB | 2.0KB |
-| `source:S001` `in hops=1`（=`both hops=1`） | 179 | **209.3KB** | 33.0KB |
-| `viewpoint:V001` `both hops=2` | 212 | 242.8KB | 39.3KB |
-| `source:S001` `both hops=2` | 253 | **291.6KB** | 47.1KB |
+| `include` | 响应体 | 节点字段 |
+|---|---|---|
+| `card`（默认） | **185.1 KB** | 同 `/search` 轻卡片（9 键：`id`/`oirf_id`/`object_type`/`project_id`/`identity`/`presentation`/`reasoning`/`experience`/`responsibility`） |
+| `ref` | **56.0 KB** | `id`/`oirf_id`/`object_type`/`project_id`/`identity{name,status}` |
+
+**≈ 3.3×**。（单节点估算 card 均值 1158B、`ref` 均值 191B；实测 `ref` 偏高，因为 `identity.name` 常是整句。）
 
 ⇒ 必须有 `include`：
 
@@ -477,7 +492,7 @@ GET /api/v1/associations/{object_type}/{oirf_id}
       "rel": "step_evidence", "step": 0, "hop": 1,
       "label": "全球与中国2023年前三季度VR/AR出货量…"   // = steps[].to
   } ],
-  "truncated": false,
+  "truncated": [],
   "missing": []
 }
 ```
@@ -507,10 +522,11 @@ GET /api/v1/associations/{object_type}/{oirf_id}
 
 **实现细节**
 
-- 纯遍历无相关度 ⇒ 全部走 `bool.filter`，不取 `_score`。
-- **`size = limit + 1`** 判断截断：取到 `limit+1` 条即 `truncated: true`，丢掉多余那条。
-- `hops=2` 时对第 1 跳节点集**批量**再查（`terms` 多值），仍是常数次。
-- ⚠️ **`hops=2` 必须按 `oirf_id` 去重**：`source:S001` 的"经证据到达的观点"与"step 直接声明的观点"是**同一批 19 个**，朴素相加会把 `199` 算成实际 `180`（多算 19）。
+- 纯遍历无相关度 ⇒ 全部走 `bool.filter`，不取 `_score`（节点不带 `score`）。
+- **截断在内存里按桶做**：先把可达节点算全（扩展只取 `oirf_id`+`reasoning`，`_EXPAND_SOURCE`），再按 `(direction, type)` 分桶截断，最后才取要返回的节点载荷（`card` 用 `SOURCE_BY_TYPE`，与 `/search` 同构；`ref` 复用扩展结果）。所以"限制返回"的多余开销很小。
+- **反向扫描是软上限**：`_SCAN_SIZE = 1000`（当前库 397 条够用，涨上来要改 `search_after`）。
+- ⚠️ **`hops=2` 必须按 `oirf_id` 去重**：`source:S001` 的"经证据到达的观点"与"step 直接声明的观点"是**同一批 19 个**，朴素相加会多算。
+- ⚠️ **反向的 `evidence_ids` / `source_ids` 必须分成独立查询**：合成一个 nested `bool.filter` 会变成"同一步同时引用两者"（见 §4.1.1）。实现是拿回引用方的 doc 后用 `_out_edges` 本地算边，保证正反两向的 `rel/step/label` 算法完全一致。
 
 #### 4.3.5 实测边界（必须写明，否则会被当 bug 报）
 
@@ -537,31 +553,36 @@ GET /api/v1/associations/{object_type}/{oirf_id}
 > 关键区别是**单调性**："限制返回"下 `types` 越大结果只增不减（可推理）；"限制展开"**非单调**——`source:S001` 传 `types=source` 得 **0**，加上 `evidence` 反而得 **12**，调用方几乎无法预期。
 > 所以**推荐"限制返回"**，代价（多展开）用两阶段消掉：**先只取 `oirf_id`（`_source: false`）做 id 层 BFS，筛完再取要返回的节点载荷**。
 
-**未定项（待拍板，2 条）**
+**实现时的两处抉择（已落地）**
 
-1. **`types` 语义**：推荐**限制返回**（依据上表单调性）。若你更看重省查询、接受"加类型反而变多"，则选限制展开。
-2. **MVP 范围**：建议先做 `direction=out|in` + `hops=1`（三种 root 全覆盖）。**`both&hops=2` 建议不放进来**——实测 212–253 节点、语义已变成"同源邻域"，与本端点定位不同，适合另开参数/端点。
+1. **`types` = 限制返回**（依据上表单调性）。判别点已实测复现：`source:S001` `both&hops=2&types=source` 返回 **12**（若为限制展开会是 **0**）。
+2. **`both&hops=2` 照常开放，不做人为禁止**——语义由 `truncated` 自我说明：`viewpoint:V001` `both&hops=2` 在默认 `limit=50` 下返回 **78** 节点且 `truncated=["in:evidence"]`；`limit=200` 才是完整的 **212** 节点。客户端看到 `truncated` 就知道自己拿到的是子集。
 
-#### 4.3.6 验收锚点（实现后逐条对表）
+#### 4.3.6 验收锚点（走真路由实测，均已复现）
 
 ```
-viewpoint:V001  out hops=1  → evidence 8（去重）/ source 2（去重）/ edges **11**（step0: 4+2, step1: 4+1；`S001` 两步各一条，故 11 而非 10）
-viewpoint:V001  out hops=2  → 与 hops=1 相同（10 节点，第 2 跳无新节点）
-evidence:E005   out hops=1  → source 1 ；in hops=1 → 被引用 1（viewpoint:V001）
-evidence:E005   both hops=1 → 2 ；both hops=2 → 37
-source:S001     in  hops=1  → evidence 160 / viewpoint 19（共 179；limit=50 时按 (direction,type) 分桶 = 50 ev + 19 vp，truncated=[in:evidence]）
-source:S001     out hops=1  → **0**（source 无出边）
-source:S003     in  hops=1  → evidence 3 / viewpoint 0
-viewpoint:V001  both hops=2 → 212 节点（evidence 192 / viewpoint 18 / source 2）← 已属"同源邻域"，见未定项 2
-缺 project_id → 422 ；不存在的 oirf_id → 404（不是空图）
+viewpoint:V001  out  hops=1  → 10 节点（evidence 8 / source 2）/ edges **11**
+                              （step0: 4 ev + 2 src；step1: 4 ev + 1 src；`S001` 两步各一条，故 11 而非 10）
+viewpoint:V001  out  hops=2  → 10 节点（第 2 跳无新节点）/ edges 19（多出 8 条 evidence→source，hop=2）
+viewpoint:V001  in   任意    → **0 节点**（观点无入边）
+evidence:E005   out  hops=1  → 1（source:S002） ；in hops=1 → 1（viewpoint:V001）
+evidence:E005   both hops=1  → 2 节点 / 2 边 ；both hops=2 → 37 节点 / 46 边
+source:S001     in   hops=1  limit=50  → **69** 节点（evidence 50 + viewpoint **19**）truncated=["in:evidence"]
+source:S001     in   hops=1  limit=200 → **179** 节点 / 189 边（evidence 160 + viewpoint 19）truncated=[]
+source:S001     out  hops=1  → **0 节点**（source 无出边）
+source:S003     in   hops=1  → 3 节点（evidence 3 / viewpoint 0）
+viewpoint:V001  both hops=2  limit=50  → 78 节点 truncated=["in:evidence"]
+viewpoint:V001  both hops=2  limit=200 → **212** 节点（evidence 192 / viewpoint 18 / source 2）/ 236 边
+types 判别点：source:S001 both hops=2 types=source → **12**（限制展开会是 0）
+include=ref（S001 in hops=1 limit=200）→ 56.0KB（card 185.1KB）
+
+422：缺 project_id / hops∉{1,2} / direction 非法 / include 非法 / limit<1 或 >200 /
+     types 含未知值 / object_type 非法 / oirf_id 前缀与 object_type 矛盾
+404：oirf_id 不存在，或不在该项目（含 project_id=2）
 ```
 
-> 以上均在 project 1 冻结数据上实测。**当前库内只有 project 1，跨项目隔离未能实测**——多项目入数据后必须补测"同 `oirf_id` 不同项目不串号"。
-
-**未定项（待拍板，2 条）**
-
-1. **`types` 语义**：限制**展开**还是限制**返回**？`hops=2` 下二者结果不同。建议**限制展开**（否则服务器白取一堆再扔掉）。
-2. **MVP 范围**：建议先只做 `hops=1`（三种 root 全覆盖）——`hops=2` 的价值受制于上文"36% 反向空洞"。
+> 以上均在 project 1 冻结数据上走真路由实测。**当前库内只有 project 1，跨项目隔离未能实测**——多项目入数据后必须补测"同 `oirf_id` 不同项目不串号"。
+> `missing` 在现有数据上**恒为 `[]`**（三种边 236+59+349 条引用零悬空），该分支**未被真实数据覆盖**。
 
 ---
 
@@ -622,7 +643,7 @@ Windows PowerShell 下建议先 `$env:PYTHONIOENCODING='utf-8'`，否则输出�
 | 项 | 状态 | 说明 |
 |---|---|---|
 | **搜索 API（§4）** | ✅ 已实现并回归 | `POST /api/v1/search`（§4.1）+ `GET /api/v1/objects`（§4.2）。HTTP 路由经 `TestClient` 走真路由回归：字段名与 mapping 全对齐、加权字段均为 `text`、`nested` 关联与 `inner_hits`、翻页一致性、`publisher` 单值/多选/严格语义、`project_id` 各形态（不传/`[]`/单值/数组/`0`）、空结果与非法入参 200/422 分支。`/associations`（§4.3）见下行 |
-| **`/associations`（§4.3）** | 📝 **设计定稿 · 未实现** | 契约 11 条、查询计划（**ES 单源、每请求常数次查询、0 次 Mongo**）、实测边界 7 条、`types` 语义对照表、验收锚点 9 条均已写入 §4.3；**2 条未定项**待拍板（`types` 语义推荐"限制返回"、MVP 范围）。实测底座：三层 DAG（`viewpoint→evidence→source`，无环）、三种边 dangling **0**、**127/349 证据反向空洞**、`source:S001` 反向 **179 节点**（card 209KB / ref 33KB）、`direction=both` **无跳数天花板**（扩散至 374/397） |
+| **`/associations`（§4.3）** | ✅ 已实现并回归 | `GET /api/v1/associations/{object_type}/{oirf_id}`，代码 `app/search/associations.py` + `app/routers/associations.py`。契约 12 条、查询计划（**ES 单源、0 次 Mongo**）、实测边界 7 条、`types` 语义对照表、验收锚点 14 条见 §4.3，**全部走真路由复现**。实测底座：三层 DAG（无环）、三种边 dangling **0**、**127/349 证据反向空洞**、`source:S001` 反向 179 节点、`direction=both` **无跳数天花板**（扩散至 374/397）。两处未覆盖：跨项目隔离（库内只有 project 1）、`missing` 分支（现有数据零悬空） |
 | **两族筛选语义统一** | ⏳ 待定 | 现在"集合限定族"（严格）与"字段取值族"（忽略）并存（§4.1.2）。语义各自成立，但调用方需要记两张表；将来若统一，需连带评估 `region`/`period` 等参数的行为变化 |
 | **`period` 区间过滤** | ⏳ 待做 | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续加归一化年份字段 |
 | **聚合 / facets** | ⏳ 待定 | 搜索响应定稿不带 facets；keyword 字段已就绪，需要"来源取值下拉""地区分布"这类前端能力时再加独立端点（`publisher` 的取值列表就是第一批候选） |

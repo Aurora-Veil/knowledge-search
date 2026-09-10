@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
-from .routers import objects, search
+from .routers import associations, objects, search
 
 app = FastAPI(
     title="OIRF Knowledge-Graph Search API",
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(search.router)
 app.include_router(objects.router)
+app.include_router(associations.router)
 
 
 @app.get("/api/v1/health")
