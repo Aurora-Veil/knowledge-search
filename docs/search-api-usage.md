@@ -40,7 +40,7 @@ JSON，字段均可选，缺省有默认值。
 | `region` | string | 无 | 精确筛 `presentation.region`（仅 evidence） |
 | `industry` | string | 无 | 精确筛 `presentation.industry`（仅 evidence） |
 | `source_type` | string \| string[] | 无 | 精确筛 `presentation.source_type`（仅 evidence），单值或多值 |
-| `confidence_level` | string | 无 | 精确筛 `experience.confidence_level` |
+| `confidence_level` | string | 无 | 精确筛 `experience.confidence_level`（仅 source/evidence；viewpoint 经验层无此字段） |
 | `claim_type` | string | 无 | 精确筛 `experience.claim_type`（仅 viewpoint） |
 | `applicable_scenario` | string | 无 | 精确筛 `experience.applicable_scenario`（仅 viewpoint） |
 | `cross_validation_mode` | string | 无 | 精确筛 `experience.cross_validation_mode`（仅 viewpoint） |

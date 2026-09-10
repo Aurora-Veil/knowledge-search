@@ -426,6 +426,8 @@ def build_filters(type_, p):
         if p.get('region'):      f.append(term('presentation.region', p['region']))
         if p.get('industry'):    f.append(term('presentation.industry', p['industry']))
         if p.get('source_type'): f.append(terms('presentation.source_type', p['source_type']))
+    if type_ in ('source', 'evidence'):                     # 置信度：仅这两类经验层有该字段（viewpoint 用 cross_validation_mode）
+        if p.get('confidence_level'): f.append(term('experience.confidence_level', p['confidence_level']))
     if type_ in ('viewpoint', 'all'):                       # viewpoint 专属
         if p.get('claim_type'):  f.append(term('experience.claim_type', p['claim_type']))
     # —— 关联（类型感知）——

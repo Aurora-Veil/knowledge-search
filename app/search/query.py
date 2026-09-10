@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .fields import SOURCE_BY_TYPE, WEIGHTS
+from .fields import CONFIDENCE_LEVEL_TYPES, SOURCE_BY_TYPE, WEIGHTS
 
 def _term(field: str, value: Any) -> dict[str, Any]:
     return {"term": {field: str(value)}}
@@ -43,7 +43,7 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
         if p.get("source_type"):
             f.append(_terms("presentation.source_type", p["source_type"]))
 
-    if type_ == "source" and p.get("confidence_level"):
+    if p.get("confidence_level") and type_ in CONFIDENCE_LEVEL_TYPES:
         f.append(_term("experience.confidence_level", p["confidence_level"]))
 
     if type_ == "viewpoint":

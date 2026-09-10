@@ -28,4 +28,9 @@ SOURCE_BY_TYPE: dict[str, list[str]] = {
 ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
 ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
 
-__all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES"]
+# experience.confidence_level exists only in source/evidence (structure/source.ts, evidence.ts);
+# viewpoint's experience layer uses cross_validation_mode - a term on a missing field is a silent 0 hits
+CONFIDENCE_LEVEL_TYPES = ("source", "evidence")
+
+__all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES",
+           "CONFIDENCE_LEVEL_TYPES"]
