@@ -1,5 +1,5 @@
-# full_sync.py —— 用最终 mapping 建三个索引，并从 Mongo(权威库) 全量灌到 ES
-#
+# full_sync.py —— 用 mapping 建索引，并 Mongo -> ES
+
 import json
 import os
 from datetime import datetime
@@ -23,7 +23,7 @@ INDICES = {
 
 
 def _jsonable(v):
-    """把 BSON/原生类型转成可 JSON 序列化的值（_id/id 是 ObjectId，其余原样）。"""
+    """ BSON -> JSON """
     if isinstance(v, ObjectId):
         return str(v)
     if isinstance(v, datetime):

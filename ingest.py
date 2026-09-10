@@ -1,16 +1,14 @@
-# ingest.py —— 把 reasoning/ 下三个实体 JSON 入库到 Mongo（权威库 knowledge_db）
+# ingest.py —— reasoning/ -> Mongo (knowledge_db)
 #
-# id 模型（已确认）：
-#   入库时丢弃原始 JSON 的生成期 int id，让 Mongo 自产 _id；
-#   插入后再把 id 回写为本次插入得到的 _id。
-#   结果：id == _id == ObjectId == ES _id（全局唯一），无需复合键。
+# id == _id == ObjectId == ES _id
+#   original id (int) 弃用
 import os
 import json
 from pymongo import MongoClient, ASCENDING
 
 MONGO_URI = "mongodb://localhost:27017"
-DB_NAME   = "knowledge_db"                                   # 权威库
-BASE      = os.path.dirname(os.path.abspath(__file__))        # 本脚本所在目录（项目根）
+DB_NAME   = "knowledge_db"
+BASE      = os.path.dirname(os.path.abspath(__file__))
 
 ENTITIES = {
     "source":    {"file": "source.json",    "collection": "sources",    "key": "sources"},
@@ -18,7 +16,6 @@ ENTITIES = {
     "viewpoint": {"file": "viewpoint.json", "collection": "viewpoints", "key": "viewpoints"},
 }
 
-# 旧的复合主键迁移备份，id 模型已变更，已失效，清库时一并删除
 STALE_BACKUPS = ("_bk_sources", "_bk_evidence", "_bk_viewpoints")
 
 
@@ -54,8 +51,8 @@ def ingest_entity(db, name: str) -> int:
 
     docs = load_docs(cfg)
     for d in docs:
-        d.pop("id", None)                      # 丢弃生成期 int id，让 Mongo 自产 _id
-        inserted = coll.insert_one(d)          # _id = 本次插入的 ObjectId
+        d.pop("id", None)                      # delete int id, use Mongo _id
+        inserted = coll.insert_one(d)          # _id =  ObjectId
         coll.update_one({"_id": inserted.inserted_id},
                         {"$set": {"id": inserted.inserted_id}})   # id = _id
     return coll.count_documents({})
