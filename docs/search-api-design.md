@@ -11,10 +11,10 @@
 |---|---|---|
 | 数据库存储 | ✅ 已落地、锁定 | 权威库 `knowledge_db`；3 集合 `project_id` 分区；`pptx_store` 已弃用 |
 | id 模型 | ✅ 已落地 | `id = _id = ObjectId`（全局唯一），**无复合键**；`oirf_id` 仅项目内唯一（`source:S001`） |
-| ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §4 |
-| 全量同步 | ✅ 已落地 | `full_sync.py`：397 条，幂等重跑；见 §5 |
-| 搜索 API | ⏳ 待实现 | 见 §6（设计已按最终 mapping 更新） |
-| 增量同步 | ⏳ 待实现 | 写后 `sync_one` / Change Streams；见 §5.2 |
+| ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §3 |
+| 同步层（索引 / 全量 / 单条 / 对账） | ✅ 本轮落地并实测 | `app/sync` 五个子命令，见 §4；实测 project 1 为 24/349/24、对账零漂移 |
+| 搜索 API | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`），HTTP 路由未回归；`/associations`（§5.3）未做 |
+| 增量同步触发形态 | ⏳ 待做 | 当前为「写库后显式调用 `sync_one`」（§4.1 ②）；量大再换 Change Streams（§8） |
 
 ---
 
@@ -132,31 +132,172 @@
 
 ---
 
-## 4. 同步（已落地 full_sync；增量待做）
+## 4. 同步（Mongo ⇒ ES）
 
-### 4.1 全量同步 `full_sync.py`（✅ 已完成）
+两个入口等价、接受同一套子命令与开关（`--help` 里是同一张表）：
 
-```
-读 Mongo(权威库) 三个集合 → 转 JSON 安全对象（ObjectId→str、datetime→iso）→ bulk 灌对应索引
-ES 文档 _id = str(Mongo _id)（= ObjectId），全局唯一、幂等；重跑自 24/349/24 不递增。
-```
-
-- 已建索引：`knowledge_source` / `knowledge_evidence` / `knowledge_viewpoint`。
-- 已验证：`_count` = 24 / 349 / 24，`distinct oirf_id` 与 Mongo 一致，中文检索（ik）可命中。
-- 重跑：先 `es.indices.exists` 跳过已建索引；bulk 用确定性 `_id` upsert 覆盖。
-
-### 4.2 增量同步（⏳ 待实现）
-
-数据量小、低频写时用**写后回调**最简：
-
-```python
-def sync_one(project_id, oirf_id):
-    """写库后调用：更新/删除单条 ES 文档。"""
-    # 找到该 (project_id, oirf_id) 所在集合，es.index(_id=str(doc['_id']), document=...)
-    # 删除时 es.delete(_id=...)
+```bash
+python -m app.sync <子命令>      # 主入口
+python full_sync.py <子命令>     # 兼容旧入口（同一份代码，行为完全一致）
 ```
 
-量大再换 **Change Streams**（pymongo `watch()` 长连接 → bulk 批量缓冲 + 重试）。
+| 子命令 | 开关 | 作用 |
+|---|---|---|
+| `init` | — | 按 `mapping/*.json` 建**缺失**的索引；已存在的一律跳过，绝不动索引定义 |
+| `full` | `[--recreate] [--dry-run]` | 全量灌 Mongo ⇒ ES；默认不动已有索引，`--recreate` 才删索引重建 |
+| `recreate` | `[--dry-run]` | 等价 `full --recreate`：drop → create → 全量重灌 |
+| `one` | `--type --oirf-id [--project-id]` | 写库后单条同步；对象已从 Mongo 删除则从 ES 删除 |
+| `reconcile` | `[--type] [--fix]` | 对账 ES ↔ Mongo；默认只报告，`--fix` 才删孤儿 + 重灌缺失 |
+
+> **前置条件**：下面所有命令都要在**仓库根目录**执行（换目录会报 `ModuleNotFoundError: No module named 'app'`）；
+> Windows PowerShell 下先执行 `$env:PYTHONIOENCODING='utf-8'`，否则中文输出会乱码（`[ɾ��]`、`[�ع�]`）——
+> 那只是控制台编码问题，不是命令失败。
+
+### 4.1 四个基本任务（照抄即可）
+
+当前实测数据：project 1，Mongo `sources 24 / evidence 349 / viewpoints 24`，ES 三索引同值（共 397）。
+
+**① 重建索引 + 全量灌**
+
+```bash
+python -m app.sync recreate
+```
+输出（逐索引列出三段动作，末行是**实际入 ES 条数**）：
+```
+[删除] knowledge_source
+[创建] knowledge_source <- mapping/source_mapping.json
+[删除] knowledge_evidence
+[创建] knowledge_evidence <- mapping/evidence_mapping.json
+[删除] knowledge_viewpoint
+[创建] knowledge_viewpoint <- mapping/viewpoint_mapping.json
+[重灌] knowledge_source：实际入 ES 24 条
+[重灌] knowledge_evidence：实际入 ES 349 条
+[重灌] knowledge_viewpoint：实际入 ES 24 条
+[完成] 实际入 ES 397 条（Mongo 权威数据未改动）
+```
+
+日常只灌数据、**不动索引定义**（最常用）：
+
+```bash
+python -m app.sync full
+```
+输出：
+```
+[跳过] knowledge_source 已存在，索引定义未改动
+[跳过] knowledge_evidence 已存在，索引定义未改动
+[跳过] knowledge_viewpoint 已存在，索引定义未改动
+[重灌] knowledge_source：实际入 ES 24 条
+[重灌] knowledge_evidence：实际入 ES 349 条
+[重灌] knowledge_viewpoint：实际入 ES 24 条
+[完成] 实际入 ES 397 条（Mongo 权威数据未改动）
+```
+
+先看会发生什么、不动手：
+
+```bash
+python -m app.sync full --recreate --dry-run
+```
+输出（三个索引各一行，末行是预演汇总）：
+```
+[计划] knowledge_source：将删除（当前存在） → 将按 mapping/source_mapping.json 创建 → 将全量重灌（预计写入 24 条，按 Mongo 现有条数）
+[计划] knowledge_evidence：将删除（当前存在） → 将按 mapping/evidence_mapping.json 创建 → 将全量重灌（预计写入 349 条，按 Mongo 现有条数）
+[计划] knowledge_viewpoint：将删除（当前存在） → 将按 mapping/viewpoint_mapping.json 创建 → 将全量重灌（预计写入 24 条，按 Mongo 现有条数）
+[预演] 未执行任何删除/创建/写入
+```
+
+**② 改一条数据并立即同步（不重灌全量）**
+
+```bash
+# 2.1 改一条：给 evidence:E001 的 identity.name 加后缀（第 2.4 步会还原）
+python -c "from app.db import get_db, close; db = get_db(); d = db.evidence.find_one({'project_id': 1, 'oirf_id': 'evidence:E001'}); old = d['identity']['name']; d['identity']['name'] = old + ' 【已改】'; db.evidence.replace_one({'_id': d['_id']}, d); print('旧值:', old); close()"
+
+# 2.2 只同步这一条
+python -m app.sync one --type evidence --oirf-id evidence:E001
+```
+输出：
+```
+旧值: 空间计算设备包含AR、VR、MR终端
+[已同步] knowledge_evidence _id=<ObjectId 字符串> <- Mongo evidence project_id=1 evidence:E001
+```
+
+```bash
+# 2.3 立刻查 ES：应已是新值
+python -c "from app.db import get_es, close; es = get_es(); r = es.search(index='knowledge_evidence', query={'term': {'oirf_id': 'evidence:E001'}}, size=1); print(r['hits']['hits'][0]['_source']['identity']['name']); close()"
+```
+输出：
+```
+空间计算设备包含AR、VR、MR终端 【已改】
+```
+
+```bash
+# 2.4 还原（去掉后缀，再同步一次）
+python -c "from app.db import get_db, close; db = get_db(); d = db.evidence.find_one({'project_id': 1, 'oirf_id': 'evidence:E001'}); d['identity']['name'] = d['identity']['name'].replace(' 【已改】', ''); db.evidence.replace_one({'_id': d['_id']}, d); close()"
+python -m app.sync one --type evidence --oirf-id evidence:E001
+```
+
+> 上面这些一行命令刻意**只用单引号 + 不含 `$`**，所以 bash 与 PowerShell 都能直接粘贴执行（`$set` 之类的写法会在两个 shell 里被当成变量插值而失效）。
+
+> - `one` 内部会 `refresh` 该索引，所以**紧接着查就是新值**，不用等全量、不用重启服务。
+> - 对象在 Mongo 里**被删掉**后跑同一个命令，输出变成 `[已删除] …（Mongo 已无该对象）`，ES 中该 `_id` 随之消失（`delete` 命中 404 不报错）；两边都没有时输出 `[无需动作]`，退出码仍为 0。
+> - 写库代码里要在写完后立刻生效，就调用同一个函数：`from app.sync.one import sync_one; sync_one(project_id, oirf_id, "evidence")`。
+
+**③ 对账（怀疑两边不一致时）**
+
+```bash
+python -m app.sync reconcile
+```
+一致时：
+```
+[knowledge_source] Mongo 24 条 / ES 24 条 —— 零漂移
+[knowledge_evidence] Mongo 349 条 / ES 349 条 —— 零漂移
+[knowledge_viewpoint] Mongo 24 条 / ES 24 条 —— 零漂移
+[结论] 零漂移 —— 两边 _id 集合逐类型完全一致
+```
+有漂移时指名列出 `_id` 并给两边计数：
+```
+[knowledge_evidence] Mongo 349 条 / ES 350 条
+  孤儿（ES 有 Mongo 无） 1 条：
+    6a9fbd1b270db0c081be6782
+[结论] 漂移 1 处（孤儿 1 / 缺失 0）
+       本次只报告、未改任何数据；要清理：python -m app.sync reconcile --fix
+```
+`--fix` 才会动 ES（删孤儿 + 重灌缺失），修完**自动复核**：
+
+```bash
+python -m app.sync reconcile --fix
+```
+输出（开头还会重印一遍对账明细，末尾两行是修复与复核）：
+```
+[修复] 已删除孤儿 1 条 / 已重灌缺失 0 条
+[复核] 修复后再对账：漂移 0 处（已归零）
+```
+
+> `reconcile` 报告模式**永远不写 ES**；`--fix` 是唯一会改 ES 的路径。单类型对账用 `--type evidence`。
+
+**④ 只看索引生命周期**
+
+```bash
+python -m app.sync init      # 只建缺失的索引；已存在的输出 [跳过] … 索引定义未改动
+```
+
+### 4.2 入库脚本 `ingest.py`（破坏性，需显式确认）
+
+`reasoning/*.json` ⇒ Mongo 的重灌脚本。它会**先 drop 三个集合**再重灌：
+
+```bash
+python ingest.py --dry-run    # 只报「将清空哪些集合（含现有条数）/ 将写入多少条」，不动库
+python ingest.py              # 不带确认 → 拒绝执行并说明会 drop 谁、怎么确认（退出码 1）
+python ingest.py --yes        # 真正执行
+```
+
+> ⚠️ 重灌会生成**新的 ObjectId**（`id = _id` 随之变新），ES 里按旧 `_id` 存的文档会**全部失配**（`reconcile` 会报成一堆孤儿 + 缺失）。所以 `ingest.py --yes` 之后**必须**接着跑 `python -m app.sync recreate`。
+
+### 4.3 实现与口径
+
+- 代码：`app/sync/{admin,full,one,reconcile,cli}.py`。常量、连接、BSON 转换分别只来自 `app/config.py`、`app/db.py`、`app/serializers.to_jsonable`（脚本不再自带副本）。
+- ES 文档 `_id = str(Mongo _id)`（ObjectId 字符串），全局唯一 ⇒ 全量灌天然幂等 upsert，重跑不递增。
+- 计数取自 `bulk` **返回值**（真实入库数），不是 Mongo 的 `count_documents`；失败时打印失败条数与原因，并以退出码 1 结束。
+- 写后同步与对账修复都会 `refresh` 相关索引，因此命令报出的数字与随后查 `_count` 一致。
 
 ---
 
@@ -377,22 +518,44 @@ source/viewpoint 索引**不带** `industry` 子句。
 
 ## 7. 环境与现状
 
-| 组件 | 容器 / 镜像 | 端口 | 状态 |
+| 组件 | 容器 / 镜像（以 `docker ps` 为准） | 端口 | 现状（实测） |
 |---|---|---|---|
-| MongoDB | `mongodb` (mongodb-community-server:latest) | 27017 | Up，`knowledge_db` 3 集合 |
-| Elasticsearch | `es01` (elasticsearch:9.5.3，含 analysis-ik) | 9200 | Up，`knowledge_*` 三索引 |
-| Kibana | `kibana` (kibana:9.5.3) | 5601 | Up；**Search 主页需 ES 安全**（见 §8） |
+| MongoDB | `mongodb`（mongodb-community-server:latest） | 27017 | 权威库 `knowledge_db`：`sources 24 / evidence 349 / viewpoints 24` |
+| Elasticsearch | `es01`（elasticsearch:9.5.3，含 analysis-ik） | 9200 | 三索引 `knowledge_source/evidence/viewpoint`，`_count` 与 Mongo 逐类型一致 |
+| Kibana | `kibana`（kibana:9.5.3） | 5601 | Search 主页需 ES 安全；非必需组件 |
+| 搜索 API | FastAPI（`python run.py`） | 8000 | 非常驻；起来后 `/docs` 是 OpenAPI 页面 |
 
-**已确认数据**：project 1，`sources(24)/evidence(349)/viewpoints(24)`；`id = _id = ObjectId`；ES `_count` 一致。
+**数据现状（实测口径）**：project 1；`id = _id = ObjectId`；ES `_id` 与 Mongo `_id` 一一对应，
+`python -m app.sync reconcile` 报**零漂移**（24/349/24）。
+
+**执行位置与编码**：同步命令都要在**仓库根目录**跑（否则 `ModuleNotFoundError: No module named 'app'`）；
+Windows PowerShell 下建议先 `$env:PYTHONIOENCODING='utf-8'`，否则命令输出的中文会显示成乱码。
+
+**容器未起时会怎样**：Mongo/ES 都在容器里，未起时同步命令会以连接类异常失败（**不会静默成功**），实测：
+
+| 依赖未起 | 异常 |
+|---|---|
+| Elasticsearch | `elasticsearch.ConnectionError` |
+| MongoDB | `pymongo.errors.ServerSelectionTimeoutError`（`No servers found yet`） |
+
+先起容器，再用一条命令确认两边都通且一致：
+
+```bash
+python -m app.sync reconcile      # 期望输出：[结论] 零漂移 —— 两边 _id 集合逐类型完全一致
+```
 
 ---
 
 ## 8. 待实现 / 风险
 
-| 项 | 说明 |
-|---|---|
-| **搜索 API（本轮）** | ✅ `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）已实现，FastAPI `app/` 包（`app/config.py`、`app/db.py`、`app/serializers.py`、`app/search/{fields,query,rank,response,service,objects}.py`、`app/routers/{search,objects}.py`）；`POST /api/v1/objects` 下一轮（§5.3） |
-| **增量同步** | 写后 `sync_one`（§4.2）；量大再 Change Streams |
-| **`period` 区间过滤** | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续可加归一化年份字段 |
-| **内容去重** | 内容重叠少，暂缓；量级上来再考虑 content-key 去重 |
-| **深分页** | 量大改用 `search_after`（当前 `from/size` 够用） |
+| 项 | 状态 | 说明 |
+|---|---|---|
+| **同步层（§4）** | ✅ 本轮落地并实测 | `init` / `full` / `recreate` / `one` / `reconcile` 五个子命令；实测：全量连跑两遍均 24/349/24（幂等，且与 ES `_count` 一致）、注入必拒文档时报出失败条数与原因并退出码 1、造孤儿/缺失后 `--fix` 自动复核归零 |
+| **搜索 API（§5）** | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`，`q=空间计算` 命中 23 条、nested `inner_hits` 正常），HTTP 路由未做回归；`/associations`（§5.3）未做 |
+| **增量同步触发形态** | ⏳ 待做 | 当前是「写库后显式调用 `sync_one`」（§4.1 ②）；量大时换 Change Streams（`pymongo.watch()` 长连接 + 批量缓冲 + 重试） |
+| **重灌导致 ES 失配** | ⚠️ 风险（有对策） | `ingest.py --yes` 会重建 ObjectId ⇒ ES 旧 `_id` 全部失配，必须紧跟 `recreate`（§4.2）。根治要么入库改用确定性 `_id`（要动 §2 已锁的 id 模型，需单独裁决），要么把 `recreate` 固定挂在 `--yes` 之后 |
+| **`reconcile --fix` 效率** | ⏳ 已知 | 重灌缺失是逐条 `sync_one`（每条 refresh 一次索引）；量大时改为批量写入后统一 refresh |
+| **有漂移时的退出码** | ⏳ 待定 | 现在 `reconcile` 有漂移仍返回 `exit=0`（漂移=发现，不是失败）；若要拿它当 cron 健康检查，需改成非 0 |
+| **`period` 区间过滤** | ⏳ 待做 | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续加归一化年份字段 |
+| **内容去重** | ⏳ 暂缓 | 内容重叠少；量级上来再考虑 content-key 去重 |
+| **深分页** | ⏳ 暂缓 | 当前 `from/size` 够用；量大改用 `search_after` |
