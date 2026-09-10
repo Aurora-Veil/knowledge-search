@@ -25,9 +25,12 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     """
     f: list[dict[str, Any]] = []
 
-    project_id = p.get("project_id")
-    if project_id is not None:
-        f.append(_term("project_id", project_id))
+    # 项目范围：project_ids 多项目并集 / project_id 单项目 / 都不传 = 不加过滤（全项目）
+    project_ids = p.get("project_ids")
+    if project_ids:
+        f.append(_terms("project_id", project_ids))
+    elif p.get("project_id") is not None:
+        f.append(_term("project_id", p["project_id"]))
     if p.get("status"):
         f.append(_term("identity.status", p["status"]))
     if p.get("presentation_type"):

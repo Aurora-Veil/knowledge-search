@@ -3,10 +3,9 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, Union
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..config import DEFAULT_PROJECT_ID
 from ..search.service import search as search_service
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
@@ -15,7 +14,10 @@ router = APIRouter(prefix="/api/v1", tags=["search"])
 class SearchRequest(BaseModel):
     q: Optional[str] = None
     type: Literal["source", "evidence", "viewpoint", "all"] = "all"
+    # 项目范围（都不传 = 全部项目，即全局检索）：
+    #   project_id  = 单个项目；project_ids = 多项目并集；两者互斥
     project_id: Optional[int] = None
+    project_ids: Optional[List[int]] = None
 
     # exact match
     status: Optional[str] = None
@@ -44,5 +46,11 @@ class SearchRequest(BaseModel):
 @router.post("/search")
 def api_search(req: SearchRequest) -> dict:
     p = req.model_dump(exclude_none=True)
-    p.setdefault("project_id", DEFAULT_PROJECT_ID)
+    if p.get("project_id") is not None and p.get("project_ids") is not None:
+        raise HTTPException(status_code=400,
+                            detail="project_id 与 project_ids 互斥：单项目用 project_id，多项目用 project_ids")
+    if p.get("project_ids") == []:
+        raise HTTPException(status_code=400,
+                            detail="project_ids 不能是空数组：要全局检索就不传项目参数")
+    # 不再补默认 project_id —— 缺省即「不加项目过滤」= 全局检索
     return search_service(p)

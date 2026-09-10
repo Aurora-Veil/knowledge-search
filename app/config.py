@@ -20,5 +20,5 @@ COLLECTION_BY_TYPE: dict[str, str] = {
     "viewpoint": "viewpoints",
 }
 
-# project_id default value for search API
+# /objects 的缺省项目（检索已不用它：/search 缺省 = 全项目）
 DEFAULT_PROJECT_ID = 1
