@@ -12,7 +12,7 @@
 | 数据库存储 | ✅ 已落地、锁定 | 权威库 `knowledge_db`；3 集合 `project_id` 分区；`pptx_store` 已弃用 |
 | id 模型 | ✅ 已落地 | `id = _id = ObjectId`（全局唯一），**无复合键**；`oirf_id` 仅项目内唯一（`source:S001`） |
 | ES 索引 + mapping | ✅ 已落地 | 三索引 `knowledge_*`，`dynamic:false`，见 §3 |
-| 同步层（索引 / 全量 / 单条 / 对账） | ✅ 本轮落地并实测 | `app/sync` 五个子命令，见 §4；实测 project 1 为 24/349/24、对账零漂移 |
+| 同步层（索引 / 全量 / 单条 / 对账 / 种子导入） | ✅ 已落地并实测 | `app/sync` 六个子命令，见 §4；实测 project 1 为 24/349/24、对账零漂移 |
 | 搜索 API | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`），HTTP 路由未回归；`/associations`（§5.3）未做 |
 | 增量同步触发形态 | ⏳ 待做 | 当前为「写库后显式调用 `sync_one`」（§4.1 ②）；量大再换 Change Streams（§8） |
 
@@ -62,7 +62,7 @@
 ```
 
 **id 模型（关键）**：
-- 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**入库时**由 `ingest.py` 生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
+- 全局唯一键 = **`_id`（ObjectId）**；`id` 字段在**导入时**由 `load`（旧的 `ingest.py`）生成：丢弃原始 JSON 的生成期 int `id` → 让 Mongo 自产 `_id` → 回写 `id = _id`。**无需复合键**。
 - `oirf_id` 只在**单个项目内唯一**；跨项目同号（`source:S001` vs 另一项目的 `source:S001`）靠 `_id` 区分。
 - 项目内软引用（`reasoning.source_ids`/`steps[].evidence_ids`）存**裸 `oirf_id`**，检索时**必须带 `project_id` 作用域**，否则跨项目同号会串。
 
@@ -148,6 +148,7 @@ python full_sync.py <子命令>     # 兼容旧入口（同一份代码，行为
 | `recreate` | `[--dry-run]` | 等价 `full --recreate`：drop → create → 全量重灌 |
 | `one` | `--type --oirf-id [--project-id]` | 写库后单条同步；对象已从 Mongo 删除则从 ES 删除 |
 | `reconcile` | `[--type] [--fix]` | 对账 ES ↔ Mongo；默认只报告，`--fix` 才删孤儿 + 重灌缺失 |
+| `load` | `[--type] [--dry-run] [--prune] [--reset] [--yes] [--no-sync]` | 按 `reasoning/*.json` 增量导入 Mongo（默认只增改、不删），变动顺手推 ES |
 
 > **前置条件**：下面所有命令都要在**仓库根目录**执行（换目录会报 `ModuleNotFoundError: No module named 'app'`）；
 > Windows PowerShell 下先执行 `$env:PYTHONIOENCODING='utf-8'`，否则中文输出会乱码（`[ɾ��]`、`[�ع�]`）——
@@ -280,21 +281,53 @@ python -m app.sync reconcile --fix
 python -m app.sync init      # 只建缺失的索引；已存在的输出 [跳过] … 索引定义未改动
 ```
 
-### 4.2 入库脚本 `ingest.py`（破坏性，需显式确认）
+### 4.2 种子导入 `load`（`reasoning/*.json` ⇒ Mongo）
 
-`reasoning/*.json` ⇒ Mongo 的重灌脚本。它会**先 drop 三个集合**再重灌：
+日常用法（**安全，不需要 `--yes`**）：
+
+```bash
+python -m app.sync load --dry-run    # 先看：将新增 / 更新 / 未变各几条
+python -m app.sync load              # 落库：只增改、默认不删；变动那几条顺手批量推给 ES
+```
+输出（当前数据本来就一致时）：
+```
+[种子] reasoning/*.json 397 条 / Mongo 现状 397 条
+        sources: 种子 24、Mongo 24 → 新增 0、更新 0、未变 24
+        evidence: 种子 349、Mongo 349 → 新增 0、更新 0、未变 349
+        viewpoints: 种子 24、Mongo 24 → 新增 0、更新 0、未变 24
+[计划] 新增 0 / 更新 0 / 未变 397（默认不删；要删加 --prune）
+[落库] sources：无需改动
+...
+[完成] Mongo 24/349/24 条；ES 已同步本次变动
+       核对两边：python -m app.sync reconcile
+```
+
+- 按 `(project_id, oirf_id)` **增量 upsert**：已存在的原地更新（`_id` 不变），缺的才插入
+- **内容未变的文档不写库、也不推 ES** ⇒ 可反复跑（上面这次实测 1.6 秒、ES 零写入）
+- 只比**种子声明的字段**：Mongo 侧的额外字段不会被比较、也不会被删或被覆盖
+- 只把**变动过的那几条**批量推给 ES（实测 397 条：批量 0.24s vs 逐条 26.85s，快 112 倍）
+  ⇒ **导入完不需要再跑 `recreate`**
+
+两个开关：
+
+```bash
+python -m app.sync load --prune       # 额外删掉 Mongo 里"种子已没有"的文档（ES 同步删）
+python -m app.sync load --reset --yes # 旧的清空重灌：drop Mongo 三集合 + 重灌 + 重建重灌 ES
+```
+> 不加 `--prune` 时，报告会明确指出「Mongo 另有 N 条种子没有的，未处理」，不会闷声不管。
+> `--reset` 会**重建 ObjectId**，所以必须跟 ES 一起重建 —— 工具已自动做掉（drop 三索引 → 按 mapping 建 → 全量重灌），跑完两边零漂移。
+
+**旧的 `ingest.py` 仍可用**，它就是 `load --reset` 的兼容包装（`--dry-run` 看计划、`--yes` 才执行、裸跑拒绝）：
 
 ```bash
 python ingest.py --dry-run    # 只报「将清空哪些集合（含现有条数）/ 将写入多少条」，不动库
 python ingest.py              # 不带确认 → 拒绝执行并说明会 drop 谁、怎么确认（退出码 1）
-python ingest.py --yes        # 真正执行
+python ingest.py --yes        # 真正执行：重灌 Mongo + 重建重灌 ES
 ```
-
-> ⚠️ 重灌会生成**新的 ObjectId**（`id = _id` 随之变新），ES 里按旧 `_id` 存的文档会**全部失配**（`reconcile` 会报成一堆孤儿 + 缺失）。所以 `ingest.py --yes` 之后**必须**接着跑 `python -m app.sync recreate`。
 
 ### 4.3 实现与口径
 
-- 代码：`app/sync/{admin,full,one,reconcile,cli}.py`。常量、连接、BSON 转换分别只来自 `app/config.py`、`app/db.py`、`app/serializers.to_jsonable`（脚本不再自带副本）。
+- 代码：`app/sync/{admin,full,one,reconcile,load,cli}.py`。常量、连接、BSON 转换分别只来自 `app/config.py`、`app/db.py`、`app/serializers.to_jsonable`（脚本不再自带副本）。
 - ES 文档 `_id = str(Mongo _id)`（ObjectId 字符串），全局唯一 ⇒ 全量灌天然幂等 upsert，重跑不递增。
 - 计数取自 `bulk` **返回值**（真实入库数），不是 Mongo 的 `count_documents`；失败时打印失败条数与原因，并以退出码 1 结束。
 - 写后同步与对账修复都会 `refresh` 相关索引，因此命令报出的数字与随后查 `_count` 一致。
@@ -550,10 +583,10 @@ python -m app.sync reconcile      # 期望输出：[结论] 零漂移 —— 两
 
 | 项 | 状态 | 说明 |
 |---|---|---|
-| **同步层（§4）** | ✅ 本轮落地并实测 | `init` / `full` / `recreate` / `one` / `reconcile` 五个子命令；实测：全量连跑两遍均 24/349/24（幂等，且与 ES `_count` 一致）、注入必拒文档时报出失败条数与原因并退出码 1、造孤儿/缺失后 `--fix` 自动复核归零 |
+| **同步层（§4）** | ✅ 已落地并实测 | `init` / `full` / `recreate` / `one` / `reconcile` / `load` 六个子命令；实测：全量连跑两遍均 24/349/24（幂等，且与 ES `_count` 一致）、注入必拒文档时报出失败条数与原因并退出码 1、造孤儿/缺失后 `--fix` 自动复核归零 |
 | **搜索 API（§5）** | ✅ 已实现 | `POST /api/v1/search`（§5.1）+ `GET /api/v1/objects`（§5.2）；本轮只实测了 service 层（直接调用 `app.search.service.search`，`q=空间计算` 命中 23 条、nested `inner_hits` 正常），HTTP 路由未做回归；`/associations`（§5.3）未做 |
 | **增量同步触发形态** | ⏳ 待做 | 当前是「写库后显式调用 `sync_one`」（§4.1 ②）；量大时换 Change Streams（`pymongo.watch()` 长连接 + 批量缓冲 + 重试） |
-| **重灌导致 ES 失配** | ⚠️ 风险（有对策） | `ingest.py --yes` 会重建 ObjectId ⇒ ES 旧 `_id` 全部失配，必须紧跟 `recreate`（§4.2）。根治要么入库改用确定性 `_id`（要动 §2 已锁的 id 模型，需单独裁决），要么把 `recreate` 固定挂在 `--yes` 之后 |
+| **种子导入（§4.2）** | ✅ 本轮落地并实测 | `load` 增量 upsert：只增改、内容未变则不写库也不推 ES（实测一致时 1.6s、ES 零写入）、只批量推变动过的（397 条 0.24s vs 逐条 26.85s）；`--prune` 显式删且 ES 同步删；`--reset --yes` 保留旧的清空重灌并自动把 ES 一起重建（`ingest.py --yes` 等价） |
 | **`reconcile --fix` 效率** | ⏳ 已知 | 重灌缺失是逐条 `sync_one`（每条 refresh 一次索引）；量大时改为批量写入后统一 refresh |
 | **有漂移时的退出码** | ⏳ 待定 | 现在 `reconcile` 有漂移仍返回 `exit=0`（漂移=发现，不是失败）；若要拿它当 cron 健康检查，需改成非 0 |
 | **`period` 区间过滤** | ⏳ 待做 | `period` 有区间值（如 `2023-2027`），精确筛 `period=2024` 会漏掉区间；后续加归一化年份字段 |
