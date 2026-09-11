@@ -21,7 +21,16 @@ _tmp/
 scratch/
 *.log
 
+# Environment snapshot taken before the mcp v2 upgrade (rollback reference)
+_mcp-v2-upgrade/
+
+# pytest, when its cache dir cannot be written
+pytest-cache-files-*/
+
 # Env / secrets
 .env
 .env.*
 !.env.example
+
+# tmp ref materials
+structure/
