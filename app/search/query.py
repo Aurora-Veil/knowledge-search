@@ -23,6 +23,8 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     build bool.filter by type. 
     type_ must be one of WEIGHTS keys.
     p is a dict of filter parameters.
+
+    Only filters that FIELD_TYPES declares applicable to ``type_`` are emitted;
     """
     f: list[dict[str, Any]] = []
 
@@ -74,7 +76,21 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     if p.get("responsible_role"):
         f.append(_nested("responsibility", _term("responsibility.operator.role", p["responsible_role"])))
 
+    _check_applicability_drift(type_, p)
     return f
+
+
+def _check_applicability_drift(type_: str, p: Mapping[str, Any]) -> None:
+    """
+    Guard: a filter passed in ``p`` must be declared applicable to ``type_`` in FIELD_TYPES, 
+    otherwise the per-type branches above and the FIELD_TYPES table have drifted apart.
+    """
+    for key, allowed in FIELD_TYPES.items():
+        if p.get(key) and type_ not in allowed:
+            raise ValueError(
+                f"filter {key!r} is not applicable to type {type_!r} "
+                f"(FIELD_TYPES says {allowed}); build_filters and FIELD_TYPES have drifted"
+            )
 
 
 def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:

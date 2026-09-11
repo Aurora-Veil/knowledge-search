@@ -15,15 +15,14 @@ def _page_size(p: dict[str, Any]) -> tuple[int, int]:
 
 def _applicable_types(p: dict[str, Any], base: tuple[str, ...] | list[str] = OBJECT_TYPES) -> set[str]:
     """
-    Return applicable object types by intersecting the association filters.
+    Return applicable object types by intersecting the declared applicability
+    of every filter present in ``p`` (see fields.FIELD_TYPES).
+
     """
     types = set(base)
-    if p.get("source_ids"):
-        types &= set(ASSOC_SOURCE_IDS_TYPES)
-    if p.get("evidence_ids"):
-        types &= set(ASSOC_EVIDENCE_IDS_TYPES)
-    if p.get("publisher"):
-        types &= set(PUBLISHER_FIELD)
+    for key, allowed in FIELD_TYPES.items():
+        if p.get(key):
+            types &= set(allowed)
     return types
 
 

@@ -39,5 +39,24 @@ ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
 # viewpoint's experience layer uses cross_validation_mode - a term on a missing field is a silent 0 hits
 CONFIDENCE_LEVEL_TYPES = ("source", "evidence")
 
+FIELD_TYPES: dict[str, tuple[str, ...]] = {
+    # evidence-only fields
+    "period": ("evidence",),
+    "region": ("evidence",),
+    "industry": ("evidence",),
+    "source_type": ("evidence",),
+    # source + evidence
+    "confidence_level": CONFIDENCE_LEVEL_TYPES,
+    # viewpoint-only fields
+    "claim_type": ("viewpoint",),
+    "applicable_scenario": ("viewpoint",),
+    "cross_validation_mode": ("viewpoint",),
+    # relations
+    "source_ids": ASSOC_SOURCE_IDS_TYPES,
+    "evidence_ids": ASSOC_EVIDENCE_IDS_TYPES,
+    # publisher maps to a different field per type (PUBLISHER_FIELD)
+    "publisher": tuple(PUBLISHER_FIELD),
+}
+
 __all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES",
-           "CONFIDENCE_LEVEL_TYPES", "PUBLISHER_FIELD"]
+           "CONFIDENCE_LEVEL_TYPES", "PUBLISHER_FIELD", "FIELD_TYPES"]
