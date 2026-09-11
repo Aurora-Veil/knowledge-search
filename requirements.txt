@@ -3,3 +3,6 @@ uvicorn[standard]>=0.30
 pydantic>=2.7
 elasticsearch>=8,<10
 pymongo>=4.6
+
+# MCP server. The official SDK v2 renamed FastMCP to MCPServer
+mcp>=2,<3

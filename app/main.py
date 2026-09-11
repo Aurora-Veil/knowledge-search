@@ -1,16 +1,29 @@
 """FastAPI app entrypoint"""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
+from .mcp import mcp
 from .routers import associations, objects, projects, search
+
+mcp_app = mcp.streamable_http_app(streamable_http_path="/")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with mcp.session_manager.run():
+        yield
+    db.close()
+
 
 app = FastAPI(
     title="OIRF Knowledge-Graph Search API",
     version="0.1.0",
-    description="MongoDB + Elasticsearch search api",
+    description="MongoDB + Elasticsearch search api, also served over MCP at /mcp",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -30,7 +43,4 @@ app.include_router(projects.router)
 def health() -> dict:
     return {"ok": True, "service": "oirf-search"}
 
-
-@app.on_event("shutdown")
-def _shutdown() -> None:
-    db.close()
+app.mount("/mcp", mcp_app)
