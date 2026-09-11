@@ -98,14 +98,14 @@ python run.py
 
 ### 2.4 参数适用类型
 
-`type=all` 时按此表判断每个参数对哪类对象生效。`生效` 表示参数参与过滤；`忽略` 表示该类对象没有这个字段，参数被忽略、该类照常返回；`排除` 表示该类对象不适用，直接不出结果。
+`type=all` 时按此表判断每个参数对哪类对象生效。`生效` 表示参数参与过滤；`排除` 表示该类对象不适用，直接不出结果。
 
 | 参数 | source | evidence | viewpoint |
 | --- | :--: | :--: | :--: |
 | `status`、`presentation_type`、`responsible_role`、`project_id` | 生效 | 生效 | 生效 |
-| `period`、`region`、`industry`、`source_type` | 忽略 | 生效 | 忽略 |
-| `confidence_level` | 生效 | 生效 | 忽略 |
-| `claim_type`、`applicable_scenario`、`cross_validation_mode` | 忽略 | 忽略 | 生效 |
+| `period`、`region`、`industry`、`source_type` | 排除 | 生效 | 排除 |
+| `confidence_level` | 生效 | 生效 | 排除 |
+| `claim_type`、`applicable_scenario`、`cross_validation_mode` | 排除 | 排除 | 生效 |
 | `publisher` | 生效 | 生效 | 排除 |
 | `source_ids` | 排除 | 生效 | 生效 |
 | `evidence_ids` | 排除 | 排除 | 生效 |
@@ -256,7 +256,6 @@ curl "$API/projects"
 }
 ```
 
-
 ## 6. 错误码
 
 | 状态码 | 场景 | 响应 |
@@ -266,5 +265,3 @@ curl "$API/projects"
 | `404` | `/associations` 找不到对象 | `{"detail":"viewpoint 'viewpoint:V999' not found in project 1"}` |
 | `422` | 参数校验失败：类型不对、超出范围、缺必填、`mode`/`direction`/`include` 取值非法、标量参数传了数组 | FastAPI 字段级错误 |
 | `422` | `/associations` 的 `oirf_id` 前缀与 `object_type` 不一致 | `{"detail":"oirf_id prefix must match object_type: …"}` |
-
-
