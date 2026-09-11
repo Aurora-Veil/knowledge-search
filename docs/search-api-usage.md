@@ -17,6 +17,7 @@ python run.py
 | POST | `/api/v1/search` | 搜索，全文加筛选 | 缺省为全部项目 |
 | GET | `/api/v1/objects/{object_type}/{oirf_id}` | 取完整对象 | 必填 |
 | GET | `/api/v1/associations/{object_type}/{oirf_id}` | 取关联子图，含节点与边 | 必填 |
+| GET | `/api/v1/projects` | 列出项目与各类对象数量 | 无 |
 
 `object_type` 取值 `source`、`evidence`、`viewpoint`。典型用法是先 `/search` 定位对象，再用 `/objects` 取全文、用 `/associations` 取上下文。
 
@@ -238,7 +239,25 @@ curl "$API/associations/evidence/evidence:E005?project_id=1"
 - 节点没有 `score`。
 - 同一对节点可能有多条边，分别对应不同 `step`，所以边数可能大于节点对数。
 
-## 5. 错误码
+## 5. 项目列表 `GET /api/v1/projects`
+
+列出库里有哪几个 `project_id`，以及每个项目三类对象的数量。无参数。
+
+```bash
+curl "$API/projects"
+```
+
+```jsonc
+{
+  "projects": [
+    { "project_id": 1, "source": 24, "evidence": 349, "viewpoint": 24 }
+  ],
+  "total_objects": 397
+}
+```
+
+
+## 6. 错误码
 
 | 状态码 | 场景 | 响应 |
 | --- | --- | --- |
