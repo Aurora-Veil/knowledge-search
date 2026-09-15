@@ -1,0 +1,55 @@
+{
+  "$comment": [
+    "向量化文本拼接规范。embedding 时读这个文件，不要在代码里写死字段列表。",
+    "path 语法：点分路径定位字段；[] 表示该处是数组，展开取每个元素上的剩余路径。",
+    "值为 string 或 string[] 均可，按 types 的顺序用 text.separator 拼接，空值跳过。"
+  ],
+
+  "model": {
+    "name": "BAAI/bge-base-zh-v1.5",
+    "dims": 768,
+    "max_tokens": 512,
+    "normalize_embeddings": true,
+    "query_instruction": "为这个句子生成表示以用于检索相关文章：",
+    "cache_dir": ".hf-cache"
+  },
+
+  "text": {
+    "separator": "\n",
+    "skip_empty": true
+  },
+
+  "types": {
+    "source": [
+      "identity.name",
+      "presentation.summary"
+    ],
+    "evidence": [
+      "identity.name",
+      "presentation.raw_texts"
+    ],
+    "viewpoint": [
+      "presentation.name",
+      "presentation.content",
+      "presentation.explanation",
+      "reasoning.steps[].to",
+      "reasoning.narrative"
+    ]
+  },
+
+  "excluded": {
+    "$comment": "刻意排除，不要加回。这一节只是文档，代码不读。",
+    "evidence.experience.confidence_reason": "349/349 条完全相同（模板常量），会在向量空间里形成高密度簇",
+    "source.experience.level_reason": "24/24 条完全相同（模板常量）",
+    "source.presentation.title": "18/24 含 SEO 杂质，如 _腾讯新闻(qq.com)、（附下载）_同比_市场_全球(sohu.com)",
+    "source.presentation.notes": "文件管理元信息（如 材料包中登记为 材料_PPTX_原稿.pptx），不是内容",
+    "evidence.presentation.notes": "重复度高（51/109 distinct），且多为出处标注",
+    "evidence.presentation.value": "p50 仅 5 字，多为纯数值，dense 模型对精确数字不敏感",
+    "evidence.experience.original_publish": "仅 17 个取值，且已是 filter 字段（PUBLISHER_FIELD）",
+    "evidence.subject/indicator": "p50 仅 6/4 字，且与 identity.name 高度重叠，不是有效上下文",
+    "period/region/industry/source_type": "枚举字段，已有 term 精确过滤，重复投入",
+    "confidence_level/claim_type/applicable_scenario/cross_validation_mode": "枚举字段，已有 term 精确过滤",
+    "viewpoint.identity.name": "与 presentation.name 在 24/24 条上完全相同，取其一即可",
+    "viewpoint.presentation.change_triggers": "疑似模板化（如 若季度数据被全年数据修订或口径变化，结论需相应调整。）"
+  }
+}
