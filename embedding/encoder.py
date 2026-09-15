@@ -6,13 +6,13 @@ bge passage / query encoder.
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any, Sequence
 
 from .spec import MODEL
 
-# Read by huggingface_hub / transformers at import time, so these must be set
-# before the lazy import in Encoder._load, not after.
+# Read by huggingface_hub / transformers at import time
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
@@ -64,22 +64,27 @@ class Encoder:
         self.batch_size = batch_size
         self.device = device
         self._model: Any = None
+        self._lock = threading.Lock()
 
     @property
     def dim(self) -> int:
         return int(MODEL["dims"])
 
     def _load(self) -> Any:
-        if self._model is None:
-            import torch
-            from sentence_transformers import SentenceTransformer
+        # Locked across the whole load, not just the swap: a second caller that
+        # slipped past the check would otherwise load its own copy of the
+        # weights. Encoding itself runs outside the lock.
+        with self._lock:
+            if self._model is None:
+                import torch
+                from sentence_transformers import SentenceTransformer
 
-            if self.device is None:
-                self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = SentenceTransformer(str(resolve_snapshot()), device=self.device)
-            model.max_seq_length = int(MODEL["max_tokens"])
-            self._model = model
-        return self._model
+                if self.device is None:
+                    self.device = "cuda" if torch.cuda.is_available() else "cpu"
+                model = SentenceTransformer(str(resolve_snapshot()), device=self.device)
+                model.max_seq_length = int(MODEL["max_tokens"])
+                self._model = model
+            return self._model
 
     def encode_passages(self, texts: Sequence[str],
                         show_progress_bar: bool = False) -> list[list[float]]:
