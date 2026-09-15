@@ -5,7 +5,7 @@ WEIGHTS: dict[str, list[str]] = {
     "source": ["identity.name^3", "presentation.title^2", "presentation.publisher.text^2"],
     "evidence": ["identity.name^3", "presentation.subject.text^2", 
                  "presentation.indicator^2", "presentation.value^2", "experience.original_publish.text^2"],
-    "viewpoint": ["presentation.name^3", "identity.name^2.5", "experience.name^2"],
+    "viewpoint": ["identity.name^3", "experience.name^2"],
 }
 
 # _source whitelist -> long text should be fetched from Mongo
