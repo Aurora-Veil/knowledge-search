@@ -1,11 +1,5 @@
 {
-  "$comment": [
-    "向量化文本拼接规范。embedding 时读这个文件，不要在代码里写死字段列表。",
-    "path 语法：点分路径定位字段；[] 表示该处是数组，展开取每个元素上的剩余路径。",
-    "值为 string 或 string[] 均可，按 types 的顺序用 text.separator 拼接，空值跳过。",
-    "三类实体统一用 identity.name 作为名称字段（schema 定义：Identity.name = 身份对象名）。",
-    "前置条件：identity.name 必须有值。若为空，该实体既检索不到也向量化不了，应在入库时校验。"
-  ],
+  "$comment": "向量化文本拼接规范。",
 
   "model": {
     "name": "BAAI/bge-base-zh-v1.5",
@@ -24,7 +18,8 @@
   "types": {
     "source": [
       "identity.name",
-      "presentation.summary"
+      "presentation.summary",
+      "presentation.publisher"
     ],
     "evidence": [
       "identity.name",
@@ -35,24 +30,8 @@
       "presentation.content",
       "presentation.explanation",
       "reasoning.steps[].to",
-      "reasoning.narrative"
+      "reasoning.narrative",
+      "experience.content"
     ]
-  },
-
-  "excluded": {
-    "$comment": "刻意排除，不要加回。这一节只是文档，代码不读。",
-    "evidence.experience.confidence_reason": "349/349 条完全相同（模板常量），会在向量空间里形成高密度簇",
-    "source.experience.level_reason": "24/24 条完全相同（模板常量）",
-    "source.presentation.title": "18/24 含 SEO 杂质，如 _腾讯新闻(qq.com)、（附下载）_同比_市场_全球(sohu.com)；丢掉的实质内容已被 summary 覆盖",
-    "source.presentation.publisher": "23/24 的 publisher 已经出现在 identity.name 前缀里，加进向量是重复",
-    "source.presentation.notes": "文件管理元信息（如 材料包中登记为 材料_PPTX_原稿.pptx），不是内容",
-    "evidence.presentation.notes": "重复度高（51/109 distinct），且多为出处标注",
-    "evidence.presentation.value": "p50 仅 5 字，多为纯数值，dense 模型对精确数字不敏感",
-    "evidence.experience.original_publish": "仅 17 个取值，且已是 filter 字段（PUBLISHER_FIELD）",
-    "evidence.subject/indicator": "p50 仅 6/4 字，且与 identity.name 高度重叠，不是有效上下文",
-    "period/region/industry/source_type": "枚举字段，已有 term 精确过滤，重复投入",
-    "confidence_level/claim_type/applicable_scenario/cross_validation_mode": "枚举字段，已有 term 精确过滤",
-    "viewpoint.presentation.name": "与 identity.name 在 24/24 条上完全相同；三类实体统一取 identity.name",
-    "viewpoint.presentation.change_triggers": "疑似模板化（如 若季度数据被全年数据修订或口径变化，结论需相应调整。）"
   }
 }

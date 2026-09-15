@@ -18,13 +18,13 @@
 
 - [x] **决策：拼接哪些文本** —— 已定稿，落在 `embedding/fields.json`
 
-  | 类型 | 进向量 | 拼接后长度 p50 / max |
+  | 类型 | 进向量 | 拼接后长度 p50 / p90 / max |
   | --- | --- | --- |
-  | source | `identity.name` + `presentation.summary` | 76 / 136 |
-  | evidence | `identity.name` + `presentation.raw_texts` | 46 / 147 |
-  | viewpoint | `presentation.name` + `presentation.content` + `presentation.explanation` + `reasoning.steps[].to` + `reasoning.narrative` | 259 / 379 |
+  | source | `identity.name` + `presentation.summary` + `presentation.publisher` | 80 / 124 / 142 |
+  | evidence | `identity.name` + `presentation.raw_texts` | 46 / 84 / 147 |
+  | viewpoint | `identity.name` + `presentation.content` + `presentation.explanation` + `reasoning.steps[].to` + `reasoning.narrative` + `experience.content` | 285 / 371 / **406** |
 
-  字段列表**不写死在代码里**，由 `embedding/fields.json` 声明，embedding 时读取。排除清单及理由也记在同一个文件的 `excluded` 节。
+  字段列表**不写死在代码里**，由 `embedding/fields.json` 声明，embedding 时读取。该文件**只放数据与解析契约**（`$comment` 说明 path 语法、值类型、拼接规则）；**排除清单属于决策，记在本文档的「排除清单」一节，不放进 JSON**——两个名单并存会造出"同一字段里外不一致"这类矛盾。
 
   两个推翻初稿的实测发现：
 
@@ -33,12 +33,47 @@
 
   已确认无空串：三类共 397 条按规范拼接后均非空。
 
+- [x] **排除清单** —— 从 `embedding/fields.json` 的 `excluded` 节移入本文档
+
+  以下字段经过讨论后**刻意排除，不要加回**。加回前先读理由——大多数理由来自实测数据，不是口味问题。
+
+  | 字段 | 排除理由 |
+  | --- | --- |
+  | `evidence.experience.confidence_reason` | 349/349 条完全相同（模板常量），会在向量空间里形成高密度簇 |
+  | `source.experience.level_reason` | 24/24 条完全相同（模板常量） |
+  | `source.presentation.title` | 18/24 含 SEO 杂质（`_腾讯新闻(qq.com)`、`（附下载）_同比_市场_全球(sohu.com)`）；丢掉的实质内容已被 `summary` 覆盖 |
+  | `source.presentation.notes` | 文件管理元信息（如"材料包中登记为 材料_PPTX_原稿.pptx"），不是内容 |
+  | `evidence.presentation.notes` | 重复度高（51/109 distinct），且多为出处标注 |
+  | `evidence.presentation.value` | p50 仅 5 字，多为纯数值；dense 模型对精确数字不敏感 |
+  | `evidence.experience.original_publish` | 仅 17 个取值，且已是 filter 字段（`PUBLISHER_FIELD`） |
+  | `evidence.presentation.subject` / `indicator` | p50 仅 6/4 字，与 `identity.name` 高度重叠；BM25 已有 `^2`，不构成有效上下文 |
+  | `evidence.presentation.period` / `region` / `industry` / `source_type` | 枚举字段，已有 term 精确过滤，重复投入 |
+  | `*.experience.confidence_level` / `claim_type` / `applicable_scenario` / `cross_validation_mode` | 枚举字段，已有 term 精确过滤 |
+  | `viewpoint.presentation.name` | 与 `identity.name` 在 24/24 条上完全相同；三类实体统一取 `identity.name` |
+  | `viewpoint.presentation.change_triggers` | 疑似模板化（"若季度数据被全年数据修订或口径变化，结论需相应调整。"） |
+  | `viewpoint.experience.name` | 经验层是**分类维度**，不是"这个观点在讲什么"。分类维度应走 filter；且已在 BM25 `^2` 覆盖。实测（24 条，弱证据）显示单独加 `content` 反而略升区分度，但**再加 `name` 就退回**——与"短标签拉高彼此相似度"的机制一致 |
+
+  判断其他字段时反复用得到的**两条原则**：
+
+  1. **内容维度走向量，分类维度走 filter。** `identity.name` 回答"这个对象叫什么"（身份锚点，一个实体一个）；`experience.name` 回答"这个对象属于哪一类"（分类，应精确筛选而非模糊接近）。原则不是绝对的——`viewpoint.experience.content` 是有意保留的例外，理由见下一条决策。
+  2. **BM25 已覆盖的字段不必再进向量。** 短标签、枚举值恰恰是 BM25 词匹配的强项。
+
+- [x] **决策：两处按人工判断加入** —— 与文档建议不一致，以人工判断为准
+
+  - `source.presentation.publisher`：**加入** `types.source`。虽然 23/24 的 publisher 已出现在 `identity.name` 前缀里（重复），但保留可覆盖剩下那 1/24，且代价只有几十个字符。
+  - `viewpoint.experience.content`：**加入** `types.viewpoint`（原文一度误写成不存在的 `experience.context`，已修正）。这对应上面的实验方案 B——实测（24 条，弱证据）显示单独加 `content` 反而使平均两两相似度从 0.6147 降到 0.6081，即区分度略升。与建议的"分类维度走向量应走 filter"原则不一致，取舍是：`content` 描述的是"分析什么主题"，与用户查询措辞重叠度高，这部分召回价值被判定为大于原则上的纯度损失。
+  - **`experience.name` 仍排除**（见上表）——实验里它把相似度拉回 0.6135，方向不利。
+
+- [x] **决策：排除清单移出 JSON** —— `embedding/fields.json` 的 `excluded` 节已删除，内容并入本文档的「排除清单」表
+  - 理由：`fields.json` 只放**数据与解析契约**（`$comment` 说明 path 语法），**决策**放项目文档
+  - 附带收益：只剩一个名单后，"同一字段同时出现在进/不进两个名单里"这类矛盾不可能再发生
+
 - [x] **决策：分隔符与标签** —— 用 `\n` 纯拼接，不加字段标签
   - 理由：bge 在自然文本上训练，`主题：X` 这类结构化提示未必更好，且增加不确定性；`\n` 能保留字段边界
 
 - [x] **决策：是否切片**
-  - 当前结论：**不引入**。数据远未触及 512 token 限制（viewpoint 最长 379，占上限 74%）
-  - 触发条件（将来重新评估）：单个实体文本超过 ~400 字时
+  - 当前结论：**仍不引入**，但已接近需要重评
+  - ⚠️ **原设的 ~400 字重评门槛已被触及**：加入 `experience.content` 后 viewpoint 拼接长度 max 从 379 涨到 **406**（占 512 上限的 79%）。建议把门槛改为「超过 480 字（约 94%）」，或改为按 **token** 而非字符判断——中文近似 1 字 1 token，但数字与英文的比例不同，bge 的 tokenizer 对大段数字会更省
   - 若将来要切，按 schema 结构切（`reasoning.steps[]`、`presentation.raw_texts[]` 是天然原子单元），不按字数盲切
   - 长文本场景的另一条路：换 bge-m3（8192 token），避免切片，但推理慢得多
 
@@ -50,16 +85,6 @@
 - [ ] **待办：写 `embedding/fields.json` 的读取器与拼接函数**
   - 路径语法：点分路径；`[]` 表示该处是数组，展开取每个元素上的剩余路径（如 `reasoning.steps[].to`）
   - 拼接后与 `embed_text_hash` 一起落库，供增量重算判断
-
-- [ ] **决策：是否切片**
-  - 当前结论：**不引入**。数据远未触及 512 token 限制
-  - 触发条件（将来重新评估）：单个实体文本超过 ~400 字时
-  - 若将来要切，按 schema 结构切（`reasoning.steps[]`、`presentation.raw_texts[]` 是天然原子单元），不按字数盲切
-  - 长文本场景的另一条路：换 bge-m3（8192 token），避免切片，但推理慢得多
-
-- [ ] **待实测：bge 的 query 指令前缀**
-  - bge-zh 系官方建议 s2p 场景 **query 侧**加前缀（`为这个句子生成表示以用于检索相关文章：`），passage 侧不加
-  - 加与不加以本项目数据实测对比后再定
 
 ## 2. 检索修改
 
