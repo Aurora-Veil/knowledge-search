@@ -42,13 +42,34 @@ example/*.json ──ingest.py──> MongoDB ──full_sync.py──> Elastics
 
 ## 目录
 
-| 路径 | 内容 |
-| --- | --- |
-| `app/` | FastAPI 服务；`app/search/` 为检索实现 |
-| `embedding/` | `fields.json` 定义向量文本、`spec.py` 拼接、`encoder.py` 编码 |
-| `mapping/` | 三个索引的 mapping |
-| `structure/` | OIRF v3.0 schema |
-| `docs/` | 文档 |
+```
+app/                        FastAPI 服务
+  main.py                   应用装配、健康检查
+  config.py                 连接串、索引名、检索开关
+  db.py                     ES / Mongo 客户端
+  serializers.py            BSON -> JSON
+  routers/                  四个路由
+  search/                   检索实现
+    query.py                构造 ES 查询体
+    rank.py                 RRF 按名次融合
+    service.py              编码、并发请求、组装响应
+    fields.py               权重、白名单、常量
+    response.py             ES hit -> 卡片
+    objects.py              /objects（Mongo）
+    associations.py         关联子图
+  mcp/server.py             MCP 工具
+embedding/                  向量化
+  fields.json               向量文本规范
+  spec.py                   拼文本、算 hash
+  encoder.py                bge 编码器
+mapping/                    三个索引 mapping
+example/                    示例数据
+structure/                  OIRF v3.0 schema
+docs/search-api-usage.md    接口用法
+ingest.py                   example -> MongoDB
+full_sync.py                MongoDB -> ES - 含向量
+run.py                      启动服务
+```
 
 ## 许可
 
