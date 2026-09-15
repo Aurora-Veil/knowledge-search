@@ -82,9 +82,31 @@
   - 前缀已记在 `embedding/fields.json` 的 `model.query_instruction`
   - 加与不加以本项目数据实测对比后再定
 
-- [ ] **待办：写 `embedding/fields.json` 的读取器与拼接函数**
-  - 路径语法：点分路径；`[]` 表示该处是数组，展开取每个元素上的剩余路径（如 `reasoning.steps[].to`）
-  - 拼接后与 `embed_text_hash` 一起落库，供增量重算判断
+- [x] **读取器与拼接函数** —— 落在 `embedding/spec.py`（`build_text` / `text_hash`）
+
+  实现取「**先把整篇文档扁平化**（数组下标写成 `[]`），**再按 `path` 精确匹配或 `path + "[]"` 前缀匹配**」。不需要递归下降求值器。四条实现契约：
+
+  - **前缀只能是 `path + "[]"`，不能是 `startswith(path)`**。后者会让 `presentation.content` 误吃 `presentation.contents` 之类——安静的错误。
+  - **外层遍历 spec 路径、内层遍历文档**。拼接顺序由 spec 决定，不由 JSON 键顺序决定；键顺序若漏进文本就会漏进 hash，"同一份数据换个序列化顺序"会被误判成过期向量。
+  - **每个字符串叶子 `strip()`，`None` 丢弃，其余标量 `str()`**。分隔符是构建器唯一引入的空白，hash 才可复现。
+  - **数组元素缺子字段要容忍**（某个 `step` 没有 `to` 就什么都不贡献，不报错）。
+
+  ⚠️ **spec 里没写、但必须有的规则：标量列表也要用 `separator` 拼入。** `presentation.raw_texts` 是 `list[str]`，而路径里没有 `[]`。若按普通标量处理，`str()` 会拼出带引号方括号的字符串直接污染向量。**实测 349 条 evidence 的 `raw_texts` 每条都恰好只有 1 个元素**，所以这条分支在当前数据上**永远不会被触发**——属潜伏分支，等第二段 raw_text 出现才第一次生效（`embed_text_hash` 会跟着变，不会静默复用旧向量）。
+
+  核对：`build_text` 复现了上面的长度表（source 80/124/142、evidence 46/84/147、viewpoint 285/371/406），三类共 397 条**无空串**，且 hash **两两不同**（24/349/24 个不同值）。
+
+- [x] **编码器** —— 落在 `embedding/encoder.py`
+
+  - **从本地 snapshot 加载**，不用 repo id。`resolve_snapshot()` 认 `refs/main`，但**先校验 `config.json` + 权重文件存在再信任**——本机 cache 里确实躺着一个残缺 revision（只有 `model.safetensors`），信了它会在 transformers 深处才炸。
+  - **懒加载**：`import embedding.spec` 不碰 torch，`Encoder()` 构造免费，模型在首次 `encode_*` 时才载入。
+  - **`encode_passages` 不加前缀，`encode_query` 加 `model.query_instruction`**（bge 的 s2p 不对称性）。
+  - **`.tolist()` 放在编码器内部**：float32 从源头就进不了 `_bulk`，而不是靠调用方记得转。
+  - 实测：768 维、python `float`、L2 范数 `1.0`、语义方向正确（`cos(VR查询, VR文本)=0.65 > cos(VR查询, 空间计算设备文本)=0.43`）。
+
+  ⚠️ **实测：向量不是逐位可复现的。** 同一文本单独编码 vs 放进 batch 里编码，`max_abs_diff = 8.9e-08`；同 batch 组成、同 batch_size、甚至新建 `Encoder` 重载模型都**逐位相同**。差异来自 padding 改变浮点累加顺序，对 kNN 无害（比余弦区分度小 6 个数量级，实测 3 个 query 对 4 篇的排序完全不变）。两个后果：
+
+  - **缓存绝不能靠比对向量是否相等**，必须靠 `embed_text_hash`（这正是 hash 取文本、不取向量的原因）。
+  - **"重算一遍再 diff 索引"不能作为校验手段**——除非 batch 组成完全一致。
 
 ## 2. 检索修改
 
