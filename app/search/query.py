@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .fields import *
 
 MATCH_MODES = ("or","and","phrase")
+
+
+class WindowTooDeep(ValueError):
+    """
+    The requested page is past RESULT_WINDOW.
+    """
+
 
 def _term(field: str, value: Any) -> dict[str, Any]:
     return {"term": {field: str(value)}}
@@ -14,17 +21,40 @@ def _terms(field: str, values: Any) -> dict[str, Any]:
     return {"terms": {field: vals}}
 
 
-def _nested(path: str, inner: Mapping[str, Any]) -> dict[str, Any]:
-    return {"nested": {"path": path, "query": dict(inner), "inner_hits": {"_source": True}}}
+def _nested(path: str, inner: Mapping[str, Any], inner_hits: bool = True) -> dict[str, Any]:
+    body: dict[str, Any] = {"path": path, "query": dict(inner)}
+    if inner_hits:
+        body["inner_hits"] = {"_source": True}
+    return {"nested": body}
 
 
-def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
+    return max(int(p.get("page", 1)), 1), max(int(p.get("size", 20)), 1)
+
+
+def window(p: Mapping[str, Any]) -> int:
+    """
+    How many hits every retriever is asked for, or raise if the page is too deep.
+
+    """
+    page, size = _page_size(p)
+    if page * size > RESULT_WINDOW:
+        raise WindowTooDeep(
+            f"page*size = {page * size} exceeds RESULT_WINDOW = {RESULT_WINDOW}; "
+            f"fusion re-reads that many hits from every retriever to stay page-stable"
+        )
+    return RESULT_WINDOW
+
+
+def build_filters(type_: str, p: Mapping[str, Any], inner_hits: bool = True) -> list[dict[str, Any]]:
     """
     build bool.filter by type. 
     type_ must be one of WEIGHTS keys.
     p is a dict of filter parameters.
 
     Only filters that FIELD_TYPES declares applicable to ``type_`` are emitted;
+
+    inner_hits is off for the kNN branch
     """
     f: list[dict[str, Any]] = []
 
@@ -71,10 +101,11 @@ def build_filters(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
         if p.get("evidence_ids"):
             steps_inner.append(_terms("reasoning.steps.evidence_ids", p["evidence_ids"]))
         if steps_inner:
-            f.append(_nested("reasoning.steps", {"bool": {"filter": steps_inner}}))
+            f.append(_nested("reasoning.steps", {"bool": {"filter": steps_inner}}, inner_hits))
 
     if p.get("responsible_role"):
-        f.append(_nested("responsibility", _term("responsibility.operator.role", p["responsible_role"])))
+        f.append(_nested("responsibility", _term("responsibility.operator.role", p["responsible_role"]),
+                         inner_hits))
 
     _check_applicability_drift(type_, p)
     return f
@@ -135,8 +166,8 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
         "fields": {f.split("^", 1)[0]: {} for f in WEIGHTS[type_]},
     }
 
-    page = max(int(p.get("page", 1)), 1)
-    size = max(int(p.get("size", 20)), 1)
+    page, size = _page_size(p)
+    window(p)   # depth guard, shared with the kNN branch
 
     body: dict[str, Any] = {
         "query": query,
@@ -153,4 +184,26 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     return body
 
 
-__all__ = ["build_query", "build_filters", "MATCH_MODES"]
+def build_knn_query(type_: str, p: Mapping[str, Any], vector: Sequence[float]) -> dict[str, Any]:
+    """
+    kNN-only body: the vector branch, with no lexical clause and no highlight.
+    """
+    if type_ not in WEIGHTS:
+        raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
+
+    need = window(p)
+    knn: dict[str, Any] = {
+        "field": EMBED_FIELD,
+        "query_vector": list(vector),
+        "k": need,
+        "num_candidates": max(need * KNN_NUM_CANDIDATES_FACTOR, need + 10),
+    }
+
+    filters = build_filters(type_, p, inner_hits=False)
+    if filters:
+        knn["filter"] = filters
+
+    return {"knn": knn, "source": SOURCE_BY_TYPE[type_], "size": need}
+
+
+__all__ = ["build_query", "build_knn_query", "build_filters", "window", "MATCH_MODES"]

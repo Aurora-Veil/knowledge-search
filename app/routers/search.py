@@ -6,6 +6,7 @@ from typing import List, Literal, Optional, Union
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from ..search.query import WindowTooDeep
 from ..search.service import search as search_service
 
 router = APIRouter(prefix="/api/v1", tags=["search"])
@@ -45,4 +46,9 @@ class SearchRequest(BaseModel):
 
 @router.post("/search")
 def api_search(req: SearchRequest) -> dict:
-    return search_service(req.model_dump(exclude_none=True))
+    try:
+        return search_service(req.model_dump(exclude_none=True))
+    except WindowTooDeep as e:
+        # Paging this deep is not a server fault, but it cannot be served
+        # either: fusion reads page*size hits from every retriever.
+        raise HTTPException(status_code=400, detail=str(e))

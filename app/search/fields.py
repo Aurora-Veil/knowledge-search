@@ -31,6 +31,19 @@ PUBLISHER_FIELD: dict[str, str] = {
     "evidence": "experience.original_publish",
 }
 
+# dense vector field, declared under the same name in all three mappings
+EMBED_FIELD = "embedding"
+
+# Reciprocal Rank Fusion: score(d) = sum over ranked lists of 1 / (k + rank(d))
+# k
+RRF_RANK_CONSTANT = 60
+
+# kNN recall window.
+KNN_NUM_CANDIDATES_FACTOR = 5
+
+# How deep every retriever is asked to rank, and therefore the deepest page the fusion can serve.
+RESULT_WINDOW = 200
+
 # association term
 ASSOC_SOURCE_IDS_TYPES = ("evidence", "viewpoint")
 ASSOC_EVIDENCE_IDS_TYPES = ("viewpoint",)
@@ -59,4 +72,5 @@ FIELD_TYPES: dict[str, tuple[str, ...]] = {
 }
 
 __all__ = ["WEIGHTS", "SOURCE_BY_TYPE", "ASSOC_SOURCE_IDS_TYPES", "ASSOC_EVIDENCE_IDS_TYPES",
-           "CONFIDENCE_LEVEL_TYPES", "PUBLISHER_FIELD", "FIELD_TYPES"]
+           "CONFIDENCE_LEVEL_TYPES", "PUBLISHER_FIELD", "FIELD_TYPES",
+           "EMBED_FIELD", "RRF_RANK_CONSTANT", "KNN_NUM_CANDIDATES_FACTOR", "RESULT_WINDOW"]

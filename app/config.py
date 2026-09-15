@@ -5,6 +5,13 @@ DB_NAME = "knowledge_db"
 
 ES_URL = "http://localhost:9200"
 
+# Vector search. 
+ENABLE_VECTOR_SEARCH = True
+
+# Fusing BM25 and kNN means two ES requests per index, so ``type=all`` costs six.
+# ES Retriever API RRF disable for Basic :(
+ES_SEARCH_WORKERS = 12
+
 OBJECT_TYPES: tuple[str, ...] = ("source", "evidence", "viewpoint")
 
 INDEX_BY_TYPE: dict[str, str] = {
