@@ -10,6 +10,9 @@ venv/
 # Node
 node_modules/
 
+# Model weights / HuggingFace hub cache (bge-base-zh-v1.5, ~780 MB)
+.hf-cache/
+
 # IDE / OS
 .vscode/
 .idea/
