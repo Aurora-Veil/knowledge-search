@@ -10,6 +10,11 @@
       "project_id":  { "type": "keyword" },
       "oirf_id":     { "type": "keyword" },
 
+      "embedding":       { "type": "dense_vector", "dims": 768, "index": true, "similarity": "cosine" },
+      "embed_model":     { "type": "keyword" },
+      "embed_rev":       { "type": "keyword" },
+      "embed_text_hash": { "type": "keyword" },
+
       "identity": {
         "type": "object",
         "properties": {
