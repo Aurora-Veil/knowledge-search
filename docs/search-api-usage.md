@@ -14,7 +14,7 @@ python run.py
 | 方法 | 路径 | 用途 | `project_id` |
 | --- | --- | --- | --- |
 | GET | `/api/v1/health` | 健康检查 | 无 |
-| POST | `/api/v1/search` | 搜索，全文加筛选 | 缺省为全部项目 |
+| POST | `/api/v1/search` | 搜索，词法加向量再加筛选 | 缺省为全部项目 |
 | GET | `/api/v1/objects/{object_type}/{oirf_id}` | 取完整对象 | 必填 |
 | GET | `/api/v1/associations/{object_type}/{oirf_id}` | 取关联子图，含节点与边 | 必填 |
 | GET | `/api/v1/projects` | 列出项目与各类对象数量 | 无 |
@@ -29,9 +29,9 @@ python run.py
 
 | 字段 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
-| `q` | string | 无 | 全文检索词。空或缺省时只做筛选 |
+| `q` | string | 无 | 检索词。同时走词法与向量两路；空或缺省时只做筛选、不走向量 |
 | `type` | `source` / `evidence` / `viewpoint` / `all` | `all` | 搜哪类对象 |
-| `mode` | `or` / `and` / `phrase` | `or` | 全文匹配松紧，只对 `q` 生效 |
+| `mode` | `or` / `and` / `phrase` | `or` | 全文匹配松紧，只对 `q` 的词法一路生效 |
 | `project_id` | int \| int[] | 无 | 单值为单个项目，数组为多项目并集，不传或 `[]` 为全部项目 |
 | `status` | string | 无 | `identity.status` |
 | `presentation_type` | string | 无 | `presentation.type` |
@@ -48,16 +48,18 @@ python run.py
 | `source_ids` | string[] | 无 | 引用溯源：返回引用了某材料的对象 |
 | `evidence_ids` | string[] | 无 | 引用溯源：返回引用了某证据的对象 |
 | `page` | int | `1` | 页码，从 1 起 |
-| `size` | int | `20` | 每页条数，最大 `100` |
+| `size` | int | `20` | 每页条数，最大 `100`；且 `page`×`size` 不得超过 `200`，超出返回 `400` |
 | `highlight` | bool | `true` | 是否返回高亮 `<em>…</em>` |
 
-`q` 匹配的字段只有这些：
+`q` 的**词法**一路匹配的字段只有这些：
 
 | type | 检索字段 |
 | --- | --- |
 | source | `identity.name`、`presentation.title`、`presentation.publisher` |
 | evidence | `identity.name`、`presentation.subject`、`presentation.indicator`、`presentation.value`、`experience.original_publish` |
 | viewpoint | `presentation.name`、`identity.name`、`experience.name` |
+
+`q` 还会并行走一次**向量**检索，比对的是每个实体的整篇拼接文本，不是上表这些字段。所以词法零命中时仍可能返回结果，`total` 与 `hits` 会不一致。
 
 ### 2.2 `mode`：召回松紧
 
@@ -67,7 +69,7 @@ python run.py
 | `and` | 所有词都要命中，顺序不限 |
 | `phrase` | 所有词必须相邻出现 |
 
-同一批查询词在三种模式下返回的条数如下。判断是否真的搜到要用 `mode=and`，`or` 会把只命中半个词的也算上。
+同一批查询词在三种模式下的 `total` 如下。判断是否真的搜到要用 `mode=and`，`or` 会把只命中半个词的也算上。`total` 只统计词法命中，所以 `and` 下的 `0` 只代表词法零命中，`hits` 仍可能由向量分支填充。
 
 | `q` | `or` | `and` | `phrase` |
 | --- | --- | --- | --- |
@@ -150,24 +152,28 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 
 ```jsonc
 {
-  "total": 15, "page": 1, "size": 3,
+  "total": 23, "page": 1, "size": 3,
   "hits": [
     {
       "id": "6a9fbd1b270db0c081be679d",  // ObjectId 字符串，全局唯一
       "object_type": "evidence", "project_id": 1,
       "oirf_id": "evidence:E028",        // 项目内唯一
-      "score": 28.29,                    // 相关度分；type=all 时归一到 0~1，便于跨类型比较
-      "raw_score": 28.29,                // 原始 BM25 分
+      "score": 0.03252,                  // RRF 名次分，只表示本查询内的排序，不表示相关度大小
+      "raw_score": 25.5993,              // 该文档的 BM25 分；词法未命中时为 null
       "identity": { "name": "…", "object_type": "evidence", "status": "PENDING" },
       "presentation": { "subject": "苹果", "value": "…", "period": "2024", "region": "全球" },
       "reasoning": { "source_ids": ["source:S005"] },
       "experience": { "confidence_level": "low", "original_publish": "澎湃新闻" },
       "responsibility": [ { "operation": "create", "operator": { "role": "analyst" } } ],
-      "highlight": { "identity.name": ["<em>空间</em><em>计算</em>时代"] }
+      "highlight": { "identity.name": ["<em>空间</em><em>计算</em>时代"] },
+      "knn_score": 0.74834895,           // 向量相似度，ES 报的 (1+cos)/2；纯筛选时为 null
+      "match_source": "both"             // bm25 / knn / both，哪几路召回了它
     }
   ]
 }
 ```
+
+三个分数含义不同，都不要跨查询比较：`score` 由名次算出（量级 `0.016`~`0.033`），`raw_score` 是 BM25（无上界，随查询漂移），`knn_score` 是余弦映射到 `[0,1]`。
 
 响应只含卡片字段，长文本如 `presentation.content`、`presentation.explanation`、`presentation.raw_texts`、`presentation.summary`、`reasoning.narrative`、`*_reason`、`lifecycle` 需用 `/objects` 取。
 
@@ -175,8 +181,11 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 
 - 数组类参数 `project_id`、`source_type`、`publisher`、`source_ids`、`evidence_ids` 传 `[]` 表示不设限；标量参数传 `[]` 返回 `422`。
 - `project_id` 不传或传 `[]` 表示全部项目；`project_id: 0` 是有效值，返回 0 条，不等于全部。
-- 纯筛选请求的 `score` 与 `raw_score` 恒为 `0`，`highlight` 也为空，都属正常。
-- `inner_hits` 只在按 `responsible_role`、`source_ids`、`evidence_ids` 过滤时出现，用来标识命中的是哪条责任链、哪一步推理。
+- 纯筛选请求（无 `q`）`score` 恒为 `0`、`knn_score` 为 `null`、`match_source` 为 `bm25`、`highlight` 为空；`raw_score` **不是** `0`，它是 ES 给纯筛选查询的分（实测 `1.0`）。都属正常。
+- `total` 只统计词法命中，不含纯向量命中，所以可能与 `hits` 不一致，极端情况是 `total=0` 而 `hits` 非空。
+- 翻页深度上限：`page`×`size` 不得超过 `200`（`size=20` 时最多 10 页），超出返回 `400`。融合必须从每一路取回同一批候选才能保证翻页不重不漏，所以这个上限不是随手可调大的参数。
+- `highlight` 与 `inner_hits` 只出现在词法命中的文档上，纯向量命中的文档没有这两个字段。`inner_hits` 用来标识命中的是哪条责任链、哪一步推理，只在按 `responsible_role`、`source_ids`、`evidence_ids` 过滤时出现。
+- 请求体必须是 UTF-8。Windows PowerShell 5.1 用 `Invoke-RestMethod` 时若 `Content-Type` 不带 `charset=utf-8`，中文 `q` 会被破坏并**静默返回 0 命中**（不报错），排查时先确认这一点。
 - 跨项目结果里 `oirf_id` 会重号，识别对象用全局唯一的 `id`，或用 `project_id` 加 `oirf_id`。
 
 ## 3. 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}`
@@ -261,6 +270,7 @@ curl "$API/projects"
 | 状态码 | 场景 | 响应 |
 | --- | --- | --- |
 | `400` | `/objects` 的 `object_type` 非法 | `{"detail":"unknown object_type: …"}` |
+| `400` | `/search` 的 `page`×`size` 超过 `200` | `{"detail":"page*size = 220 exceeds RESULT_WINDOW = 200; …"}` |
 | `404` | `/objects` 找不到对象，或 `project_id` 指向没有数据的项目 | `{"detail":"object not found"}` |
 | `404` | `/associations` 找不到对象 | `{"detail":"viewpoint 'viewpoint:V999' not found in project 1"}` |
 | `422` | 参数校验失败：类型不对、超出范围、缺必填、`mode`/`direction`/`include` 取值非法、标量参数传了数组 | FastAPI 字段级错误 |
