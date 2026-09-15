@@ -49,3 +49,7 @@ example/*.json ──ingest.py──> MongoDB ──full_sync.py──> Elastics
 | `mapping/` | 三个索引的 mapping |
 | `structure/` | OIRF v3.0 schema |
 | `docs/` | 文档 |
+
+## 许可
+
+MIT，见 [LICENSE](LICENSE)。
