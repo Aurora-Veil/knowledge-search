@@ -36,4 +36,4 @@ pytest-cache-files-*/
 !.env.example
 
 # tmp ref materials
-structure/
+
