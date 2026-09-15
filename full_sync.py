@@ -1,13 +1,17 @@
-# full_sync.py —— 用 mapping 建索引，并 Mongo -> ES
+# full_sync.py —— 用 mapping 建索引，并 Mongo -> ES（含向量）
 
 import json
 import os
+import time
 from datetime import datetime
 
 from pymongo import MongoClient
 from bson import ObjectId
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
+
+from embedding.encoder import Encoder, resolve_snapshot
+from embedding.spec import MODEL, build_text, text_hash
 
 MONGO_URI = "mongodb://localhost:27017"
 DB_NAME   = "knowledge_db"
@@ -54,14 +58,45 @@ def ensure_indices(es, name: str) -> None:
     print(f"  created {cfg['index']}")
 
 
-def full_sync(es, mongo, name: str) -> int:
+def _embed(name: str, docs: list[dict], encoder: Encoder) -> None:
+    """
+    Attach the vector and its provenance to each document, in place.
+
+    """
+    texts = [build_text(src, name) for src in docs]
+    todo = [i for i, t in enumerate(texts) if t]
+    if len(todo) != len(texts):
+        print(f"  warn: {len(texts) - len(todo)} doc(s) have no vector text")
+    if not todo:
+        return
+
+    t0 = time.perf_counter()
+    vectors = encoder.encode_passages([texts[i] for i in todo])
+    rev = resolve_snapshot().name          # the snapshot that actually produced them
+    for i, vector in zip(todo, vectors):
+        src = docs[i]
+        src["embedding"] = vector
+        src["embed_model"] = MODEL["name"]
+        src["embed_rev"] = rev
+        src["embed_text_hash"] = text_hash(texts[i])
+    print(f"  encoded {len(todo)} docs in {time.perf_counter() - t0:.1f}s")
+
+
+def full_sync(es, mongo, name: str, encoder: Encoder) -> int:
     cfg = INDICES[name]
     coll = mongo[cfg["collection"]]
 
+    docs = []
+    for d in coll.find({}):
+        src = _jsonable(d)                        # ObjectId -> str
+        sid = src.pop("_id", None) or src["id"]    # ES 文档 id = ObjectId str
+        docs.append((sid, src))
+
+    # Vectors are built from exactly what gets stored
+    _embed(name, [src for _, src in docs], encoder)
+
     def actions():
-        for d in coll.find({}):
-            src = _jsonable(d)            # ObjectId -> str
-            sid = src.pop("_id", None) or src["id"]   # ES 文档 id = ObjectId str
+        for sid, src in docs:
             yield {"_index": cfg["index"], "_id": str(sid), "_source": src}
 
     bulk(es, actions(), chunk_size=500, raise_on_error=False)
@@ -77,9 +112,10 @@ def main() -> None:
             ensure_indices(es, name)
 
         print("== full sync ==")
+        encoder = Encoder()          # free: the model loads on the first encode
         for name in INDICES:
             cfg = INDICES[name]
-            n = full_sync(es, mongo, name)
+            n = full_sync(es, mongo, name, encoder)
             print(f"  {cfg['index']}: synced {n} docs")
     finally:
         es.close()
