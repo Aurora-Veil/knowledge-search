@@ -16,27 +16,40 @@
 
 ## 1. 整实体向量化
 
-- [ ] **决策：拼接哪些文本**（主要待办）
+- [x] **决策：拼接哪些文本** —— 已定稿，落在 `embedding/fields.json`
 
-  候选进向量的字段：
-
-  | 类型 | 进向量 | 中位长度 |
+  | 类型 | 进向量 | 拼接后长度 p50 / max |
   | --- | --- | --- |
-  | evidence | `identity.name` + `presentation.raw_texts`（可加 `subject`/`indicator` 做弱上下文） | 16 + 26 |
-  | viewpoint | `presentation.name` + `presentation.content` + `presentation.explanation` + `reasoning.steps[].to` + `reasoning.narrative` | 26 / 108 / 41 / 20 / 25 |
-  | source | `presentation.title` + `presentation.summary` | 40 / 43 |
+  | source | `identity.name` + `presentation.summary` | 76 / 136 |
+  | evidence | `identity.name` + `presentation.raw_texts` | 46 / 147 |
+  | viewpoint | `presentation.name` + `presentation.content` + `presentation.explanation` + `reasoning.steps[].to` + `reasoning.narrative` | 259 / 379 |
 
-  明确排除：
+  字段列表**不写死在代码里**，由 `embedding/fields.json` 声明，embedding 时读取。排除清单及理由也记在同一个文件的 `excluded` 节。
 
-  - `experience.confidence_reason`、`experience.level_reason`（模板常量，100% 重复）
-  - `presentation.region` / `period` / `industry` / `source_type` / `confidence_level` / `claim_type` 等枚举字段（已有 term 过滤）
-  - `presentation.value` / `unit`（数值，dense 模型对精确数字不敏感）
+  两个推翻初稿的实测发现：
 
-  待决策点：
+  - **source 不用 `presentation.title`，用 `identity.name`**。title 有 18/24 含 SEO 杂质（`_腾讯新闻(qq.com)`、`（附下载）_同比_市场_全球(sohu.com)`），identity.name 只有 2/24，且是"发布方 + 干净标题"。
+  - **evidence 不加 `subject`/`indicator` 做弱上下文**。单向量没有字段权重概念，"弱"只能用模板/位置表达；而 subject/indicator（p50 6/4 字）与 identity.name 高度重叠，边际收益接近零。数据里最短的 raw_texts 只有 4~6 字（`IMU3`、`色域75%`），但对应的 identity.name（`IMU单价3美元`）已足够表达。
 
-  - [ ] 拼接的分隔符与字段标签：是否写成 `"标题：xxx\n原文：yyy"` 这种带字段名的形式，还是纯文本直接串接
-  - [ ] `identity.name` 这类"人工写的短标题"是否重复计入（它同时是 BM25 权重最高的字段 `identity.name^3`，存在双重加权）
-  - [ ] evidence 中位仅 54 字，向量收益有限。**是否只先做 viewpoint**（文本最长、最受益）作为试点
+  已确认无空串：三类共 397 条按规范拼接后均非空。
+
+- [x] **决策：分隔符与标签** —— 用 `\n` 纯拼接，不加字段标签
+  - 理由：bge 在自然文本上训练，`主题：X` 这类结构化提示未必更好，且增加不确定性；`\n` 能保留字段边界
+
+- [x] **决策：是否切片**
+  - 当前结论：**不引入**。数据远未触及 512 token 限制（viewpoint 最长 379，占上限 74%）
+  - 触发条件（将来重新评估）：单个实体文本超过 ~400 字时
+  - 若将来要切，按 schema 结构切（`reasoning.steps[]`、`presentation.raw_texts[]` 是天然原子单元），不按字数盲切
+  - 长文本场景的另一条路：换 bge-m3（8192 token），避免切片，但推理慢得多
+
+- [ ] **待实测：bge 的 query 指令前缀**
+  - bge-zh 系官方建议 s2p 场景 **query 侧**加前缀（`为这个句子生成表示以用于检索相关文章：`），passage 侧不加
+  - 前缀已记在 `embedding/fields.json` 的 `model.query_instruction`
+  - 加与不加以本项目数据实测对比后再定
+
+- [ ] **待办：写 `embedding/fields.json` 的读取器与拼接函数**
+  - 路径语法：点分路径；`[]` 表示该处是数组，展开取每个元素上的剩余路径（如 `reasoning.steps[].to`）
+  - 拼接后与 `embed_text_hash` 一起落库，供增量重算判断
 
 - [ ] **决策：是否切片**
   - 当前结论：**不引入**。数据远未触及 512 token 限制
