@@ -1,14 +1,21 @@
-# ingest.py —— example/ -> Mongo (knowledge_db)
+# scripts/ingest.py —— example/ -> Mongo (knowledge_db)
 #
 # id == _id == ObjectId == ES _id
 
-import os
 import json
+import os
+import sys
+from pathlib import Path
+
+# repo root on sys.path, so this runs from any working directory
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 from pymongo import MongoClient, ASCENDING
 
 MONGO_URI = "mongodb://localhost:27017"
 DB_NAME   = "knowledge_db"
-BASE      = os.path.dirname(os.path.abspath(__file__))
+BASE      = str(ROOT)
 
 ENTITIES = {
     "source":    {"file": "source.json",    "collection": "sources",    "key": "sources"},

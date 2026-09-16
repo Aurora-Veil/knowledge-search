@@ -1,9 +1,15 @@
-# full_sync.py —— 用 mapping 建索引，并 Mongo -> ES（含向量）
+# scripts/full_sync.py —— 用 mapping 建索引，并 Mongo -> ES（含向量）
 
 import json
 import os
+import sys
 import time
 from datetime import datetime
+from pathlib import Path
+
+# repo root on sys.path, so this runs from any working directory
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from pymongo import MongoClient
 from bson import ObjectId
@@ -14,8 +20,7 @@ from app.config import DB_NAME, ES_URL, MONGO_URI, es_auth
 from embedding.encoder import Encoder, resolve_snapshot
 from embedding.spec import MODEL, build_text, text_hash
 
-BASE      = os.path.dirname(os.path.abspath(__file__))
-MAPPING   = os.path.join(BASE, "mapping")
+MAPPING = str(ROOT / "mapping")
 
 INDICES = {
     "source":    {"index": "knowledge_source",    "mapping": "source_mapping.json",    "collection": "sources"},

@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
+
+# repo root on sys.path, so this runs from any working directory
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from elasticsearch import Elasticsearch
 
@@ -15,8 +20,8 @@ INDEX_PATTERN = "knowledge_*"
 
 # read                 search queries (all that app/ needs)
 # view_index_metadata  indices.exists
-# create_index         full_sync.py creates the indices on first run
-# write                full_sync.py bulk indexing
+# create_index         scripts/full_sync.py creates the indices on first run
+# write                scripts/full_sync.py bulk indexing
 # manage               creating an index with settings/mappings
 PRIVILEGES = ["read", "view_index_metadata", "create_index", "write", "manage"]
 

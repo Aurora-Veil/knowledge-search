@@ -19,10 +19,10 @@ pip install -r requirements.txt
 # 下载向量模型
 python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
 
-python init_es_auth.py # 在 ES 上建 knowledge_app 角色与用户
-python ingest.py       # example/*.json  -> MongoDB
-python full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
-python run.py          # http://127.0.0.1:8000
+python scripts/init_es_auth.py # 在 ES 上建 knowledge_app 角色与用户
+python scripts/ingest.py       # example/*.json  -> MongoDB
+python scripts/full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
+python run.py                  # http://127.0.0.1:8000
 ```
 
 ## Elasticsearch user
@@ -30,7 +30,7 @@ python run.py          # http://127.0.0.1:8000
 | 变量 | 谁读 | 说明 |
 | --- | --- | --- |
 | `ES_ELASTIC_PASSWORD` | `docker compose` | 超级用户 `elastic`，只用于初始化 ES 与建用户 |
-| `ES_URL` / `ES_USER` / `ES_PASSWORD` | `app/`、`full_sync.py` | 最小权限 |
+| `ES_URL` / `ES_USER` / `ES_PASSWORD` | `app/`、`scripts/full_sync.py` | 最小权限 |
 
 ## 接口
 
@@ -47,8 +47,8 @@ python run.py          # http://127.0.0.1:8000
 ## 数据链路
 
 ```
-example/*.json ──ingest.py──> MongoDB ──full_sync.py──> Elasticsearch
-                                            └ bge-base-zh-v1.5 embedding
+example/*.json ──scripts/ingest.py──> MongoDB ──scripts/full_sync.py──> Elasticsearch
+                                                └ bge-base-zh-v1.5 embedding
 ```
 
 ## 目录
@@ -80,9 +80,10 @@ example/                    示例数据
 structure/                  OIRF v3.0 schema
 docs/search-api-usage.md    接口用法
 .env.example                ES user & key
-ingest.py                   example -> MongoDB
-full_sync.py                MongoDB -> ES - 含向量
-init_es_auth.py             在 ES 上建角色与用户
+scripts/                    一次性脚本
+  ingest.py                 example -> MongoDB
+  full_sync.py              MongoDB -> ES - 含向量
+  init_es_auth.py           在 ES 上建角色与用户
 run.py                      启动服务
 ```
 
