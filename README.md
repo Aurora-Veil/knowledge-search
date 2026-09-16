@@ -5,12 +5,13 @@ OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词�
 ## 依赖
 
 - Python 3.12
-- MongoDB（`localhost:27017`，库 `knowledge_db`）
-- Elasticsearch 9.x（`localhost:9200`，需 **analysis-ik** 分词插件）
+- Docker   MongoDB + Elasticsearch 包括 analysis-ik 插件
 
 ## 启动
 
 ```bash
+docker compose up -d   # 首次会构建带 analysis-ik 的 ES 镜像
+
 pip install -r requirements.txt
 
 # 首次：下载向量模型
@@ -63,6 +64,8 @@ embedding/                  向量化
   spec.py                   拼文本、算 hash
   encoder.py                bge 编码器
 mapping/                    三个索引 mapping
+docker-compose.yml          MongoDB + Elasticsearch
+docker/Dockerfile           ES + analysis-ik
 example/                    示例数据
 structure/                  OIRF v3.0 schema
 docs/search-api-usage.md    接口用法
