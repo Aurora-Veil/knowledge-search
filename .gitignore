@@ -13,19 +13,19 @@ node_modules/
 # Model weights / HuggingFace hub cache (bge-base-zh-v1.5, ~780 MB)
 .hf-cache/
 
+# Docker volume data
+data/
+
 # IDE / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# Temp / scratch (my inspection scripts, run artifacts)
+# Temp / scratch 
 _tmp/
 scratch/
 *.log
-
-# Environment snapshot taken before the mcp v2 upgrade (rollback reference)
-_mcp-v2-upgrade/
 
 # pytest, when its cache dir cannot be written
 pytest-cache-files-*/
