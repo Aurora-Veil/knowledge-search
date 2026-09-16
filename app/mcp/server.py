@@ -20,6 +20,8 @@ from ..search.associations import neighborhood
 from ..search.objects import get_object as get_object_service
 from ..search.projects import list_projects as list_projects_service
 from ..search.service import search as search_service
+from ..search.service_reports import get as get_report_service
+from ..search.service_reports import search as search_reports_service
 
 # REVIEW_STATUSES = ("FORMAL", "PENDING", "DISPUTED", "REJECTED")
 # CONFIDENCE_LEVELS = ("high", "medium", "low")
@@ -29,6 +31,7 @@ ReviewStatus: TypeAlias = Literal["FORMAL", "PENDING", "DISPUTED", "REJECTED"]
 ConfidenceLevel: TypeAlias = Literal["high", "medium", "low"]
 SourceType: TypeAlias = Literal["primary_interview", "secondary_public", "analyst_calculation"]
 EvidenceType: TypeAlias = Literal["历史值", "预估值", "计算值", "规则值"]
+ReportLayout: TypeAlias = Literal["横版", "竖版"]
 
 SERVER_NAME = "oirf-search"
 
@@ -36,17 +39,18 @@ SERVER_INSTRUCTIONS = """
 
 OIRF 知识图谱检索 MCP Server
 
-检索工具：
+知识图谱检索工具：
 - 全文检索 —— search_knowledge：按检索词与筛选条件查材料，返回卡片
 - 取对象全文 —— get_object：取单个对象的完整内容
 - 取关联 —— get_associations：取某对象的关联子图，可沿推理链向下追溯与反查
 
 先给命中摘要，再按需展开
 
-使用约定：
-- 对于单个对象，id 全局唯一
-- oirf_id 只在project内唯一，跨project会重号，get_object、get_associations 时须与 project_id 同时提供
-- 部分筛选参数会把某类对象排除，由数据库内数据决定
+报告检索工具（独立索引，与上面的知识图谱无关）：
+- 语义检索 —— search_reports：按检索词做语义匹配，返回报告卡片
+- 取报告正文 —— get_report：按 report_id 取报告完整内容（含摘要）
+
+报告检索只有语义召回，检索词越接近自然语言问法效果越好
 
 """
 
@@ -137,6 +141,34 @@ class ProjectInfo(BaseModel):
 class ProjectList(BaseModel):
     projects: list[ProjectInfo]
     total_objects: int = Field(description="各项目对象数之和")
+
+
+class ReportCard(BaseModel):
+    """
+    One report search hit.
+
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    report_id: Optional[str] = Field(None, description="报告唯一标识，取详情时用")
+    title: Optional[str] = Field(None, description="报告标题")
+    industry: list[str] = Field(default_factory=list, description="行业分类")
+    layout: Optional[str] = Field(None, description="横版 / 竖版")
+    publish_date: Optional[str] = Field(None, description="发布日期 YYYY-MM-DD")
+    url: Optional[str] = Field(None, description="原文链接")
+    score: Optional[float] = Field(None, description="向量相似度")
+
+
+class ReportSearchResult(BaseModel):
+    """
+    Report search response: no total, no summary.
+
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    hits: list[ReportCard] = Field(description="按相似度降序，不含摘要正文")
 
 
 # --------------------------------------------------------------------------- #
@@ -376,6 +408,91 @@ def list_projects() -> ProjectList:
         return ProjectList(**list_projects_service())
     except Exception as exc:  # noqa: BLE001
         raise ToolError(f"查询项目列表失败：{type(exc).__name__}: {exc}") from exc
+
+
+@mcp.tool(
+    title="语义检索报告",
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def search_reports(
+    q: Annotated[
+        str,
+        Field(description="检索词"),
+    ],
+    layout: Annotated[
+        Optional[ReportLayout],
+        Field(description="版式"),
+    ] = None,
+    industry: Annotated[
+        Optional[List[str]],
+        Field(description="行业分类，精确匹配，可多值"),
+    ] = None,
+    publish_date_from: Annotated[
+        Optional[str],
+        Field(description="起始发布日期，YYYY-MM-DD"),
+    ] = None,
+    publish_date_to: Annotated[
+        Optional[str],
+        Field(description="截止发布日期，YYYY-MM-DD"),
+    ] = None,
+    page: Annotated[int, Field(ge=1, description="page")] = 1,
+    size: Annotated[int, Field(ge=1, le=100, description="size per page")] = 20,
+) -> ReportSearchResult:
+    """按语义检索报告，返回标题等卡片信息，不含摘要正文"""
+    params: dict[str, Any] = {
+        "q": q,
+        "layout": layout,
+        "industry": industry,
+        "publish_date_from": publish_date_from,
+        "publish_date_to": publish_date_to,
+        "page": page,
+        "size": size,
+    }
+    params = {k: v for k, v in params.items() if v is not None}
+
+    try:
+        result = search_reports_service(params)
+        if result.get("hits"):
+            return ReportSearchResult(**result)
+        return ReportSearchResult(**result, notice=(
+            """
+            没有命中。
+
+            报告检索只有语义召回，没有关键词精确匹配：
+            - 检索词写成自然语言问法比堆关键词效果好
+            - layout / industry / 日期都是精确匹配，值不匹配会直接过滤空
+            - industry keyword 为完整行业名，可先不带过滤检索，再照结果里的值筛
+
+            去筛选、换更短的 q、或只留核心词重试。
+            """
+        ))
+    except ToolError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - surfaced to the model verbatim
+        raise ToolError(f"报告检索失败：{type(exc).__name__}: {exc}") from exc
+
+
+@mcp.tool(
+    title="取报告详情",
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def get_report(
+    report_id: Annotated[
+        str,
+        Field(description="来自 search_reports 结果的 report_id"),
+    ],
+) -> dict[str, Any]:
+    """按 report_id 取报告完整内容（含摘要正文）"""
+    try:
+        report = get_report_service(report_id)
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(f"取报告详情失败：{type(exc).__name__}: {exc}") from exc
+
+    if report is None:
+        raise ToolError(
+            f"找不到 report_id={report_id!r}，请用 search_reports 返回的 report_id"
+        )
+    return report
 
 
 __all__ = ["mcp", "SERVER_NAME"]

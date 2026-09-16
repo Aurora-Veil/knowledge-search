@@ -1,0 +1,29 @@
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "dynamic": false,
+    "properties": {
+      "report_id": { "type": "keyword" },
+
+      "title": {"type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart"},
+      "summary": { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" },
+
+      "industry": {
+        "type": "keyword",
+        "fields": { "text": { "type": "text", "analyzer": "ik_max_word", "search_analyzer": "ik_smart" } }
+      },
+
+      "layout":       { "type": "keyword" },
+      "publish_date": { "type": "date", "format": "yyyy-MM-dd" },
+      "url":          { "type": "keyword" },
+
+      "embedding":       { "type": "dense_vector", "dims": 768, "index": true, "similarity": "cosine" },
+      "embed_model":     { "type": "keyword" },
+      "embed_rev":       { "type": "keyword" },
+      "embed_text_hash": { "type": "keyword" }
+    }
+  }
+}

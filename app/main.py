@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import db
 from .mcp import mcp
-from .routers import associations, objects, projects, search
+from .routers import associations, objects, projects, reports, search
 
 mcp_app = mcp.streamable_http_app(streamable_http_path="/")
 
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(search.router)
+app.include_router(reports.router)
 app.include_router(objects.router)
 app.include_router(associations.router)
 app.include_router(projects.router)

@@ -32,6 +32,10 @@
       "reasoning.steps[].to",
       "reasoning.narrative",
       "experience.content"
+    ],
+    "report": [
+      "title",
+      "summary"
     ]
   }
 }
