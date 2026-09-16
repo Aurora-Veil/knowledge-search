@@ -5,7 +5,7 @@ from typing import Any
 from elasticsearch import Elasticsearch
 from pymongo import MongoClient
 
-from .config import DB_NAME, ES_URL, MONGO_URI
+from .config import DB_NAME, ES_URL, MONGO_URI, es_auth
 
 _es: Elasticsearch | None = None
 _mongo: MongoClient | None = None
@@ -14,7 +14,7 @@ _mongo: MongoClient | None = None
 def get_es() -> Elasticsearch:
     global _es
     if _es is None:
-        _es = Elasticsearch(ES_URL)
+        _es = Elasticsearch(ES_URL, basic_auth=es_auth())
     return _es
 
 
