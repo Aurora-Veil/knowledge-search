@@ -9,6 +9,8 @@ python run.py
 服务地址 `http://127.0.0.1:8000`，交互文档 `http://127.0.0.1:8000/docs`。
 示例中的 `$API` 代表 `http://127.0.0.1:8000/api/v1`。
 
+启动后会在后台预热向量模型，约 15 秒。
+
 ## 1. 端点总览
 
 | 方法 | 路径 | 用途 | `project_id` |
@@ -18,8 +20,12 @@ python run.py
 | GET | `/api/v1/objects/{object_type}/{oirf_id}` | 取完整对象 | 必填 |
 | GET | `/api/v1/associations/{object_type}/{oirf_id}` | 取关联子图，含节点与边 | 必填 |
 | GET | `/api/v1/projects` | 列出项目与各类对象数量 | 无 |
+| POST | `/api/v1/reports/search` | 报告语义检索 | 无 |
+| GET | `/api/v1/reports/{report_id}` | 取报告详情，含摘要 | 无 |
 
 `object_type` 取值 `source`、`evidence`、`viewpoint`。典型用法是先 `/search` 定位对象，再用 `/objects` 取全文、用 `/associations` 取上下文。
+
+报告是另一份数据集，与这三类对象无关。
 
 ## 2. 搜索 `POST /api/v1/search`
 
@@ -265,13 +271,68 @@ curl "$API/projects"
 }
 ```
 
-## 6. 错误码
+## 6. 报告检索
+
+报告是独立数据集，与上面三类对象无关，**只有语义检索，没有词法分支**。
+
+### 6.1 检索 `POST /api/v1/reports/search`
+
+| 字段 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- |
+| `q` | string | 必填 | 检索词；语义召回，写自然语言问句比堆关键词好 |
+| `report_id` | string[] | 无 | 精确匹配，已知 id 时用来批量取卡片 |
+| `layout` | `横版` / `竖版` | 无 | 版式，精确匹配 |
+| `industry` | string[] | 无 | 行业，精确匹配 |
+| `publish_date_from` / `publish_date_to` | date | 无 | `YYYY-MM-DD`，闭区间 |
+| `page` | int | `1` | 页码，从 1 起 |
+| `size` | int | `20` | 每页条数，最大 `100` |
+
+```bash
+# 语义检索加筛选，3 条
+curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+  -d '{"q":"氢能产业园发展格局","layout":"横版","size":3}'
+
+# 只要 2025 年之后发布的
+curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+  -d '{"q":"新能源汽车销量预测","publish_date_from":"2025-01-01"}'
+```
+
+```jsonc
+{
+  "hits": [                                        // 没有 total，只给命中
+    {
+      "report_id": "62e33fbc2f669532f23e1cd8", 
+      "title": "2022年中国氢能产业园研究报告：…",
+      "industry": [], "layout": "横版",
+      "publish_date": "2022-07-29",
+      "url": "https://www.leadleo.com/report/reading/62e33fbc2f669532f23e1cd8",
+      "score": 0.81234567
+    }
+  ]
+}
+```
+
+列表只给卡片，不含 `summary`。
+
+### 6.2 详情 `GET /api/v1/reports/{report_id}`
+
+```bash
+curl "$API/reports/62e33fbc2f669532f23e1cd8"
+```
+
+字段与列表相同，多一个 `summary`、少一个 `score`。`report_id` 不存在返回 `404`。
+
+
+## 7. 错误码
 
 | 状态码 | 场景 | 响应 |
 | --- | --- | --- |
 | `400` | `/objects` 的 `object_type` 非法 | `{"detail":"unknown object_type: …"}` |
 | `400` | `/search` 的 `page`×`size` 超过 `200` | `{"detail":"page*size = 220 exceeds RESULT_WINDOW = 200; …"}` |
+| `400` | `/reports/search` 的 `q` 是空白串 | `{"detail":"q is required: reports search is semantic-only"}` |
+| `400` | `/reports/search` 的 `page`×`size` 超过 `10000` | `{"detail":"page*size = 11000 exceeds MAX_RESULT_WINDOW = 10000"}` |
 | `404` | `/objects` 找不到对象，或 `project_id` 指向没有数据的项目 | `{"detail":"object not found"}` |
 | `404` | `/associations` 找不到对象 | `{"detail":"viewpoint 'viewpoint:V999' not found in project 1"}` |
+| `404` | `/reports/{report_id}` 找不到报告 | `{"detail":"report not found: …"}` |
 | `422` | 参数校验失败：类型不对、超出范围、缺必填、`mode`/`direction`/`include` 取值非法、标量参数传了数组 | FastAPI 字段级错误 |
 | `422` | `/associations` 的 `oirf_id` 前缀与 `object_type` 不一致 | `{"detail":"oirf_id prefix must match object_type: …"}` |

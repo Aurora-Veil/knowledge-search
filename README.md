@@ -2,6 +2,8 @@
 
 OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词法 + 向量混合检索。
 
+另含报告数据的语义检索。
+
 ## 依赖
 
 - Python 3.12
@@ -22,6 +24,7 @@ python -c "from huggingface_hub import snapshot_download; snapshot_download('BAA
 python scripts/init_es_auth.py # 在 ES 上建 knowledge_app 角色与用户
 python scripts/ingest.py       # example/*.json  -> MongoDB
 python scripts/full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
+python scripts/ingest_reports.py # example/reports.json -> ES 报告索引
 python run.py                  # http://127.0.0.1:8000
 ```
 
@@ -40,15 +43,22 @@ python run.py                  # http://127.0.0.1:8000
 | GET | `/api/v1/objects/{type}/{oirf_id}` | 取完整对象 |
 | GET | `/api/v1/associations/{type}/{oirf_id}` | 取关联子图 |
 | GET | `/api/v1/projects` | 列出项目 |
+| POST | `/api/v1/reports/search` | 报告语义检索 |
+| GET | `/api/v1/reports/{report_id}` | 取报告详情，含摘要 |
 | GET | `/api/v1/health` | 健康检查 |
 
 参数、筛选取值与响应字段见 [docs/search-api-usage.md](docs/search-api-usage.md)。
+
+服务同时以 MCP 暴露在 `http://127.0.0.1:8000/mcp`，工具定义见 `app/mcp/server.py`。
 
 ## 数据链路
 
 ```
 example/*.json ──scripts/ingest.py──> MongoDB ──scripts/full_sync.py──> Elasticsearch
                                                 └ bge-base-zh-v1.5 embedding
+
+example/reports.json ──scripts/ingest_reports.py──> Elasticsearch
+                                                     └ bge-base-zh-v1.5 embedding
 ```
 
 ## 目录
@@ -59,11 +69,14 @@ app/                        FastAPI 服务
   config.py                 连接串、索引名、检索开关
   db.py                     ES / Mongo 客户端
   serializers.py            BSON -> JSON
-  routers/                  四个路由
+  routers/                  五个路由
   search/                   检索实现
     query.py                构造 ES 查询体
+    query_reports.py        构造报告查询体
     rank.py                 RRF 按名次融合
     service.py              编码、并发请求、组装响应
+    service_reports.py      报告检索（纯向量）
+    encoder.py              bge 编码器单例与启动预热
     fields.py               权重、白名单、常量
     response.py             ES hit -> 卡片
     objects.py              /objects（Mongo）
@@ -73,7 +86,7 @@ embedding/                  向量化
   fields.json               向量文本规范
   spec.py                   拼文本、算 hash
   encoder.py                bge 编码器
-mapping/                    三个索引 mapping
+mapping/                    四个索引 mapping
 docker-compose.yml          MongoDB + Elasticsearch
 docker/Dockerfile           ES + analysis-ik
 example/                    示例数据
@@ -83,6 +96,7 @@ docs/search-api-usage.md    接口用法
 scripts/                    一次性脚本
   ingest.py                 example -> MongoDB
   full_sync.py              MongoDB -> ES - 含向量
+  ingest_reports.py         example/reports.json -> ES - 报告索引
   init_es_auth.py           在 ES 上建角色与用户
 run.py                      启动服务
 ```

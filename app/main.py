@@ -9,12 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import db
 from .mcp import mcp
 from .routers import associations, objects, projects, reports, search
+from .search.encoder import _start_warmup
 
 mcp_app = mcp.streamable_http_app(streamable_http_path="/")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with mcp.session_manager.run():
+        _start_warmup() 
         yield
     db.close()
 

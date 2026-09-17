@@ -479,10 +479,10 @@ def search_reports(
 def get_report(
     report_id: Annotated[
         str,
-        Field(description="来自 search_reports 结果的 report_id"),
+        Field(description="report_id"),
     ],
 ) -> dict[str, Any]:
-    """按 report_id 取报告完整内容（含摘要正文）"""
+    """按 report_id 取报告完整内容"""
     try:
         report = get_report_service(report_id)
     except Exception as exc:  # noqa: BLE001
@@ -490,7 +490,7 @@ def get_report(
 
     if report is None:
         raise ToolError(
-            f"找不到 report_id={report_id!r}，请用 search_reports 返回的 report_id"
+            f"找不到 report_id={report_id!r}，请确认 report_id "
         )
     return report
 

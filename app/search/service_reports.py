@@ -6,23 +6,24 @@
 
 from __future__ import annotations
 
-import threading
+# import threading
 from typing import Any, Mapping
 
 from ..db import get_es
 from .query_reports import INDEX, build_detail_query, build_knn_query
+from .encoder import get_encoder
 
-_encoder = None
-_encoder_lock = threading.Lock()
+# _encoder = None
+# _encoder_lock = threading.Lock()
 
 
-def _get_encoder() -> Any:
-    global _encoder
-    with _encoder_lock:
-        if _encoder is None:
-            from embedding.encoder import Encoder
-            _encoder = Encoder()
-        return _encoder
+# def _get_encoder() -> Any:
+#     global _encoder
+#     with _encoder_lock:
+#         if _encoder is None:
+#             from embedding.encoder import Encoder
+#             _encoder = Encoder()
+#         return _encoder
 
 
 def _card(hit: Mapping[str, Any]) -> dict[str, Any]:
@@ -56,7 +57,7 @@ def search(p: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(q, str) or not q.strip():
         raise ValueError("q is required: reports search is semantic-only")
 
-    vector = _get_encoder().encode_query(q.strip())
+    vector = get_encoder().encode_query(q.strip())
     res = get_es().search(index=INDEX, **build_knn_query(p, vector))
 
     return {"hits": [_card(h) for h in res["hits"]["hits"]]}

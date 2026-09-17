@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import threading
+# import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -10,9 +10,10 @@ from .fields import *
 from .query import build_knn_query, build_query, window
 from .rank import LEXICAL, VECTOR, fuse, plain
 from .response import hit_to_card
+from .encoder import get_encoder
 
-_encoder = None
-_encoder_lock = threading.Lock()
+# _encoder = None
+# _encoder_lock = threading.Lock()
 
 # Shared, not per request: a fixed pool bounds how many searches hit ES at once.
 _search_pool = ThreadPoolExecutor(max_workers=ES_SEARCH_WORKERS, thread_name_prefix="es-search")
@@ -45,16 +46,16 @@ def _query_vector(q: str) -> list[float]:
     Embed a search query.
 
     """
-    return _get_encoder().encode_query(q)
+    return get_encoder().encode_query(q)
 
 
-def _get_encoder() -> Any:
-    global _encoder
-    with _encoder_lock:
-        if _encoder is None:
-            from embedding.encoder import Encoder
-            _encoder = Encoder()
-        return _encoder
+# def _get_encoder() -> Any:
+#     global _encoder
+#     with _encoder_lock:
+#         if _encoder is None:
+#             from embedding.encoder import Encoder
+#             _encoder = Encoder()
+#         return _encoder
 
 
 def _run(index: str, body: dict[str, Any]) -> dict[str, Any]:
