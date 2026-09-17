@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>报告检索</title>
+  <!-- 注意：这里的路径以 /ui 开头（绝对路径）。
+       页面挂在 /ui 下，用相对路径 "style.css" 会被浏览器解析成 /style.css，取不到。 -->
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+
+  <!-- 顶栏：标题 + 检索表单。form 的好处是按回车自动提交（触发 submit 事件） -->
+  <header class="topbar">
+    <h1 class="brand">报告检索</h1>
+    <a class="nav-link" href="/ui/">首页</a>
+    <a class="nav-link" href="/ui/oirf.html">OIRF 检索 →</a>
+
+    <form id="searchForm" class="searchbar" autocomplete="off">
+      <input id="q" class="q" type="search"
+             placeholder="用一句话描述你想要的报告，例如：工业机器人应用场景"
+             aria-label="检索词">
+
+      <!-- 版式只有两个取值（横版 / 竖版）。传别的值接口不会报错，只会返回 0 条，
+           所以这里用下拉框而不是输入框。 -->
+      <select id="layout" class="layout" aria-label="版式">
+        <option value="">全部版式</option>
+        <option value="横版">横版</option>
+        <option value="竖版">竖版</option>
+      </select>
+
+      <button id="submit" class="submit" type="submit">搜索</button>
+    </form>
+  </header>
+
+  <!-- 左右两栏：左列表、右详情 -->
+  <main class="panes">
+
+    <section class="pane list-pane">
+      <!-- 状态条：检索中 / 无结果 / 出错，都显示在这里 -->
+      <div id="listStatus" class="status" hidden></div>
+      <ul id="results" class="results"></ul>
+
+      <!-- 翻页条。列表接口不返回总数，所以这里只有页码，没有「共 N 页」 -->
+      <div id="pager" class="pager" hidden>
+        <button id="prevPage" class="page-btn" type="button">上一页</button>
+        <span id="pageInfo" class="page-info"></span>
+        <button id="nextPage" class="page-btn" type="button">下一页</button>
+      </div>
+    </section>
+
+    <section class="pane detail-pane">
+      <div id="detail" class="detail">
+        <p class="placeholder">在左侧点一条报告，这里显示详情。</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- defer = 等 HTML 解析完再执行，所以脚本里可以直接 getElementById -->
+  <script src="/ui/report.js" defer></script>
+</body>
+</html>

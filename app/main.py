@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from . import db
 from .mcp import mcp
@@ -46,4 +47,5 @@ app.include_router(projects.router)
 def health() -> dict:
     return {"ok": True, "service": "oirf-search"}
 
+app.mount("/ui", StaticFiles(directory="static", html=True))
 app.mount("/mcp", mcp_app)

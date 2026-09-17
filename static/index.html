@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>knowledge-search</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body class="home">
+
+  <main class="home-wrap">
+    <h1 class="home-title">knowledge-search</h1>
+    <p class="home-sub">OIRF 知识图谱检索服务</p>
+
+    <!-- 两个入口。页面都是纯 HTML/CSS/JS，没有构建步骤 -->
+    <div class="entries">
+
+      <a class="entry" href="/ui/report.html">
+        <div class="entry-name">报告检索</div>
+        <div class="entry-desc">
+          用一句话描述你要找的报告，按语义匹配标题；点开看摘要与原文链接。
+        </div>
+        <div class="entry-meta">POST /api/v1/reports/search</div>
+      </a>
+
+      <a class="entry" href="/ui/oirf.html">
+        <div class="entry-name">OIRF 检索</div>
+        <div class="entry-desc">
+          检索 source / evidence / viewpoint 三类对象，词法与向量融合排序；
+          点开看对象全文，也能留空检索词按类型浏览。
+        </div>
+        <div class="entry-meta">POST /api/v1/search</div>
+      </a>
+
+    </div>
+
+    <p class="home-foot">
+      <a class="nav-link" href="/docs">接口文档 /docs</a>
+    </p>
+  </main>
+
+</body>
+</html>

@@ -25,7 +25,7 @@ python scripts/init_es_auth.py # 在 ES 上建 knowledge_app 角色与用户
 python scripts/ingest.py       # example/*.json  -> MongoDB
 python scripts/full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
 python scripts/ingest_reports.py # example/reports.json -> ES 报告索引
-python run.py                  # http://127.0.0.1:8000
+python run.py                  # http://127.0.0.1:8000，检索页 /ui
 ```
 
 ## Elasticsearch user
@@ -50,6 +50,8 @@ python run.py                  # http://127.0.0.1:8000
 参数、筛选取值与响应字段见 [docs/search-api-usage.md](docs/search-api-usage.md)。
 
 服务同时以 MCP 暴露在 `http://127.0.0.1:8000/mcp`，工具定义见 `app/mcp/server.py`。
+
+检索页面入口 `http://127.0.0.1:8000/ui`，内含报告检索与 OIRF 检索两个入口页；前端源码在 `static/`。
 
 ## 数据链路
 
@@ -98,6 +100,7 @@ scripts/                    一次性脚本
   full_sync.py              MongoDB -> ES - 含向量
   ingest_reports.py         example/reports.json -> ES - 报告索引
   init_es_auth.py           在 ES 上建角色与用户
+static/                     检索页面（原生 HTML/CSS/JS）
 run.py                      启动服务
 ```
 
