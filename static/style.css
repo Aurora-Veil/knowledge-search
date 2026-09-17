@@ -46,13 +46,14 @@ body {
 
 .searchbar {
   display: flex;
+  flex-wrap: wrap;       /* 控件多，窗口窄时让它们换行，别把检索框压成一条缝 */
   gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .q {
-  flex: 1;
+  flex: 1 1 200px;       /* 基准给 200px：换行时检索框占满一行，而不是被压扁 */
   min-width: 0;
   padding: 9px 12px;
   border: 1px solid #d0d5dd;
@@ -172,6 +173,16 @@ body {
   font-weight: 500;
   line-height: 1.45;
   word-break: break-word;
+}
+
+/* 词法命中的词由 ES 包在 <em> 里，浏览器默认给斜体 —— 中文标题里很别扭。
+   这里改成加粗 + 淡蓝底：保留「哪几个词命中了」的信息，但不改变字形。 */
+.title em {
+  font-style: normal;
+  font-weight: 600;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: #dbeafe;
 }
 
 .meta {

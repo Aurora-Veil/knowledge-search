@@ -12,6 +12,8 @@
  *   - 后端 RESULT_WINDOW = 200，page * size 超过 200 会 400，
  *     所以 size=20 时最多只能翻到第 10 页
  *   - q 必须给（报告页不做「留空浏览」），mode 只约束词法那一路
+ *   - 发布时间下拉映射到 publish_date_from / publish_date_to，默认「全部时间」
+ *     就是两个字段都不发；空串会被后端当非法日期挡成 422，所以必须省略
  *
  * 列表里每条（card）的字段：
  *   report_id, title, industry[], layout, publish_date, url,
@@ -34,6 +36,7 @@ const form = $("searchForm");
 const qInput = $("q");
 const layoutSel = $("layout");
 const modeSel = $("mode");
+const periodSel = $("period");
 const resultsEl = $("results");
 const statusEl = $("listStatus");
 const detailEl = $("detail");
@@ -72,6 +75,27 @@ function titleOf(h) {
   return frag ? highlight(frag) : (esc(h.title) || "无标题");
 }
 
+/* 日期只认 YYYY-MM-DD（后端 _date() 校验得很死，别的格式直接 400）。
+   这里按本地时间取年月日，不用 toISOString()，否则会被时区挪掉一天。 */
+function ymd(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+function yearsAgo(n) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - n);
+  return ymd(d);
+}
+
+/* 发布时间下拉的值 -> [from, to]，两端都可能为 null（表示这一头不限制）。
+   空值 -> 不加过滤；1y/3y/5y -> 今天往前推，只卡下界；2024 -> 那一整个自然年。 */
+function periodRange(value) {
+  if (!value) return [null, null];
+  if (value.endsWith("y")) return [yearsAgo(Number(value.slice(0, -1))), null];
+  return [value + "-01-01", value + "-12-31"];
+}
+
 function showStatus(text, kind) {
   statusEl.textContent = text;
   statusEl.className = "status" + (kind ? " " + kind : "");
@@ -106,6 +130,10 @@ async function doSearch(targetPage = 1) {
 
   const body = { q: q, mode: modeSel.value, page: targetPage, size: PAGE_SIZE };
   if (layoutSel.value) body.layout = layoutSel.value;
+
+  const [dateFrom, dateTo] = periodRange(periodSel.value);
+  if (dateFrom) body.publish_date_from = dateFrom;
+  if (dateTo) body.publish_date_to = dateTo;
 
   let data;
   try {
@@ -292,6 +320,12 @@ layoutSel.addEventListener("change", () => {
 });
 
 modeSel.addEventListener("change", () => {
+  if (!qInput.value.trim()) return;
+  resetDetail();
+  doSearch(1);
+});
+
+periodSel.addEventListener("change", () => {
   if (!qInput.value.trim()) return;
   resetDetail();
   doSearch(1);

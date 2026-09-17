@@ -35,6 +35,29 @@
         <option value="phrase">短语匹配</option>
       </select>
 
+      <!-- 发布时间。默认「全部时间」，也就是不加任何日期过滤。
+           相对范围按今天算，年份范围按自然年算；后端只认 YYYY-MM-DD，
+           拼日期的事在 report.js 的 periodRange() 里。
+           年份列表按库里现有的数据写的（2018-03 ~ 2026-08），
+           以后入了新一年的数据，这里补一个 option 即可。 -->
+      <select id="period" class="layout" aria-label="发布时间">
+        <option value="">全部时间</option>
+        <option value="1y">近一年</option>
+        <option value="3y">近三年</option>
+        <option value="5y">近五年</option>
+        <optgroup label="按年份">
+          <option value="2026">2026 年</option>
+          <option value="2025">2025 年</option>
+          <option value="2024">2024 年</option>
+          <option value="2023">2023 年</option>
+          <option value="2022">2022 年</option>
+          <option value="2021">2021 年</option>
+          <option value="2020">2020 年</option>
+          <option value="2019">2019 年</option>
+          <option value="2018">2018 年</option>
+        </optgroup>
+      </select>
+
       <button id="submit" class="submit" type="submit">搜索</button>
     </form>
   </header>
