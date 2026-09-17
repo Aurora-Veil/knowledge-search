@@ -129,13 +129,12 @@ def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:
         "query": q,
         "analyzer": "ik_smart",
         "fields": WEIGHTS[type_],
+        "type": "best_fields",
     }
     if mode == "and":
-        mm.update({"type": "best_fields", "operator": "and"})
+        mm["operator"] = "and"
     elif mode == "phrase":
         mm["type"] = "phrase"
-    else:
-        mm["type"] = "best_fields"
     return {"multi_match": mm}
 
 def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:

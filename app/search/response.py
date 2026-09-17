@@ -28,3 +28,17 @@ def hit_to_card(hit: dict[str, Any], object_type: str) -> dict[str, Any]:
         card["inner_hits"] = hit["inner_hits"]
         
     return card
+
+
+def hit_to_card_report(hit: dict[str, Any]) -> dict[str, Any]:
+    src = hit.get("_source") or {}
+    
+    return {
+        "report_id": src.get("report_id") or hit.get("_id"),
+        "title": src.get("title"),
+        "summary": src.get("summary"),
+        "industry": src.get("industry") or [],
+        "layout": src.get("layout"),
+        "publish_date": src.get("publish_date"),
+        "url": src.get("url"),
+    }

@@ -12,11 +12,11 @@ from typing import Any, Mapping, Sequence
 INDEX = "knowledge_report_index"
 
 # --- 词法分支 ---
-# ANALYZER = "ik_max_word"
-#
-# REPORT_FIELDS: list[str] = ["title^3", "industry.text^2", "summary"]
-#
-# MATCH_MODES = ("or", "and", "phrase")
+ANALYZER = "ik_smart"
+
+REPORT_FIELDS: list[str] = ["title^3", "industry.text^2", "summary"]
+
+MATCH_MODES = ("or", "and", "phrase")
 
 SOURCE_FIELDS: list[str] = [
     "report_id", "title", "industry",
@@ -89,21 +89,22 @@ def build_filters(p: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 # --- 词法分支 ---
 #
-# def _multi_match(q: str, mode: str) -> dict[str, Any]:
-#     mm: dict[str, Any] = {
-#         "query": q,
-#         "analyzer": ANALYZER,
-#         "fields": REPORT_FIELDS,
-#         "type": "best_fields",
-#     }
-#     if mode == "and":
-#         mm["operator"] = "and"
-#     elif mode == "phrase":
-#         mm["type"] = "phrase"
-#     return {"multi_match": mm}
+def _multi_match(q: str, mode: str = "or") -> dict[str, Any]:
+    mm: dict[str, Any] = {
+        "query": q,
+        "analyzer": ANALYZER,
+        "fields": REPORT_FIELDS,
+        "type": "best_fields",
+    }
+    if mode == "and":
+        mm["operator"] = "and"
+    elif mode == "phrase":
+        mm["type"] = "phrase"
+    return {"multi_match": mm}
 #
 #
 # def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
+# 
 #     mode = p.get("mode") or "or"
 #     if mode not in MATCH_MODES:
 #         raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
@@ -120,9 +121,15 @@ def build_filters(p: Mapping[str, Any]) -> list[dict[str, Any]]:
 #         query["bool"]["must"] = must
 #     if filters:
 #         query["bool"]["filter"] = filters
-#
-#     window(p)
+
+    # highlight = {
+    #     "pre_tags": ["<em>"],
+    #     "post_tags": ["</em>"],
+    #     "fields": {f.split("^", 1)[0]: {} for f in REPORT_FIELDS},
+    # }
+
 #     page, size = _page_size(p)
+#     window(p)
 #
 #     body: dict[str, Any] = {
 #         "query": query,

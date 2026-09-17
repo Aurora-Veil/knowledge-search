@@ -25,7 +25,6 @@ class Fused(NamedTuple):
 def _collect(pools: Iterable[Pool], k: int) -> dict[str, dict[str, Any]]:
     """
     Fold ranked lists into one entry per document.
-
     """
     by_id: dict[str, dict[str, Any]] = {}
 
@@ -55,10 +54,7 @@ def _collect(pools: Iterable[Pool], k: int) -> dict[str, dict[str, Any]]:
 
 
 def _order(entries: Iterable[dict[str, Any]], page: int, size: int) -> list[Fused]:
-    """
-    Sort and slice.
-    
-    """
+    """Sort and slice."""
     fused = [
         Fused(e["score"], e["best_rank"], e["hit"], e["type"],
               frozenset(e["retrievers"]), e["bm25"], e["knn"])
@@ -77,18 +73,12 @@ def _constant(k: int | None = None) -> int:
 
 def fuse(pools: Iterable[Pool], page: int, size: int,
          k: int | None = None) -> list[Fused]:
-    """
-    Rank-fuse hits from different pools and return one page.
-
-    """
+    """Rank-fuse hits from different pools and return one page."""
     return _order(_collect(pools, _constant(k)).values(), page, size)
 
 
 def plain(pools: Iterable[Pool], page: int, size: int) -> list[Fused]:
-    """
-    Ordering for a filter-only request, where no ranking signal exists.
-
-    """
+    """Ordering for a filter-only request, where no ranking signal exists."""
     flat = [
         Fused(0.0, position, hit, type_, frozenset({retriever}),
               hit.get("_score"), None)
