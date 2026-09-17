@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -26,6 +26,9 @@ class ReportSearchRequest(BaseModel):
 
     page: int = Field(1, ge=1)
     size: int = Field(20, ge=1, le=100)
+    highlight: bool = True
+
+    mode: Literal["or", "and", "phrase"] = "or"
 
 
 @router.post("/reports/search")

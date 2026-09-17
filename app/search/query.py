@@ -33,10 +33,7 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
 
 
 def window(p: Mapping[str, Any]) -> int:
-    """
-    How many hits every retriever is asked for, or raise if the page is too deep.
-
-    """
+    """How many hits every retriever is asked for, or raise if the page is too deep."""
     page, size = _page_size(p)
     if page * size > RESULT_WINDOW:
         raise WindowTooDeep(

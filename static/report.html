@@ -29,6 +29,12 @@
         <option value="竖版">竖版</option>
       </select>
 
+      <select id="mode" class="layout" aria-label="匹配方式">
+        <option value="or">任一匹配</option>
+        <option value="and">全部匹配</option>
+        <option value="phrase">短语匹配</option>
+      </select>
+
       <button id="submit" class="submit" type="submit">搜索</button>
     </form>
   </header>
@@ -41,7 +47,10 @@
       <div id="listStatus" class="status" hidden></div>
       <ul id="results" class="results"></ul>
 
-      <!-- 翻页条。列表接口不返回总数，所以这里只有页码，没有「共 N 页」 -->
+      <!-- 翻页条。接口的 total 只是词法分支的命中数（可能小于返回条数），
+           所以有没有下一页仍然靠「这一页装满了没有」判断。
+           后端 RESULT_WINDOW = 200，page * size 超过 200 会返回 400，
+           size=20 时最多翻到第 10 页。 -->
       <div id="pager" class="pager" hidden>
         <button id="prevPage" class="page-btn" type="button">上一页</button>
         <span id="pageInfo" class="page-info"></span>

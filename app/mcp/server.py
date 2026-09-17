@@ -47,10 +47,10 @@ OIRF 知识图谱检索 MCP Server
 先给命中摘要，再按需展开
 
 报告检索工具（独立索引，与上面的知识图谱无关）：
-- 语义检索 —— search_reports：按检索词做语义匹配，返回报告卡片
-- 取报告正文 —— get_report：按 report_id 取报告完整内容（含摘要）
+- 检索 —— search_reports：词法 + 向量融合，返回报告卡片
+- 取报告正文 —— get_report：按 report_id 取报告完整内容
 
-报告检索只有语义召回，检索词越接近自然语言问法效果越好
+报告卡片的 score 是 RRF 融合分，raw_score 是 BM25，knn_score 是向量分，match_source 说明命中来自哪一路
 
 """
 
@@ -157,18 +157,19 @@ class ReportCard(BaseModel):
     layout: Optional[str] = Field(None, description="横版 / 竖版")
     publish_date: Optional[str] = Field(None, description="发布日期 YYYY-MM-DD")
     url: Optional[str] = Field(None, description="原文链接")
-    score: Optional[float] = Field(None, description="向量相似度")
+    score: Optional[float] = Field(None, description="RRF 融合分")
 
 
 class ReportSearchResult(BaseModel):
     """
-    Report search response: no total, no summary.
-
+    Report search response: no summary in cards.
     """
-
     model_config = ConfigDict(extra="allow")
 
-    hits: list[ReportCard] = Field(description="按相似度降序，不含摘要正文")
+    total: int = Field(description="词法分支的命中数，不含向量分支")
+    page: int
+    size: int
+    hits: list[ReportCard] = Field(description="按 RRF 融合分降序，不含摘要正文")
 
 
 # --------------------------------------------------------------------------- #
@@ -411,7 +412,7 @@ def list_projects() -> ProjectList:
 
 
 @mcp.tool(
-    title="语义检索报告",
+    title="检索报告",
     annotations={"readOnlyHint": True, "openWorldHint": False},
 )
 def search_reports(
@@ -419,6 +420,12 @@ def search_reports(
         str,
         Field(description="检索词"),
     ],
+    mode: Annotated[
+        Literal["or", "and", "phrase"],
+        Field(description=(
+            "or = 任一词命中；and = 所有词均命中；phrase = 所有词相邻"
+        )),
+    ] = "or",
     layout: Annotated[
         Optional[ReportLayout],
         Field(description="版式"),
@@ -438,9 +445,10 @@ def search_reports(
     page: Annotated[int, Field(ge=1, description="page")] = 1,
     size: Annotated[int, Field(ge=1, le=100, description="size per page")] = 20,
 ) -> ReportSearchResult:
-    """按语义检索报告，返回标题等卡片信息，不含摘要正文"""
+    """按检索词查报告，返回标题等卡片信息，不含摘要正文"""
     params: dict[str, Any] = {
         "q": q,
+        "mode": mode,
         "layout": layout,
         "industry": industry,
         "publish_date_from": publish_date_from,
@@ -458,8 +466,8 @@ def search_reports(
             """
             没有命中。
 
-            报告检索只有语义召回，没有关键词精确匹配：
-            - 检索词写成自然语言问法比堆关键词效果好
+            报告检索是词法 + 向量两路召回后融合的：
+            - mode=and/phrase 会收紧词法分支，先退回 or 或换更短的 q
             - layout / industry / 日期都是精确匹配，值不匹配会直接过滤空
             - industry keyword 为完整行业名，可先不带过滤检索，再照结果里的值筛
 
