@@ -2,6 +2,9 @@
 
 ```bash
 pip install -r requirements.txt
+
+python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
+
 python run.py
 ```
 
@@ -164,15 +167,15 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
       "id": "6a9fbd1b270db0c081be679d",  // ObjectId 字符串，全局唯一
       "object_type": "evidence", "project_id": 1,
       "oirf_id": "evidence:E028",        // 项目内唯一
-      "score": 0.03252,                  // RRF 名次分，只表示本查询内的排序，不表示相关度大小
-      "raw_score": 25.5993,              // 该文档的 BM25 分；词法未命中时为 null
+      "score": 0.03252,                  // RRF 名次分
+      "raw_score": 25.5993,              // BM25
       "identity": { "name": "…", "object_type": "evidence", "status": "PENDING" },
       "presentation": { "subject": "苹果", "value": "…", "period": "2024", "region": "全球" },
       "reasoning": { "source_ids": ["source:S005"] },
       "experience": { "confidence_level": "low", "original_publish": "澎湃新闻" },
       "responsibility": [ { "operation": "create", "operator": { "role": "analyst" } } ],
       "highlight": { "identity.name": ["<em>空间</em><em>计算</em>时代"] },
-      "knn_score": 0.74834895,           // 向量相似度，ES 报的 (1+cos)/2；纯筛选时为 null
+      "knn_score": 0.74834895,           // 向量相似度
       "match_source": "both"             // bm25 / knn / both，哪几路召回了它
     }
   ]
@@ -183,20 +186,11 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 
 响应只含卡片字段，长文本如 `presentation.content`、`presentation.explanation`、`presentation.raw_texts`、`presentation.summary`、`reasoning.narrative`、`*_reason`、`lifecycle` 需用 `/objects` 取。
 
-### 2.7 注意
-
-- 数组类参数 `project_id`、`source_type`、`publisher`、`source_ids`、`evidence_ids` 传 `[]` 表示不设限；标量参数传 `[]` 返回 `422`。
-- `project_id` 不传或传 `[]` 表示全部项目；`project_id: 0` 是有效值，返回 0 条，不等于全部。
-- 纯筛选请求（无 `q`）`score` 恒为 `0`、`knn_score` 为 `null`、`match_source` 为 `bm25`、`highlight` 为空；`raw_score` **不是** `0`，它是 ES 给纯筛选查询的分（实测 `1.0`）。都属正常。
-- `total` 只统计词法命中，不含纯向量命中，所以可能与 `hits` 不一致，极端情况是 `total=0` 而 `hits` 非空。
-- 翻页深度上限：`page`×`size` 不得超过 `200`（`size=20` 时最多 10 页），超出返回 `400`。融合必须从每一路取回同一批候选才能保证翻页不重不漏，所以这个上限不是随手可调大的参数。
-- `highlight` 与 `inner_hits` 只出现在词法命中的文档上，纯向量命中的文档没有这两个字段。`inner_hits` 用来标识命中的是哪条责任链、哪一步推理，只在按 `responsible_role`、`source_ids`、`evidence_ids` 过滤时出现。
-- 请求体必须是 UTF-8。Windows PowerShell 5.1 用 `Invoke-RestMethod` 时若 `Content-Type` 不带 `charset=utf-8`，中文 `q` 会被破坏并**静默返回 0 命中**（不报错），排查时先确认这一点。
-- 跨项目结果里 `oirf_id` 会重号，识别对象用全局唯一的 `id`，或用 `project_id` 加 `oirf_id`。
-
 ## 3. 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}`
 
-取完整对象，含 `/search` 卡片里没有的长文本。`object_type` 与 `oirf_id` 放在路径上，如 `/objects/viewpoint/viewpoint:V001`；`project_id` 是必填查询参数，缺省返回 `422`，因为 `oirf_id` 只在项目内唯一。
+取完整对象，含 `/search` 卡片里没有的长文本。`object_type` 与 `oirf_id` 放在路径上，如 `/objects/viewpoint/viewpoint:V001`
+
+`project_id` 是必填查询参数，缺省返回 `422`，因为 `oirf_id` 只在项目内唯一
 
 ```bash
 curl "$API/objects/viewpoint/viewpoint:V001?project_id=1"
@@ -346,7 +340,6 @@ curl "$API/reports/62e33fbc2f669532f23e1cd8"
 ```
 
 字段与列表相同，多一个 `summary`、少 `score` / `raw_score` / `knn_score` / `match_source` / `highlight`。`report_id` 不存在返回 `404`。
-
 
 ## 7. 错误码
 

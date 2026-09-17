@@ -28,13 +28,6 @@ python scripts/ingest_reports.py # example/reports.json -> ES 报告索引
 python run.py                  # http://127.0.0.1:8000，检索页 /ui
 ```
 
-## Elasticsearch user
-
-| 变量 | 谁读 | 说明 |
-| --- | --- | --- |
-| `ES_ELASTIC_PASSWORD` | `docker compose` | 超级用户 `elastic`，只用于初始化 ES 与建用户 |
-| `ES_URL` / `ES_USER` / `ES_PASSWORD` | `app/`、`scripts/full_sync.py` | 最小权限 |
-
 ## 接口
 
 | 方法 | 路径 | 用途 |
@@ -77,11 +70,11 @@ app/                        FastAPI 服务
     query_reports.py        构造报告查询体
     rank.py                 RRF 按名次融合
     service.py              编码、并发请求、组装响应
-    service_reports.py      报告检索（词法加向量融合）
+    service_reports.py      报告检索
     encoder.py              bge 编码器单例与启动预热
     fields.py               权重、白名单、常量
     response.py             ES hit -> 卡片
-    objects.py              /objects（Mongo）
+    objects.py              /objects
     associations.py         关联子图
   mcp/server.py             MCP 工具
 embedding/                  向量化
@@ -100,7 +93,7 @@ scripts/                    一次性脚本
   full_sync.py              MongoDB -> ES - 含向量
   ingest_reports.py         example/reports.json -> ES - 报告索引
   init_es_auth.py           在 ES 上建角色与用户
-static/                     检索页面（原生 HTML/CSS/JS）
+static/                     检索页面
 run.py                      启动服务
 ```
 
