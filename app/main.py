@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -35,6 +35,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# @app.middleware("http")
+# async def ui_no_cache(request: Request, call_next):
+#     """静态页面每次都回源校验。"""
+#     response = await call_next(request)
+#     if request.url.path.startswith(("/ui", "/ui/")):
+#         response.headers["Cache-Control"] = "no-cache"
+#     return response
 
 app.include_router(search.router)
 app.include_router(reports.router)

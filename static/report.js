@@ -14,10 +14,12 @@
  *   - q 必须给（报告页不做「留空浏览」），mode 只约束词法那一路
  *   - 发布时间下拉映射到 publish_date_from / publish_date_to，默认「全部时间」
  *     就是两个字段都不发；空串会被后端当非法日期挡成 422，所以必须省略
+ *   - 时间权重下拉映射到 time_weight，默认「不衰减」= 不发这个字段（后端默认 0）
  *
  * 列表里每条（card）的字段：
  *   report_id, title, industry[], layout, publish_date, url,
  *   score(RRF 融合分), raw_score(BM25), knn_score(向量), match_source,
+ *   —— 传了 time_weight 时 raw_score / knn_score 已含时间衰减，标签会写成 ×时间
  *   highlight{字段: [片段]}
  *   —— 摘要只在详情接口返回，列表里没有。
  */
@@ -37,6 +39,7 @@ const qInput = $("q");
 const layoutSel = $("layout");
 const modeSel = $("mode");
 const periodSel = $("period");
+const decaySel = $("decay");
 const resultsEl = $("results");
 const statusEl = $("listStatus");
 const detailEl = $("detail");
@@ -50,6 +53,7 @@ let hits = [];       // 当前这一页的结果
 let total = 0;       // 命中总数（接口给的）
 let page = 1;        // 当前页码
 let current = null;  // 当前选中的 report_id
+let decayW = 0;      // 本次检索用的时间衰减权重，渲染时决定分数标签的口径
 let seq = 0;         // 检索的请求序号，见下面 doSearch 里的说明
 let detailSeq = 0;   // 详情的请求序号，同理（快速连点两条时防止串台）
 
@@ -135,6 +139,9 @@ async function doSearch(targetPage = 1) {
   if (dateFrom) body.publish_date_from = dateFrom;
   if (dateTo) body.publish_date_to = dateTo;
 
+  decayW = Number(decaySel.value) || 0;
+  if (decayW > 0) body.time_weight = decayW;
+
   let data;
   try {
     const res = await fetch(SEARCH_URL, {
@@ -186,13 +193,17 @@ async function doSearch(targetPage = 1) {
 
 // 序号 = (page-1)*PAGE_SIZE + i + 1，接着上一页往下数，不是每页都从 1 开始
 function renderList() {
+  // 开了时间衰减后 raw_score / knn_score 都乘过衰减因子，标签跟着改口径
+  const bm25Label = decayW > 0 ? "BM25×时间" : "BM25";
+  const knnLabel = decayW > 0 ? "向量×时间" : "向量";
+
   resultsEl.innerHTML = hits.map((h, i) => {
     const meta = [
       h.layout ? `<span class="badge">${esc(h.layout)}</span>` : "",
       h.publish_date ? `<span>${esc(h.publish_date)}</span>` : "",
       typeof h.score === "number" ? `<span class="score">融合 ${h.score.toFixed(4)}</span>` : "",
-      typeof h.raw_score === "number" ? `<span>BM25 ${h.raw_score.toFixed(1)}</span>` : "",
-      typeof h.knn_score === "number" ? `<span>向量 ${h.knn_score.toFixed(3)}</span>` : "",
+      typeof h.raw_score === "number" ? `<span>${bm25Label} ${h.raw_score.toFixed(1)}</span>` : "",
+      typeof h.knn_score === "number" ? `<span>${knnLabel} ${h.knn_score.toFixed(3)}</span>` : "",
       h.match_source ? `<span>${esc(h.match_source)}</span>` : "",
     ].join("");
 
@@ -326,6 +337,12 @@ modeSel.addEventListener("change", () => {
 });
 
 periodSel.addEventListener("change", () => {
+  if (!qInput.value.trim()) return;
+  resetDetail();
+  doSearch(1);
+});
+
+decaySel.addEventListener("change", () => {
   if (!qInput.value.trim()) return;
   resetDetail();
   doSearch(1);

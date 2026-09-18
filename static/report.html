@@ -58,6 +58,15 @@
         </optgroup>
       </select>
 
+      <!-- 时间衰减权重。默认「不衰减」= 不发 time_weight，和后端加这个参数之前的行为一致。
+           值越大越偏向新报告（半衰期 1 年、前 3 个月免罚），细节见 app/search/time_decay.py。 -->
+      <select id="decay" class="layout" aria-label="时间权重">
+        <option value="">不衰减</option>
+        <option value="0.1">略偏新</option>
+        <option value="0.2">偏新</option>
+        <option value="0.35">更偏新</option>
+      </select>
+
       <button id="submit" class="submit" type="submit">搜索</button>
     </form>
   </header>
