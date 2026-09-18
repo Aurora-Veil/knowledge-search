@@ -29,6 +29,7 @@ class ReportSearchRequest(BaseModel):
     highlight: bool = True
 
     mode: Literal["or", "and", "phrase"] = "or"
+    time_weight: float = Field(0.0, ge=0.0, le=1.0, description="时间衰减权重")
 
 
 @router.post("/reports/search")

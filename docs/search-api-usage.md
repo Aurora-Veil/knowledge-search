@@ -281,12 +281,15 @@ curl "$API/projects"
 
 `mode` 与 `/search` 同义：`or` 任一词命中，`and` 所有词都要命中，`phrase` 所有词必须相邻。
 
+`time_weight` 控制时间衰减：默认为 `0`，大于 `0` 时两条召回分支都按 `原分 × (1 - w + w × 新鲜度)` 重排，新鲜度由 `publish_date` 算，半衰期 1 年、前 3 个月不扣分。它只改排序不改命中文档。
+
 ### 6.1 检索 `POST /api/v1/reports/search`
 
 | 字段 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- |
 | `q` | string | 必填 | 检索词；词法与向量两路召回，写自然语言问句或堆关键词都可以 |
 | `mode` | `or` / `and` / `phrase` | `or` | 词法一路的召回松紧 |
+| `time_weight` | float | `0` | 时间衰减权重，`0` 关闭；越大越偏向新报告 |
 | `report_id` | string[] | 无 | 精确匹配，已知 id 时用来批量取卡片 |
 | `layout` | `横版` / `竖版` | 无 | 版式，精确匹配 |
 | `industry` | string[] | 无 | 行业，精确匹配，取值为完整行业名 |
@@ -307,6 +310,10 @@ curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
 # 只要 2025 年之后发布的
 curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
   -d '{"q":"新能源汽车销量预测","publish_date_from":"2025-01-01"}'
+
+# 排序偏向新报告
+curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+  -d '{"q":"新能源汽车销量预测","time_weight":0.2}'
 ```
 
 ```jsonc

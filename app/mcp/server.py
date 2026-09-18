@@ -47,10 +47,8 @@ OIRF 知识图谱检索 MCP Server
 先给命中摘要，再按需展开
 
 报告检索工具（独立索引，与上面的知识图谱无关）：
-- 检索 —— search_reports：词法 + 向量融合，返回报告卡片
+- 检索 —— search_reports：词法 + 向量融合，返回报告卡片，可控制时间衰减权重
 - 取报告正文 —— get_report：按 report_id 取报告完整内容
-
-报告卡片的 score 是 RRF 融合分，raw_score 是 BM25，knn_score 是向量分，match_source 说明命中来自哪一路
 
 """
 
@@ -420,6 +418,7 @@ def search_reports(
         str,
         Field(description="检索词"),
     ],
+    time_weight: Annotated[float, Field(ge=0.0, le=1.0, description="时间衰减权重 default 0.0 越大越偏向新报告")] = 0.0,
     mode: Annotated[
         Literal["or", "and", "phrase"],
         Field(description=(
@@ -448,6 +447,7 @@ def search_reports(
     """按检索词查报告，返回标题等卡片信息，不含摘要正文"""
     params: dict[str, Any] = {
         "q": q,
+        "time_weight": time_weight,
         "mode": mode,
         "layout": layout,
         "industry": industry,

@@ -9,6 +9,8 @@ import re
 from datetime import date
 from typing import Any, Mapping, Sequence
 
+from . import time_decay
+
 INDEX = "knowledge_report_index"
 
 # --- 词法分支 ---
@@ -33,6 +35,10 @@ KNN_NUM_CANDIDATES_FACTOR = 5
 
 RESULT_WINDOW = 200
 
+# DECAY_SCALE_DAYS = 365
+# DECAY_OFFSET_DAYS = 90
+DECAY_FIELD = "publish_date"
+
 
 class WindowTooDeep(ValueError):
     """
@@ -53,6 +59,8 @@ def window(p: Mapping[str, Any]) -> int:
         )
     return RESULT_WINDOW
 
+# def _decay_weight(p: Mapping[str, Any]) -> float:
+#     return min(max(float(p.get("time_weight") or 0.0), 0.0), 1.0)
 
 def _terms(field: str, values: Any) -> dict[str, Any]:
     vals = [str(v) for v in values] if isinstance(values, (list, tuple)) else [str(values)]
@@ -135,6 +143,9 @@ def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
         "track_total_hits": True,
     }
 
+    w = time_decay.weight(p)
+    if w > 0.0:
+        body["rescore"] = time_decay.rescore(DECAY_FIELD, w, size)
 
     if must and p.get("highlight", True) is not False:
         body["highlight"] = {
@@ -161,7 +172,13 @@ def build_knn_query(p: Mapping[str, Any], vector: Sequence[float]) -> dict[str, 
     if filters:
         knn["filter"] = filters
 
-    return {"knn": knn, "source": SOURCE_FIELDS, "size": need}
+    body: dict[str, Any] = {"knn": knn, "source": SOURCE_FIELDS, "size": need}
+
+    w = time_decay.weight(p)
+    if w > 0.0:
+        body["rescore"] = time_decay.rescore(DECAY_FIELD, w, need)
+
+    return body
 
 
 def build_detail_query(report_id: str) -> dict[str, Any]:
@@ -174,7 +191,7 @@ def build_detail_query(report_id: str) -> dict[str, Any]:
 
 __all__ = [
     "INDEX", "SOURCE_FIELDS", "DETAIL_FIELDS", "EMBED_FIELD", "LAYOUTS",
-    "RESULT_WINDOW", "KNN_NUM_CANDIDATES_FACTOR", "MATCH_MODES",
+    "RESULT_WINDOW", "KNN_NUM_CANDIDATES_FACTOR", "MATCH_MODES", "DECAY_FIELD",
     "WindowTooDeep", "window", "build_filters", "build_query",
     "build_knn_query", "build_detail_query",
 ]
