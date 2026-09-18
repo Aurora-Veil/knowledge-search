@@ -2,7 +2,7 @@
 
 OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词法 + 向量混合检索。
 
-另含报告数据的词法 + 向量融合检索。
+另含报告数据的词法 + 向量融合检索，可按发布时间做时间衰减。
 
 ## 依赖
 
@@ -36,7 +36,7 @@ python run.py                  # http://127.0.0.1:8000，检索页 /ui
 | GET | `/api/v1/objects/{type}/{oirf_id}` | 取完整对象 |
 | GET | `/api/v1/associations/{type}/{oirf_id}` | 取关联子图 |
 | GET | `/api/v1/projects` | 列出项目 |
-| POST | `/api/v1/reports/search` | 报告检索，词法加向量再加筛选 |
+| POST | `/api/v1/reports/search` | 报告检索，词法加向量再加筛选与时间衰减 |
 | GET | `/api/v1/reports/{report_id}` | 取报告详情，含摘要 |
 | GET | `/api/v1/health` | 健康检查 |
 
@@ -68,6 +68,7 @@ app/                        FastAPI 服务
   search/                   检索实现
     query.py                构造 ES 查询体
     query_reports.py        构造报告查询体
+    time_decay.py           时间衰减，两分支共用 rescore
     rank.py                 RRF 按名次融合
     service.py              编码、并发请求、组装响应
     service_reports.py      报告检索
