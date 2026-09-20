@@ -16,7 +16,7 @@ from bson import ObjectId
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-from app.config import DB_NAME, ES_URL, MONGO_URI, es_auth
+from app.config import DB_NAME, MONGO_URI, es_auth, es_hosts
 from embedding.encoder import Encoder, resolve_snapshot
 from embedding.spec import MODEL, build_text, text_hash
 
@@ -108,7 +108,7 @@ def full_sync(es, mongo, name: str, encoder: Encoder) -> int:
 
 def main() -> None:
     mongo = MongoClient(MONGO_URI)[DB_NAME]
-    es = Elasticsearch(ES_URL, basic_auth=es_auth())
+    es = Elasticsearch(es_hosts(), basic_auth=es_auth())
     try:
         print("== ensure indices ==")
         for name in INDICES:

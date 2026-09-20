@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
-from app.config import ES_URL, es_auth
+from app.config import es_auth, es_hosts
 from embedding.encoder import Encoder, resolve_snapshot
 from embedding.spec import MODEL, build_text, text_hash
 
@@ -112,7 +112,7 @@ def main() -> int:
                     help="only ingest the first N reports (smoke test)")
     args = ap.parse_args()
 
-    es = Elasticsearch(ES_URL, basic_auth=es_auth())
+    es = Elasticsearch(es_hosts(), basic_auth=es_auth())
     try:
         print("== ensure index ==")
         ensure_index(es, args.recreate)

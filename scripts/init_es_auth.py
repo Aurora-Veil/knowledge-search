@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 
 from elasticsearch import Elasticsearch
 
-from app.config import ES_PASSWORD, ES_URL, ES_USER
+from app.config import ES_PASSWORD, ES_USER, es_auth, es_hosts
 
 SUPERUSER = "elastic"
 ROLE = "knowledge_app_role"
@@ -35,7 +35,7 @@ def admin_client() -> Elasticsearch:
             "ES_ELASTIC_PASSWORD is not set: "
             "run `cp .env.example .env` and fill in the superuser password."
         )
-    return Elasticsearch(ES_URL, basic_auth=(SUPERUSER, password))
+    return Elasticsearch(es_hosts(), basic_auth=(SUPERUSER, password))
 
 
 def require_app_credentials() -> None:
@@ -97,12 +97,12 @@ def main() -> None:
     finally:
         admin.close()
 
-    app = Elasticsearch(ES_URL, basic_auth=(ES_USER, ES_PASSWORD))
+    app = Elasticsearch(es_hosts(), basic_auth=(ES_USER, ES_PASSWORD))
     try:
         verify(app)
     finally:
         app.close()
-    print(f"\nOK: {ES_USER} is ready on {ES_URL} (password in .env)")
+    print(f"\nOK: {ES_USER} is ready on {', '.join(es_hosts())} (password in .env)")
 
 
 if __name__ == "__main__":
