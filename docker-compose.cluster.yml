@@ -39,11 +39,6 @@ services:
   es01:
     depends_on:
       setup:
-        # 不能用 service_healthy：setup 是"跑完就退出"的一次性容器，
-        # 证书已存在时它秒退，而 healthcheck 的第一次检查要等 interval 才跑，
-        # 结果是 exited(0) + Health=unhealthy + Checks=0，
-        # 报 "dependency failed to start: container ... exited (0)"。
-        # service_completed_successfully 只等退出码 0，正是一次性容器该用的条件。
         condition: service_completed_successfully
     build:
       context: ./docker
