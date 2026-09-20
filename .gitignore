@@ -36,4 +36,8 @@ pytest-cache-files-*/
 !.env.example
 
 # tmp ref materials
+docs/report-search-todo.md
+example/reports.csv
+example/*.xlsx
+scripts/reports_to_json.py
 
