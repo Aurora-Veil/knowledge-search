@@ -16,6 +16,10 @@ cp .env.example .env   # 用户与密码设置
 
 docker compose up -d
 
+# 或用三节点集群
+# 首次启动需在 docker/es0*.yml 取消 cluster.initial_master_nodes 的注释
+docker compose -f docker-compose.cluster.yml up -d
+
 pip install -r requirements.txt
 
 # 下载向量模型
@@ -39,6 +43,7 @@ python run.py                  # http://127.0.0.1:8000，检索页 /ui
 | POST | `/api/v1/reports/search` | 报告检索，词法加向量再加筛选与时间衰减 |
 | GET | `/api/v1/reports/{report_id}` | 取报告详情，含摘要 |
 | GET | `/api/v1/health` | 健康检查 |
+| GET | `/api/v1/health/ready` | 依赖就绪检查，ES 或 Mongo 不可用返回 503 |
 
 参数、筛选取值与响应字段见 [docs/search-api-usage.md](docs/search-api-usage.md)。
 
@@ -84,6 +89,9 @@ embedding/                  向量化
   encoder.py                bge 编码器
 mapping/                    四个索引 mapping
 docker-compose.yml          MongoDB + Elasticsearch
+docker-compose.cluster.yml  三节点 ES 集群
+docker/es0*.yml             各节点 ES 配置
+docker/instances.yml        节点证书清单
 docker/Dockerfile           ES + analysis-ik
 example/                    示例数据
 structure/                  OIRF v3.0 schema
