@@ -13,9 +13,23 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "knowledge_db")
 
 # Elasticsearch
-ES_URL = os.getenv("ES_URL", "http://localhost:9200")
+_ES_URL_DEFAULT = "http://localhost:9200"
+ES_URL = os.getenv("ES_URL", _ES_URL_DEFAULT)
 ES_USER = os.getenv("ES_USER", "")
 ES_PASSWORD = os.getenv("ES_PASSWORD", "")
+
+#   ES_URL=http://localhost:9200
+#   ES_URL=http://localhost:9200,http://localhost:9201,http://localhost:9202
+
+ES_HOSTS: list[str] = [u.strip() for u in ES_URL.replace(";", ",").split(",") if u.strip()]
+
+ES_HOSTS = ES_HOSTS or [_ES_URL_DEFAULT]
+
+ES_HEALTH_TIMEOUT = float(os.getenv("ES_HEALTH_TIMEOUT", "2"))
+
+
+def es_hosts() -> list[str]:
+    return list(ES_HOSTS)
 
 # Vector search. 
 ENABLE_VECTOR_SEARCH = True
@@ -41,11 +55,6 @@ COLLECTION_BY_TYPE: dict[str, str] = {
 
 
 def es_auth() -> tuple[str, str]:
-    """Basic Auth 凭据 (user, password)。
-
-    缺失时直接抛错，不回退成匿名连接：ES 开了 security 之后匿名只会换来一个
-    难查的 401，早失败比晚失败好。
-    """
     if not ES_USER or not ES_PASSWORD:
         raise RuntimeError(
             "ES_USER / ES_PASSWORD 未设置：ES 已开启 security，连接需要凭据。"
