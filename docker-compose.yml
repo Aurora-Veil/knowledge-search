@@ -1,19 +1,6 @@
 services:
-  mongo:
-    image: mongodb/mongodb-community-server:latest
-    container_name: knowledge-mongo
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - ./data/mongo:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   elasticsearch:
+    image: elasticsearch-ik:9.5.3
     build:
       context: ./docker
       args:
@@ -27,7 +14,7 @@ services:
       - ELASTIC_PASSWORD=${ES_ELASTIC_PASSWORD:?set ES_ELASTIC_PASSWORD in .env}
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "9200:9200"
+      - ${ES_PORT:-9200}:9200
     volumes:
       - ./data/es:/usr/share/elasticsearch/data
     healthcheck:
@@ -36,3 +23,17 @@ services:
       timeout: 5s
       retries: 12
       start_period: 60s
+
+  mongo:
+    image: mongodb/mongodb-community-server:latest
+    container_name: knowledge-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
