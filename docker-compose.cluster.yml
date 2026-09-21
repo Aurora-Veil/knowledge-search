@@ -114,6 +114,13 @@ services:
     image: docker.elastic.co/kibana/kibana:9.5.3
     container_name: kibana
     restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=["http://es01:9200","http://es02:9200","http://es03:9200"]
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD:?set KIBANA_PASSWORD in .env}
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTED_SAVED_OBJECTS_KEY:?set it in .env}
+      - XPACK_REPORTING_ENCRYPTIONKEY=${KIBANA_REPORTING_KEY:?set it in .env}
+      - XPACK_SECURITY_ENCRYPTIONKEY=${KIBANA_SECURITY_KEY:?set it in .env}
     depends_on:
       es01:
         condition: service_healthy
@@ -124,7 +131,6 @@ services:
     ports:
       - ${KIBANA_PORT:-5601}:5601
     volumes:
-      - ./docker/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
       - ./data/kibana:/usr/share/kibana/data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf -I http://localhost:5601 | grep -q ' 302' || exit 1"]
