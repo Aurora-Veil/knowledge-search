@@ -37,6 +37,7 @@ pytest-cache-files-*/
 
 # tmp ref materials
 docs/report-search-todo.md
+docs/auth-learning-path.md
 example/reports.csv
 example/*.xlsx
 scripts/reports_to_json.py
