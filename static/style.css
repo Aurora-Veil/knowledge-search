@@ -452,3 +452,186 @@ body {
   gap: 16px;
   margin: 24px 0 0;
 }
+
+/* 放右上角：让 .home-title 仍然从左边开始，不因为多了一条状态栏而移动 */
+.home-top {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 20px;
+  margin-bottom: 20px;
+}
+
+/* 第三个入口（我的搜索记录）横跨两列，省得 2 列栅格里留一格空的 */
+.entry-wide { grid-column: 1 / -1; }
+
+/* ---------- 顶栏用户区 ---------- */
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;      /* 顶栏里把自己推到最右 */
+  white-space: nowrap;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* ---------- 登录 / 注册页 ---------- */
+
+.login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.login-wrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-card {
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 3px;
+  background: var(--bg);
+  border-radius: 8px;
+}
+
+.tab {
+  flex: 1;
+  padding: 7px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--card);
+  color: var(--text);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.field-name {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* 登录页的输入框要在卡片里撑满，不像顶栏那样跟别的控件挤一行 */
+.field .q {
+  display: block;
+  width: 100%;
+}
+
+.submit.block {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.submit:disabled {
+  background: #93b4f5;
+  cursor: not-allowed;
+}
+
+.login-card .status {
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.login-foot {
+  margin: 16px 0 0;
+  text-align: center;
+}
+
+/* ---------- 搜索记录页 ---------- */
+
+.history-wrap {
+  padding: 16px 20px 24px;
+}
+
+.history-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.history-table {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;          /* 列宽按 th 上的类定，不被长检索词挤歪 */
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.history-table th {
+  padding: 9px 12px;
+  background: #fafbfc;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.history-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tbody tr:hover { background: #f8fafc; }
+
+.col-time    { width: 158px; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.col-kind    { width: 72px; }
+.col-query   { width: 20%; font-weight: 500; }
+.col-filters { color: var(--text-2); font-size: 12px; }
+.col-num     { width: 78px; text-align: right; font-variant-numeric: tabular-nums; }
+.col-go      { width: 56px; text-align: right; }
+
+/* 表格宽，窄屏就让它横向滚动，不要把列压成一条缝 */
+@media (max-width: 900px) {
+  .history-table { display: block; overflow-x: auto; white-space: nowrap; }
+  .history-table td, .history-table th { white-space: nowrap; }
+}
+
+.history-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-3);
+}

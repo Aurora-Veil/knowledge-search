@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 · knowledge-search</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body class="login">
+
+  <main class="login-wrap">
+    <h1 class="home-title">knowledge-search</h1>
+    <p class="home-sub">OIRF 知识图谱检索服务 —— 登录后才能检索</p>
+
+    <div class="login-card">
+
+      <!-- 两个 tab 共用一套表单：注册比登录多一个「确认密码」字段 -->
+      <div class="tabs">
+        <button id="tabLogin" class="tab active" type="button">登录</button>
+        <button id="tabRegister" class="tab" type="button">注册</button>
+      </div>
+
+      <form id="authForm" autocomplete="off">
+        <label class="field">
+          <span class="field-name">用户名</span>
+          <input id="username" class="q" type="text" name="username"
+                 autocomplete="username" spellcheck="false"
+                 placeholder="3-32 位字母、数字、下划线或连字符">
+        </label>
+
+        <label class="field">
+          <span class="field-name">密码</span>
+          <!-- 密码上限 128 位：后端 validate_password 会拒，但先在这里挡一下 -->
+          <input id="password" class="q" type="password" name="password"
+                 autocomplete="current-password" maxlength="128"
+                 placeholder="至少 8 位">
+        </label>
+
+        <!-- 只在注册 tab 出现，由 login.js 切 hidden -->
+        <label class="field" id="confirmField" hidden>
+          <span class="field-name">确认密码</span>
+          <input id="confirm" class="q" type="password"
+                 autocomplete="new-password" maxlength="128">
+        </label>
+
+        <!-- 报错显示在这里（后端 detail / 网络错误） -->
+        <div id="authError" class="status error" hidden></div>
+
+        <button id="authSubmit" class="submit block" type="submit">登录</button>
+      </form>
+
+      <p class="login-foot">
+        <a class="nav-link" href="/ui/">← 回到首页</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- 顺序不能反：auth.js 提供 saveSession / errorText，login.js 依赖它们 -->
+  <script src="/ui/auth.js" defer></script>
+  <script src="/ui/login.js" defer></script>
+</body>
+</html>
