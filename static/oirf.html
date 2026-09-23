@@ -33,6 +33,9 @@
 
       <button id="submit" class="submit" type="submit">搜索</button>
     </form>
+
+    <!-- 用户名 / 我的搜索 / 退出，由 auth.js 的 mountUser() 填 -->
+    <div id="userBox" class="user-box"></div>
   </header>
 
   <main class="panes">
@@ -60,6 +63,8 @@
 
   </main>
 
+  <!-- 顺序不能反：oirf.js 用 auth.js 提供的 apiFetch / requireLogin -->
+  <script src="/ui/auth.js" defer></script>
   <script src="/ui/oirf.js" defer></script>
 </body>
 </html>
