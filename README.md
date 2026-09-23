@@ -6,6 +6,8 @@ OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词�
 
 检索接口需要登录：账号与检索记录存在 PostgreSQL，登录令牌是 JWT。
 
+具体见 [更新日志](CHANGELOG.md)
+
 ## 依赖
 
 - Python 3.12
