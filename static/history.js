@@ -29,7 +29,7 @@ function clearStatus() {
   statusEl.textContent = "";
 }
 
-/* created_at 是 TIMESTAMPTZ，FastAPI 序列化成带时区的 ISO 串。
+/* last_seen_at / first_seen_at 是 TIMESTAMPTZ，FastAPI 序列化成带时区的 ISO 串。
  * 转成本地时间显示：直接显示 ISO 串会让用户以为时间错了 8 小时。 */
 function fmtTime(iso) {
   if (!iso) return "";
@@ -88,10 +88,12 @@ function render(rows) {
   for (const row of rows) {
     const tr = document.createElement("tr");
 
-    // 时间
+    // 最近一次。去重之后一行可能被搜过很多次，第一次的时间放进 title
     const time = document.createElement("td");
     time.className = "col-time";
-    time.textContent = fmtTime(row.created_at);
+    time.textContent = fmtTime(row.last_seen_at);
+    time.title = "第一次：" + fmtTime(row.first_seen_at) +
+                 "　共 " + row.search_count + " 次";
     tr.append(time);
 
     // 类型
@@ -130,10 +132,10 @@ function render(rows) {
     }
     tr.append(filters);
 
-    // 页码 / 每页
+    // 翻到过的最深页 / 每页（不是"当前这一页"）
     const page = document.createElement("td");
     page.className = "col-num";
-    page.textContent = row.page + " / " + row.size;
+    page.textContent = row.last_page + " / " + row.size;
     tr.append(page);
 
     // 命中数。OIRF 的 total 只是词法分支的命中数，加 * 提示别当权威值读
@@ -146,12 +148,11 @@ function render(rows) {
     }
     tr.append(total);
 
-    // 耗时
-    const latency = document.createElement("td");
-    latency.className = "col-num";
-    latency.textContent = (row.latency_ms === null || row.latency_ms === undefined)
-      ? "—" : row.latency_ms + " ms";
-    tr.append(latency);
+    // 搜过几次。去重丢掉的是时间分布，频次留在这里
+    const count = document.createElement("td");
+    count.className = "col-num";
+    count.textContent = row.search_count + " 次";
+    tr.append(count);
 
     // 重搜
     const go = document.createElement("td");

@@ -41,13 +41,13 @@
     <table id="historyTable" class="history-table" hidden>
       <thead>
         <tr>
-          <th class="col-time">时间</th>
+          <th class="col-time">最近一次</th>
           <th class="col-kind">类型</th>
           <th class="col-query">检索词</th>
           <th class="col-filters">筛选条件</th>
-          <th class="col-num">页码</th>
+          <th class="col-num">最深页</th>
           <th class="col-num">命中</th>
-          <th class="col-num">耗时</th>
+          <th class="col-num">搜过</th>
           <th class="col-go"></th>
         </tr>
       </thead>
@@ -55,10 +55,14 @@
     </table>
 
     <p class="history-note">
-      「重搜」只带得走表单上有的字段（检索词 / 类型 / 匹配方式 / 版式）。
+      一行 = <strong>一次检索</strong>：同一个检索词 + 同一套筛选条件只占一行，
+      翻页不会另起一行，只会把「最深页」推深、把「搜过」加一次。
+      「最近一次」是最后一次搜它的时间，鼠标移上去能看到第一次搜的时间。
+      「重搜」只带得走表单上有的字段（检索词 / 类型 / 匹配方式 / 版式）；
       库里可能记着更细的筛选条件（地区、行业、发布时间…），那些照原样列在
       「筛选条件」一列里 —— 页面上没有对应控件，所以重搜不会复原它们。
       「命中」后面带 * 表示这个数字只是词法分支的命中数，可能小于实际返回条数。
+      耗时这类执行细节不在本页，它们在 search_log 里（暂不对外开放）。
     </p>
 
   </main>
