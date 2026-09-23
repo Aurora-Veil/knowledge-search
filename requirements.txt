@@ -5,6 +5,14 @@ elasticsearch>=8,<10
 pymongo>=4.6
 python-dotenv>=1.0        # 从 .env 读 ES / Mongo 凭据
 
+# Auth —— 密码哈希（Argon2id）与 JWT 登录令牌
+pwdlib[argon2]>=0.3
+pyjwt>=2.10,<3            # 2.10 起 sub 必须是字符串，解码时会校验
+python-multipart>=0.0.20  # /token 的 OAuth2PasswordRequestForm 靠它解析表单
+
+# PostgreSQL —— 用户与搜索记录
+psycopg[binary,pool]>=3.2
+
 # MCP server. The official SDK v2 renamed FastMCP to MCPServer
 mcp>=2,<3
 

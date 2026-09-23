@@ -11,6 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DB_NAME = os.getenv("DB_NAME", "knowledge_db")
+MONGO_TIMEOUT_MS = int(os.getenv("MONGO_TIMEOUT_MS", "3000"))
 
 # Elasticsearch
 _ES_URL_DEFAULT = "http://localhost:9200"
@@ -26,6 +27,7 @@ ES_HOSTS: list[str] = [u.strip() for u in ES_URL.replace(";", ",").split(",") if
 ES_HOSTS = ES_HOSTS or [_ES_URL_DEFAULT]
 
 ES_HEALTH_TIMEOUT = float(os.getenv("ES_HEALTH_TIMEOUT", "2"))
+PG_HEALTH_TIMEOUT = float(os.getenv("PG_HEALTH_TIMEOUT", "2"))
 
 
 def es_hosts() -> list[str]:
@@ -61,3 +63,29 @@ def es_auth() -> tuple[str, str]:
             "请先 `cp .env.example .env` 并填入用户名与密码。"
         )
     return ES_USER, ES_PASSWORD
+
+
+PG_DSN = os.getenv("PG_DSN", "")
+
+
+SECRET_KEY = os.getenv("SECRET_KEY", "")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+
+
+def pg_dsn() -> str:
+    if not PG_DSN:
+        raise RuntimeError(
+            "PG_DSN 未设置：用户数据需要 PostgreSQL。"
+            "请先 `cp .env.example .env` 并填入连接串。"
+        )
+    return PG_DSN
+
+
+def jwt_secret() -> str:
+    if not SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY 未设置：签发登录令牌需要签名密钥。"
+            "生成一个：python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+    return SECRET_KEY
