@@ -1,21 +1,19 @@
-"""FastAPI app entrypoint"""
+"""FastAPI app entrypoint -- assembly only.
+
+Route behaviour lives in app/routers/*.py; this file only wires things together.
+"""
 from __future__ import annotations
 
-import logging
-import re
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from . import db
-from .config import ES_HEALTH_TIMEOUT
 from .mcp import mcp
-from .routers import associations, objects, projects, reports, search
+from .routers import associations, auth, health, objects, projects, reports, search, history
 from .search.encoder import _start_warmup
-
-log = logging.getLogger(__name__)
 
 mcp_app = mcp.streamable_http_app(streamable_http_path="/")
 
@@ -50,49 +48,14 @@ app.add_middleware(
 #         response.headers["Cache-Control"] = "no-cache"
 #     return response
 
+app.include_router(auth.router)
+app.include_router(health.router)
 app.include_router(search.router)
 app.include_router(reports.router)
 app.include_router(objects.router)
 app.include_router(associations.router)
 app.include_router(projects.router)
-
-
-@app.get("/api/v1/health")
-def health() -> dict:
-    return {"ok": True, "service": "oirf-search"}
-
-
-_ERR_MAX = 200
-_ERR_CREDS = re.compile(r"://[^@/\s]*@")
-
-
-def _safe_err(exc: BaseException) -> str:
-    msg = _ERR_CREDS.sub("://***@", f"{type(exc).__name__}: {exc}")
-    return msg[:_ERR_MAX]
-
-
-@app.get("/api/v1/health/ready")
-def health_ready() -> dict:
-    try:
-        es_health = db.get_es().cluster.health(index="knowledge_*", timeout=f"{ES_HEALTH_TIMEOUT}s")
-        es_status = es_health["status"]
-        es = {"status": es_status, "ok": es_status != "red"}
-    except Exception as exc:                      # noqa: BLE001
-        log.warning("readiness: elasticsearch unreachable: %s", exc)
-        es = {"status": "unreachable", "ok": False, "error": _safe_err(exc)}
-
-    try:
-        db.get_mongo().admin.command("ping")
-        mongo = {"ok": True}
-    except Exception as exc:                      # noqa: BLE001
-        log.warning("readiness: mongodb unreachable: %s", exc)
-        mongo = {"ok": False, "error": _safe_err(exc)}
-
-    ready = bool(es["ok"] and mongo["ok"])
-    body = {"ready": ready, "elasticsearch": es, "mongodb": mongo}
-    if not ready:
-        raise HTTPException(status_code=503, detail=body)
-    return body
+app.include_router(history.router)
 
 app.mount("/ui", StaticFiles(directory="static", html=True))
 app.mount("/mcp", mcp_app)
