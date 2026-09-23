@@ -1,7 +1,6 @@
 """ POST /api/v1/reports/search  GET /api/v1/reports/{report_id} """
 from __future__ import annotations
 
-import time
 from datetime import date
 from typing import List, Literal, Optional
 
@@ -13,6 +12,7 @@ from ..history import store as history
 from ..search.query_reports import WindowTooDeep
 from ..search.service_reports import get as get_report
 from ..search.service_reports import search as search_service
+from ..searchlog import store as search_log
 
 router = APIRouter(prefix="/api/v1", tags=["reports"])
 
@@ -47,19 +47,24 @@ class ReportSearchRequest(BaseModel):
 
 @router.post("/reports/search")
 def api_report_search(req: ReportSearchRequest, user: ActiveUser) -> dict:
-    started = time.perf_counter()
     try:
-        result = search_service(req.model_dump(exclude_none=True))
+        # observe() 把这次请求记进 search_log（成功和失败都记），
+        # 异常仍然原样抛出，下面的处理逻辑不受影响
+        with search_log.observe(kind=history.KIND_REPORT, user_id=user.id,
+                                req=req) as obs:
+            result = search_service(req.model_dump(exclude_none=True))
+            obs.ok(result_total=result.get("total"))
     except WindowTooDeep as e:
         raise HTTPException(status_code=400, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # 记的是"一次检索"：翻页只会更新既有那行，不会新增（见 app/history/store.py）
     history.record_search(
         user_id=user.id,
         kind=history.KIND_REPORT,
         req=req,
         result_total=result.get("total"),
-        latency_ms=int((time.perf_counter() - started) * 1000),
     )
     return result
 

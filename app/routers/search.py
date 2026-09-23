@@ -1,7 +1,6 @@
 """ POST /api/v1/search """
 from __future__ import annotations
 
-import time
 from typing import List, Literal, Optional, Union
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +12,7 @@ from ..search.query import WindowTooDeep
 from ..search.service import search as search_service
 
 from ..history import store as history
+from ..searchlog import store as search_log
 
 
 
@@ -62,16 +62,23 @@ class SearchRequest(BaseModel):
 
 @router.post("/search")
 def api_search(req: SearchRequest, user: ActiveUser) -> dict:
-    started = time.perf_counter()
     try:
-        result = search_service(req.model_dump(exclude_none=True))
+        # observe() 把这次请求记进 search_log（成功和失败都记），
+        # 异常仍然原样抛出，下面的处理逻辑不受影响
+        with search_log.observe(kind=history.KIND_OIRF, user_id=user.id,
+                                req=req) as obs:
+            result = search_service(req.model_dump(exclude_none=True))
+            obs.ok(result_total=result.get("total"))
     except WindowTooDeep as e:
+        # Paging this deep is not a server fault, but it cannot be served
+        # either: fusion reads page*size hits from every retriever.
         raise HTTPException(status_code=400, detail=str(e))
+
+    # 记的是"一次检索"：翻页只会更新既有那行，不会新增（见 app/history/store.py）
     history.record_search(
         user_id=user.id,
         kind=history.KIND_OIRF,
         req=req,
         result_total=result.get("total"),
-        latency_ms=int((time.perf_counter() - started) * 1000),
     )
     return result
