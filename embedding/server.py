@@ -62,6 +62,10 @@ class Batcher:
         self.wait = max(float(wait_ms), 0.0) / 1000.0
         self.inbox: asyncio.Queue[list[tuple[list[str], asyncio.Future]]] = asyncio.Queue()
         self.last_fail: str | None = None
+        self.last_batch = 0
+        self.last_batch_ms = 0.0
+        self.batches = 0
+        self.texts = 0
 
     def submit(self, texts: list[str]) -> asyncio.Future:
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
@@ -95,6 +99,10 @@ class Batcher:
             return
 
         self._recovered()
+        self.last_batch = total
+        self.last_batch_ms = (asyncio.get_running_loop().time() - started) * 1000
+        self.batches += 1
+        self.texts += total
         offset = 0
         for texts, fut in batch:
             chunk = vectors[offset:offset + len(texts)]
@@ -142,6 +150,16 @@ app = FastAPI(title="OIRF encoder service", version="0.1.0", lifespan=lifespan)
 @app.get("/health")
 async def health() -> dict:
     return {"ok": _encoder is not None, "dim": _encoder.dim, "device": _encoder.device}
+
+
+@app.get("/metrics")
+async def metrics() -> dict:
+    """合批队列深度与最近一批大小，压测采样用。"""
+    if _batcher is None:
+        return {"queue": 0, "last_batch": 0, "batches": 0, "texts": 0}
+    return {"queue": _batcher.inbox.qsize(), "last_batch": _batcher.last_batch,
+            "last_batch_ms": round(_batcher.last_batch_ms, 1),
+            "batches": _batcher.batches, "texts": _batcher.texts}
 
 
 @app.post("/encode")
