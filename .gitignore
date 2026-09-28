@@ -27,6 +27,9 @@ _tmp/
 scratch/
 *.log
 
+# 压测结果
+stress/*.json
+
 # pytest, when its cache dir cannot be written
 pytest-cache-files-*/
 
