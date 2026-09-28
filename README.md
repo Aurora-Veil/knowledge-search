@@ -35,7 +35,12 @@ python scripts/ingest.py       # example/*.json  -> MongoDB
 python scripts/full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
 python scripts/ingest_reports.py # example/reports.json -> ES 报告索引
 python scripts/init_pg.py      # PostgreSQL 建表 users / search_history / search_log
-python run.py                  # http://127.0.0.1:8000，检索页 /ui
+
+# 编码服务
+python -m embedding.server     # 默认 127.0.0.1:8020
+
+# 起动 API
+ENCODER_URL=http://127.0.0.1:8020 python run.py   # http://127.0.0.1:8000，检索页 /ui
 ```
 
 ## 接口
@@ -53,7 +58,7 @@ python run.py                  # http://127.0.0.1:8000，检索页 /ui
 | GET | `/api/v1/projects` | 登录 | 列出项目 |
 | GET | `/api/v1/history` | 登录 | 当前用户的检索记录 |
 | GET | `/api/v1/health` | 公开 | 健康检查 |
-| GET | `/api/v1/health/ready` | 公开 | 依赖就绪检查，ES / MongoDB / PostgreSQL 任一不可用返回 503 |
+| GET | `/api/v1/health/ready` | 公开 | 依赖就绪检查，ES / MongoDB / PostgreSQL 任一不可用返回 503；`encoder` 字段只报状态 |
 
 参数、筛选取值与响应字段见 [docs/search-api-usage.md](docs/search-api-usage.md)。
 
@@ -99,7 +104,7 @@ app/                        FastAPI 服务
     rank.py                 RRF 按名次融合
     service.py              编码、并发请求、组装响应
     service_reports.py      报告检索
-    encoder.py              bge 编码器单例与启动预热
+    encoder.py              编码器入口：远端客户端 + 熔断 + 降级
     fields.py               权重、白名单、常量
     response.py             ES hit -> 卡片
     objects.py              /objects
@@ -109,6 +114,7 @@ embedding/                  向量化
   fields.json               向量文本规范
   spec.py                   拼文本、算 hash
   encoder.py                bge 编码器
+  server.py                 独立编码服务：单进程、query 合批
 mapping/                    四个索引 mapping
 schema/auth.sql             PostgreSQL 建表：用户与检索记录
 docker-compose.yml          MongoDB + Elasticsearch

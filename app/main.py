@@ -4,6 +4,7 @@ Route behaviour lives in app/routers/*.py; this file only wires things together.
 """
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -14,6 +15,11 @@ from . import db
 from .mcp import mcp
 from .routers import associations, auth, health, objects, projects, reports, search, history
 from .search.encoder import _start_warmup
+
+# 模块级：多进程 spawn 出的子进程也会 import 这里，run.py 的 __main__ 不会执行
+# root 日志由 mcp SDK 在 import 时配好（INFO + rich），这里只压掉 httpx 的 INFO：
+# 它会把完整 URL 打出来，查询词会进日志
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 mcp_app = mcp.streamable_http_app(streamable_http_path="/")
 

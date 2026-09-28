@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from .. import db
 from ..config import ES_HEALTH_TIMEOUT, PG_HEALTH_TIMEOUT
+from ..search.encoder import status as encoder_status
 
 log = logging.getLogger(__name__)
 
@@ -65,12 +66,14 @@ def health_ready() -> dict:
     es = _check_es()
     mongo = _check_mongo()
     postgres = _check_pg()
+    encoder = encoder_status()
 
     body = {
         "ready": bool(es["ok"] and mongo["ok"] and postgres["ok"]),
         "elasticsearch": es,
         "mongodb": mongo,
         "postgresql": postgres,
+        "encoder": encoder,
     }
     if not body["ready"]:
         raise HTTPException(status_code=503, detail=body)

@@ -10,7 +10,7 @@ from .fields import *
 from .query import build_knn_query, build_query, window
 from .rank import LEXICAL, VECTOR, fuse, plain
 from .response import hit_to_card
-from .encoder import get_encoder
+from .encoder import encode_query_optional
 
 # _encoder = None
 # _encoder_lock = threading.Lock()
@@ -38,15 +38,15 @@ def _applicable_types(p: dict[str, Any], base: tuple[str, ...] | list[str] = OBJ
 
 def _empty(total: int, p: dict[str, Any]) -> dict[str, Any]:
     page, size = _page_size(p)
-    return {"total": total, "page": page, "size": size, "hits": []}
+    return {"total": total, "page": page, "size": size, "degraded": False, "hits": []}
 
 
-def _query_vector(q: str) -> list[float]:
+def _query_vector(q: str) -> list[float] | None:
     """
-    Embed a search query.
+    Embed a search query; None when encoding is unavailable (lexical only).
 
     """
-    return get_encoder().encode_query(q)
+    return encode_query_optional(q)
 
 
 # def _get_encoder() -> Any:
@@ -115,6 +115,8 @@ def search(p: dict[str, Any]) -> dict[str, Any]:
     need = window(p)
     q = p.get("q")
     vector = _query_vector(q) if (q and ENABLE_VECTOR_SEARCH) else None
+    # 只有"该走向量却没走上"才算降级；没有 q 的纯筛选请求本来就不走向量
+    degraded = bool(q) and ENABLE_VECTOR_SEARCH and vector is None
     active = [t for t in OBJECT_TYPES if t in types]
 
     pools, total = _pools(active, p, need, vector)
@@ -122,7 +124,7 @@ def search(p: dict[str, Any]) -> dict[str, Any]:
     # A filter-only request has no relevance signal to fuse
     ranked = fuse(pools, page, size) if q else plain(pools, page, size)
 
-    return {"total": total, "page": page, "size": size,
+    return {"total": total, "page": page, "size": size, "degraded": degraded,
             "hits": [_card(f) for f in ranked]}
 
 

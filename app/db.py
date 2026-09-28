@@ -9,8 +9,10 @@ from pymongo import MongoClient
 from .config import (
     DB_NAME,
     ES_HEALTH_TIMEOUT,
+    ES_SEARCH_WORKERS,
     MONGO_TIMEOUT_MS,
     MONGO_URI,
+    PG_POOL_MAX,
     es_auth,
     es_hosts,
     pg_dsn,
@@ -28,6 +30,8 @@ def get_es() -> Elasticsearch:
             es_hosts(),
             basic_auth=es_auth(),
             request_timeout=ES_HEALTH_TIMEOUT,
+            # Room for the whole search pool, not the transport default of 10
+            connections_per_node=ES_SEARCH_WORKERS,
         )
     return _es
 
@@ -48,7 +52,7 @@ def get_db():
 def get_pg() -> ConnectionPool:
     global _pg
     if _pg is None:
-        _pg = ConnectionPool(pg_dsn(), min_size=1, max_size=10, open=True)
+        _pg = ConnectionPool(pg_dsn(), min_size=1, max_size=PG_POOL_MAX, open=True)
     return _pg
 
 

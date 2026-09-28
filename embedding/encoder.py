@@ -93,9 +93,14 @@ class Encoder:
 
     def encode_query(self, query: str, show_progress_bar: bool = False) -> list[float]:
         """Encode one search query."""
+        return self.encode_queries([query], show_progress_bar=show_progress_bar)[0]
+
+    def encode_queries(self, queries: Sequence[str],
+                       show_progress_bar: bool = False) -> list[list[float]]:
+        """Encode a batch of search queries in one forward pass."""
         prefix = MODEL.get("query_instruction") or ""
-        return self._encode([query], prefix=prefix,
-                            show_progress_bar=show_progress_bar)[0]
+        return self._encode(queries, prefix=prefix,
+                            show_progress_bar=show_progress_bar)
 
     def _encode(self, texts: Sequence[str], prefix: str,
                 show_progress_bar: bool) -> list[list[float]]:

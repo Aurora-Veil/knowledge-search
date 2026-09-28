@@ -16,6 +16,9 @@ psycopg[binary,pool]>=3.2
 # MCP server. The official SDK v2 renamed FastMCP to MCPServer
 mcp>=2,<3
 
+# API 侧访问独立编码服务（ENCODER_URL）；fastapi 只在 [standard] extra 里带它
+httpx>=0.27
+
 # Vector search
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
 sentence-transformers>=6,<7

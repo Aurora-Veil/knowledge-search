@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import os
+import warnings
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from embedding.config import (
+    ENCODER_BATCH_WAIT_MS,
+    ENCODER_MAX_BATCH,
+    ENCODER_PORT,
+    ENCODER_SERVER_TIMEOUT_S,
+    ENCODER_TIMEOUT_S,
+    ENCODER_URL,
+)
 
 # Load environment variables from .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -36,9 +46,46 @@ def es_hosts() -> list[str]:
 # Vector search. 
 ENABLE_VECTOR_SEARCH = True
 
-# Fusing BM25 and kNN means two ES requests per index
-# ES Retriever API RRF disable for Basic :(
-ES_SEARCH_WORKERS = 12
+# API processes. One pool per process, connections = WEB_WORKERS * PG_POOL_MAX,
+# against PG max_connections = 100.
+WEB_WORKERS = int(os.getenv("WEB_WORKERS", "4"))
+PG_POOL_MAX = int(os.getenv("PG_POOL_MAX", "10"))
+
+# This box's ES search thread pool, int((16 * 3) / 2) + 1. Only the ES side
+# changes it, so it lives here rather than in the env.
+_ES_POOL_SIZE = 25
+
+# Per process. Fusing BM25 and kNN means two ES requests per index
+# (the Retriever API RRF is disabled on Basic), so in flight is
+# WEB_WORKERS * this. Unset spreads the pool across workers: 4 -> 6, 8 -> 3.
+_ES_SEARCH_WORKERS_ENV = os.getenv("ES_SEARCH_WORKERS")
+ES_SEARCH_WORKERS = (int(_ES_SEARCH_WORKERS_ENV) if _ES_SEARCH_WORKERS_ENV
+                     else max(1, _ES_POOL_SIZE // WEB_WORKERS))
+
+
+def _check_concurrency() -> None:
+    if ENCODER_TIMEOUT_S >= ENCODER_SERVER_TIMEOUT_S:
+        raise RuntimeError(
+            f"ENCODER_TIMEOUT_S({ENCODER_TIMEOUT_S}) >= 编码服务兜底超时"
+            f"({ENCODER_SERVER_TIMEOUT_S})：客户端会先放弃，调小 ENCODER_TIMEOUT_S。"
+        )
+    pg = WEB_WORKERS * PG_POOL_MAX
+    if pg > 100:
+        raise RuntimeError(
+            f"WEB_WORKERS({WEB_WORKERS}) * PG_POOL_MAX({PG_POOL_MAX}) = {pg} > 100："
+            "PG max_connections 会被打满，调小其中一个。"
+        )
+    es = WEB_WORKERS * ES_SEARCH_WORKERS
+    if es > _ES_POOL_SIZE:
+        warnings.warn(
+            f"WEB_WORKERS({WEB_WORKERS}) * ES_SEARCH_WORKERS({ES_SEARCH_WORKERS}) = {es}"
+            f" 超过 ES 搜索线程池({_ES_POOL_SIZE})：多出来的检索会在 ES 侧排队，"
+            "只影响延迟，不影响正确性。",
+            stacklevel=2,
+        )
+
+
+_check_concurrency()
 
 OBJECT_TYPES: tuple[str, ...] = ("source", "evidence", "viewpoint")
 

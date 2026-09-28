@@ -181,6 +181,7 @@ curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: 
 ```jsonc
 {
   "total": 23, "page": 1, "size": 3,
+  "degraded": false,                   // 编码不可用、这次只走了词法时为 true
   "hits": [
     {
       "id": "6a9fbd1b270db0c081be679d",  // ObjectId 字符串，全局唯一
@@ -202,6 +203,9 @@ curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: 
 ```
 
 三个分数含义不同，都不要跨查询比较：`score` 由名次算出（量级 `0.016`~`0.033`），`raw_score` 是 BM25（无上界，随查询漂移），`knn_score` 是余弦映射到 `[0,1]`。
+
+`degraded` 恒存在：只有"带 `q`、该走向量分支、却没走上"（编码服务挂了或编码失败）才是 `true`，此时
+`match_source` 全是 `bm25`、`knn_score` 是 `null`。没有 `q` 的纯筛选请求不走向量，不算降级。
 
 响应只含卡片字段，长文本如 `presentation.content`、`presentation.explanation`、`presentation.raw_texts`、`presentation.summary`、`reasoning.narrative`、`*_reason`、`lifecycle` 需用 `/objects` 取。
 
@@ -340,6 +344,7 @@ curl -s -X POST $API/reports/search -H "Authorization: Bearer $TOKEN" -H "Conten
   "total": 9,                                      // 只是词法分支的命中数，不含向量分支
   "page": 1,
   "size": 3,
+  "degraded": false,                               // 与 /search 同义
   "hits": [
     {
       "report_id": "62e33fbc2f669532f23e1cd8", 
