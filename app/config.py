@@ -39,6 +39,9 @@ ES_HOSTS = ES_HOSTS or [_ES_URL_DEFAULT]
 ES_HEALTH_TIMEOUT = float(os.getenv("ES_HEALTH_TIMEOUT", "2"))
 PG_HEALTH_TIMEOUT = float(os.getenv("PG_HEALTH_TIMEOUT", "2"))
 
+# 单次检索给 ES 的时间。早先这里复用健康检查的 2 秒，上万篇的索引下会误杀检索。
+ES_REQUEST_TIMEOUT = float(os.getenv("ES_REQUEST_TIMEOUT", "10"))
+
 
 def es_hosts() -> list[str]:
     return list(ES_HOSTS)

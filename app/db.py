@@ -8,7 +8,7 @@ from pymongo import MongoClient
 
 from .config import (
     DB_NAME,
-    ES_HEALTH_TIMEOUT,
+    ES_REQUEST_TIMEOUT,
     ES_SEARCH_WORKERS,
     MONGO_TIMEOUT_MS,
     MONGO_URI,
@@ -29,7 +29,7 @@ def get_es() -> Elasticsearch:
         _es = Elasticsearch(
             es_hosts(),
             basic_auth=es_auth(),
-            request_timeout=ES_HEALTH_TIMEOUT,
+            request_timeout=ES_REQUEST_TIMEOUT,
             # Room for the whole search pool, not the transport default of 10
             connections_per_node=ES_SEARCH_WORKERS,
         )
