@@ -6,7 +6,8 @@ Windows 上多个进程共用同一个监听 socket 会出现 accept 抢 socket�
 
 用法：
     python run.py                         # 实例数 = WEB_WORKERS（默认 4），对外 8000，实例在 8001+
-    python run.py --instances 1 --reload  # 单实例直跑，开发用
+    python run.py --instances 1           # 单实例，同样经过转发层（便于和 4 实例对比）
+    python run.py --instances 1 --reload  # 开发用：单实例直跑 + 热重载
     python run.py --response-timeout 60   # 请求发出后后端一直不回应的上限，默认 30 秒
 """
 
@@ -275,7 +276,8 @@ def main() -> int:
     ap.add_argument("--instances", type=int,
                     default=int(os.getenv("WEB_WORKERS", "4")),
                     help="实例数，默认等于 WEB_WORKERS；1 = 单实例直跑")
-    ap.add_argument("--reload", action="store_true", help="仅单实例时可用，改代码自动重启")
+    ap.add_argument("--reload", action="store_true",
+                    help="仅 --instances 1 时可用：直跑 + 热重载，不经过转发层")
     ap.add_argument("--response-timeout", type=float, default=30.0,
                     help="请求已发出、后端一直不回应的上限秒数，默认 30")
     args = ap.parse_args()
@@ -285,12 +287,12 @@ def main() -> int:
 
     from app.config import ES_SEARCH_WORKERS      # noqa: E402  导入即校验（PG / ES / 编码超时）
 
-    if instances == 1:
-        run_single(args.port, args.reload)
-        return 0
     if args.reload:
-        print("--reload 只在 --instances 1 下有效", file=sys.stderr)
-        return 2
+        if instances > 1:
+            print("--reload 只在 --instances 1 下有效", file=sys.stderr)
+            return 2
+        run_single(args.port, True)          # 开发用：直跑 + 热重载，不经过转发层
+        return 0
 
     base_port = args.port + 1
     for port in [args.port, *range(base_port, base_port + instances)]:
