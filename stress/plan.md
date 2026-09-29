@@ -8,7 +8,7 @@
 
 ## 1. 目标
 
-1. 并发 → 吞吐曲线：峰值并发在哪、从哪一档开始塌。`WEB_WORKERS` 固定 4，不再扫进程数。
+1. 并发 → 吞吐曲线：实例数 1 与 4 各扫一遍，看峰值并发在哪、从哪一档开始塌、多实例值不值。
 2. 报告量从现有 5514 篇放大到 3 万级后的退化幅度，以及每请求多次 ES 往返的代价。
 
 ## 2. 两条数据线
@@ -43,8 +43,9 @@ B 线原本按 10 万级设计，10 万条编码加 bulk 时间过长。测试�
 
 **P1 · 并发拐点**：
 
-- `WEB_WORKERS` 固定 4，只扫并发 8 / 20 / 40 / 80，每档 200 请求，四档一次跑完、不用重启
-- 要回答：峰值并发在哪一档、从哪一档开始塌
+- 实例数 1 与 4 各扫一遍并发 8 / 20 / 40 / 80，每档 200 请求
+- 并发只改脚本参数，四档连着跑；换实例数要重启启动器：`python run.py --instances 1` / `--instances 4`
+- 要回答：峰值并发在哪一档、从哪一档开始塌、4 实例比 1 实例提升多少
 - 每档顺带报 ES queue / rejected、PG 后端与行锁、编码服务队列峰值
 
 **P2 · B 线大数据索引**：
@@ -76,14 +77,17 @@ B 线原本按 10 万级设计，10 万条编码加 bulk 时间过长。测试�
 ```powershell
 python -m embedding.server                    # 编码服务 127.0.0.1:8020
 $env:PYTHONIOENCODING='utf-8'; $env:PYTHONPATH=(Get-Location).Path
-$env:ENCODER_URL='http://127.0.0.1:8020'; python run.py    # API 127.0.0.1:8000
+python run.py --instances 4                   # API：4 实例（8001+），对外 127.0.0.1:8000
 python stress/stress_search.py --requests 20 --concurrency 4 --warmup 5 --json   # 冒烟
-foreach ($c in 8,20,40,80) { python stress/stress_search.py --requests 200 --concurrency $c --mode mixed --json }   # P1
+# P1：4 实例扫完，重启成 --instances 1 再扫一遍
+foreach ($c in 8,20,40,80) { python stress/stress_search.py --requests 200 --concurrency $c --mode mixed --json }
 python stress/stress_search.py --soak 10 --concurrency 40 --json    # P3 耐久，并发换成 P1 峰值 × 0.7
 python stress/make_reports_stress.py --stats 20000                 # 分布自检
 python stress/make_reports_stress.py --count 30000 --recreate      # B 线造数
 # 索引为空时先灌生产数据：python scripts/ingest_reports.py
 ```
+
+实例数由启动器参数决定（`--instances N`，默认取 `WEB_WORKERS`）；对外始终是 8000，压测脚本不用改地址。
 
 压测账号由脚本自建：`stress1` / `stresspass123`
 
@@ -100,12 +104,18 @@ python stress/make_reports_stress.py --count 30000 --recreate      # B 线造数
 
 ### A 线并发拐点
 
-| 并发 | 吞吐 req/s | p50 | p95 | p99 | 错误 | 服务端核对 | run id | 备注 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 8 | | | | | | | | |
-| 20 | | | | | | | | |
-| 40 | | | | | | | | |
-| 80 | | | | | | | | |
+实例数 1 与 4 各 4 档，共 8 行。
+
+| 实例数 | 并发 | 吞吐 req/s | p50 | p95 | p99 | 错误 | 服务端核对 | run id | 备注 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 4 | 8 | | | | | | | | |
+| 4 | 20 | | | | | | | | |
+| 4 | 40 | | | | | | | | |
+| 4 | 80 | | | | | | | | |
+| 1 | 8 | | | | | | | | |
+| 1 | 20 | | | | | | | | |
+| 1 | 40 | | | | | | | | |
+| 1 | 80 | | | | | | | | |
 
 ### B 线大数据索引
 
