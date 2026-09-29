@@ -1,4 +1,4 @@
-"""按生产报告的分布随机造 10 万级报告，直接 bulk 进独立压测索引。
+"""按生产报告的分布随机造 3 万级报告，直接 bulk 进独立压测索引。
 
 不套模板，而是从 example/reports.json 真实语料重组：标题取真实标题做变异（换年份、换主体行业、
 冒号后的卖点换成另一条真实卖点、按真实占比增删“（独占版）”），摘要取真实摘要做句级拼接并让它引用
@@ -11,7 +11,7 @@ mapping 与向量文本口径沿用生产（mapping/report_mapping.json、embedd
     $env:PYTHONIOENCODING='utf-8'; $env:PYTHONPATH=(Get-Location).Path
     python stress/make_reports_stress.py --stats 5000                  # 看分布像不像（不连 ES）
     python stress/make_reports_stress.py --dry-run 5                   # 看几条样本
-    python stress/make_reports_stress.py --count 100000 --recreate     # 建索引 + 灌 10 万
+    python stress/make_reports_stress.py --count 30000 --recreate      # 建索引 + 灌 3 万
 
 向量：ENCODER_URL 有值就走编码服务（kind=passage，单请求 ≤ 256 条），否则用进程内模型
 （--in-process 可强制）。压测索引默认 3 分片 0 副本：3 个数据节点各担一份，副本少一半写入。
@@ -302,8 +302,8 @@ def ensure_index(es, args) -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="造 10 万级报告数据并灌进压测索引")
-    ap.add_argument("--count", type=int, default=100000)
+    ap = argparse.ArgumentParser(description="造 3 万级报告数据并灌进压测索引")
+    ap.add_argument("--count", type=int, default=30000)
     ap.add_argument("--index", default="knowledge_report_stress")
     ap.add_argument("--seed", type=int, default=20260101)
     ap.add_argument("--shards", type=int, default=3, help="压测索引分片数（生产 mapping 不动）")
