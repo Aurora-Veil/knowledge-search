@@ -10,13 +10,20 @@
 
 | 项 | 实测值 |
 | --- | --- |
-| ES | 3 节点 es01 / es02 / es03，全绿；search 线程池 `size=25` / 节点；active_shards 135、unassigned 0 |
+| 主机 | **笔记本**：i7-11800H，8 核 16 线程 2.3 GHz，31.7 GB RAM，Windows 10 Pro 19045 |
+| GPU | GeForce RTX 3060 Laptop，6 GB 显存，驱动 576.83 |
+| 拓扑 | ES ×3（容器）+ Kibana + PG（原生）+ 4 个 API 实例 + 编码服务 + 压测客户端**全在同一台机器** |
+| Docker Desktop | 29.0.1，配额 16 CPU / 15.5 GiB；ES 容器未设 CPU 与内存限额 |
+| ES | 9.5.3，3 节点 es01 / es02 / es03，全绿；**每节点堆 1 GB** 加 `MaxDirectMemorySize=512m`；search 线程池 `size=25` / 节点；active_shards 135、unassigned 0 |
 | 生产索引 `knowledge_report_index` | **5514 篇，1 分片 / 1 副本** |
 | 压测索引 `knowledge_report_stress` | **34500 篇，3 分片 / 0 副本**，此前会话遗留 |
-| PostgreSQL | 17.3，`max_connections = 100`；表 `users` / `search_history` / `search_log` 齐备 |
+| PostgreSQL | 17.3，**Windows 原生服务**，`max_connections = 100`、`shared_buffers = 128MB`、`work_mem = 4MB`；表 `users` / `search_history` / `search_log` 齐备 |
 | 编码服务 | `http://127.0.0.1:8020`，模型 `BAAI/bge-base-zh-v1.5`，dim 768，**device = cuda** |
+| 压测客户端 | 同机 Python 3.12.13 |
 | 空闲基线 | PG 后端 5；ES queue 0 / rejected 0；编码服务 queue 0；python 进程 3 个 / RSS 1333 MB |
 | 压测账号 | `stress1` 已存在，id=74，自带历史数据：history 20 行 / search_count 84299 / search_log 84418 |
+
+**硬件口径**：上表是这台机器实测，不是可移植配置。吞吐、延迟与队列峰值都含"ES 三容器 + PG + API + 编码服务 + 压测客户端同机抢一颗 8 核 16 线程 CPU"的成分，换机器必然不同。
 
 **口径**：每档 200 请求、20 热身，热身不计入客户端统计；`--mode mixed`，20 个报告主题词轮转。
 
