@@ -1,7 +1,9 @@
-import uvicorn
+"""启动入口：python run.py
 
-from app.config import WEB_WORKERS
+实现见 serve.py（N 实例 + 转发层）。
+"""
+
+from serve import main
 
 if __name__ == "__main__":
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000,
-                reload=WEB_WORKERS == 1, workers=WEB_WORKERS)
+    raise SystemExit(main())

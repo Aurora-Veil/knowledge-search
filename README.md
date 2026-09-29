@@ -40,8 +40,12 @@ python scripts/init_pg.py      # PostgreSQL 建表 users / search_history / sear
 python -m embedding.server     # 默认 127.0.0.1:8020
 
 # 起动 API
-ENCODER_URL=http://127.0.0.1:8020 python run.py   # http://127.0.0.1:8000，检索页 /ui
+python run.py                                  # http://127.0.0.1:8000，检索页 /ui
 ```
+
+`run.py` 起 `WEB_WORKERS` 个单进程实例（8001、8002…），前面套一个本地转发层（8000）：
+Windows 上多进程共用同一个监听 socket 会抢 accept，表现为连接被接受却无人处理、客户端挂满超时。
+单进程开发用 `python run.py --instances 1 --reload`，实例日志在 `logs/worker-<端口>.log`。
 
 ## 接口
 
