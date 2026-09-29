@@ -90,6 +90,11 @@ example/reports.json ──scripts/ingest_reports.py──> Elasticsearch
                                                      └ bge-base-zh-v1.5 embedding
 ```
 
+## 压测
+
+任务书 `stress/plan.md`，脚本 `stress/stress_search.py`、`stress/make_reports_stress.py`。
+结果与结论见 [stress/report.md](stress/report.md)，原始 JSON 与日志见 `stress/stress-results-20260929.zip`。
+
 ## 目录
 
 ```
@@ -130,7 +135,7 @@ docker/Dockerfile           ES + analysis-ik
 example/                    示例数据
 structure/                  OIRF v3.0 schema
 docs/search-api-usage.md    接口用法
-.env.example                ES 凭据、PG_DSN、JWT 密钥
+.env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数
 scripts/                    一次性脚本
   ingest.py                 example -> MongoDB
   full_sync.py              MongoDB -> ES - 含向量
@@ -138,7 +143,9 @@ scripts/                    一次性脚本
   init_es_auth.py           在 ES 上建角色与用户
   init_pg.py                schema/auth.sql -> PostgreSQL 建表
 static/                     静态页面：登录 / 检索 / 记录，无构建
-run.py                      启动服务
+stress/                     压测：任务书、脚本与结果
+serve.py                    启动实现：N 实例 + 本地转发层
+run.py                      启动入口
 ```
 
 ## 许可
