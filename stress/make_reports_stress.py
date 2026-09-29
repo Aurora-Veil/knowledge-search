@@ -1,9 +1,5 @@
 """按生产报告的分布随机造 3 万级报告，直接 bulk 进独立压测索引。
 
-不套模板，而是从 example/reports.json 真实语料重组：标题取真实标题做变异（换年份、换主体行业、
-冒号后的卖点换成另一条真实卖点、按真实占比增删“（独占版）”），摘要取真实摘要做句级拼接并让它引用
-自己的标题，长度/占比都对齐真实分布（`--stats` 可打印真实 vs 生成对照）。
-
 mapping 与向量文本口径沿用生产（mapping/report_mapping.json、embedding/fields.json
 的 report = title + summary）。生产索引 knowledge_report_index 一个字不改。
 
