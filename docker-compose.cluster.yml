@@ -61,8 +61,9 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ES_ELASTIC_PASSWORD:?set ES_ELASTIC_PASSWORD in .env}
       - ES_JAVA_OPTS=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ES_INITIAL_MASTER_NODES=${ES_INITIAL_MASTER_NODES:-}
     ports:
-      - ${ES_PORT:-9200}:9200
+      - "${BIND_ADDR:-127.0.0.1}:${ES_PORT:-9200}:9200"
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - ./data/es01:/usr/share/elasticsearch/data
@@ -81,6 +82,7 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ES_ELASTIC_PASSWORD:?set ES_ELASTIC_PASSWORD in .env}
       - ES_JAVA_OPTS=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ES_INITIAL_MASTER_NODES=${ES_INITIAL_MASTER_NODES:-}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - ./data/es02:/usr/share/elasticsearch/data
@@ -99,6 +101,7 @@ services:
     environment:
       - ELASTIC_PASSWORD=${ES_ELASTIC_PASSWORD:?set ES_ELASTIC_PASSWORD in .env}
       - ES_JAVA_OPTS=-Xms1g -Xmx1g -XX:MaxDirectMemorySize=512m
+      - ES_INITIAL_MASTER_NODES=${ES_INITIAL_MASTER_NODES:-}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - ./data/es03:/usr/share/elasticsearch/data
@@ -129,7 +132,7 @@ services:
       es03:
         condition: service_healthy
     ports:
-      - ${KIBANA_PORT:-5601}:5601
+      - "${BIND_ADDR:-127.0.0.1}:${KIBANA_PORT:-5601}:5601"
     volumes:
       - ./data/kibana:/usr/share/kibana/data
     healthcheck:

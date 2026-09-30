@@ -1,0 +1,133 @@
+services:
+  mongo:
+    image: mongodb/mongodb-community-server:latest
+    container_name: mongo
+    restart: "no"
+    ports: ["${BIND_ADDR:-127.0.0.1}:${MONGO_PORT:-27017}:27017"]
+    volumes: ["./data/mongo:/data/db"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: 512m
+    logging: &logcap
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  pg:
+    image: postgres:17.11
+    container_name: pg
+    restart: "no"
+    environment:
+      POSTGRES_DB: knowledge_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}"
+    command: postgres -c max_connections=100 -c shared_buffers=128MB -c work_mem=4MB
+    ports:
+      - "${BIND_ADDR:-127.0.0.1}:${PG_PORT:-5433}:5432"
+      - "[::1]:${PG_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema/auth.sql:/docker-entrypoint-initdb.d/10-auth.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d knowledge_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    shm_size: 128mb
+    mem_limit: 512m
+    logging: *logcap
+
+  encoder:
+    build: {context: ., dockerfile: docker/app.Dockerfile, target: encoder}
+    image: knowledge-encoder:gpu
+    container_name: encoder
+    restart: "no"
+    gpus: all
+    environment:
+      - BIND_HOST=0.0.0.0
+      - ENCODER_PORT=8020
+    ports: ["${BIND_ADDR:-127.0.0.1}:${ENCODER_PORT:-8020}:8020"]
+    volumes: ["./.hf-cache:/app/.hf-cache:ro"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8020/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 180s
+    mem_limit: 4g
+    logging: *logcap
+
+  es-init:
+    build: {context: ., dockerfile: docker/app.Dockerfile, target: app}
+    image: knowledge-api:latest
+    container_name: es-init
+    restart: "no"
+    command:
+      - sh
+      - -c
+      - |
+        for i in $$(seq 1 60); do
+          if python scripts/init_es_auth.py > /tmp/init.log 2>&1 \
+             && python scripts/init_es_structure.py >> /tmp/init.log 2>&1; then
+            cat /tmp/init.log
+            exit 0
+          fi
+          echo "ES 未就绪或初始化失败，5 秒后重试 ($$i/60)"
+          sleep 5
+        done
+        cat /tmp/init.log
+        exit 1
+    environment:
+      - ES_URL=http://es01:9200,http://es02:9200,http://es03:9200
+      - ES_USER=${ES_USER}
+      - ES_PASSWORD=${ES_PASSWORD}
+      - ES_ELASTIC_PASSWORD=${ES_ELASTIC_PASSWORD}
+    mem_limit: 256m
+    logging: *logcap
+
+  api:
+    build: {context: ., dockerfile: docker/app.Dockerfile, target: app}
+    image: knowledge-api:latest
+    container_name: api
+    restart: "no"
+    init: true
+    command: sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_WORKERS:-4}"
+    environment:
+      - WEB_WORKERS=${WEB_WORKERS:-4}
+      - ES_URL=http://es01:9200,http://es02:9200,http://es03:9200
+      - ES_USER=${ES_USER}
+      - ES_PASSWORD=${ES_PASSWORD}
+      - MONGO_URI=mongodb://mongo:27017
+      - PG_DSN=postgresql://postgres:${POSTGRES_PASSWORD}@pg:5432/knowledge_db
+      - ENCODER_URL=http://encoder:8020
+      - SECRET_KEY=${SECRET_KEY}
+      - ES_REQUEST_TIMEOUT=${ES_REQUEST_TIMEOUT:-10}
+    ports: ["${BIND_ADDR:-127.0.0.1}:${API_PORT:-8000}:8000"]
+    depends_on:
+      mongo:
+        condition: service_healthy
+      pg:
+        condition: service_healthy
+    mem_limit: 3g
+    logging: *logcap
+
+  es01:
+    mem_limit: 3g
+  es02:
+    mem_limit: 3g
+  es03:
+    mem_limit: 3g
+
+  kibana:
+    profiles: ["kibana"]
+    mem_limit: 2g
+
+volumes:
+  pgdata:
+    driver: local

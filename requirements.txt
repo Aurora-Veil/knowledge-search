@@ -19,7 +19,7 @@ mcp>=2,<3
 # API 侧访问独立编码服务（ENCODER_URL）；fastapi 只在 [standard] extra 里带它
 httpx>=0.27
 
-# Vector search
+# Vector search —— 下面两行只在编码服务装，Dockerfile 按 encoder-only 标记排除
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
-sentence-transformers>=6,<7
-torch>=2.2
+sentence-transformers>=6,<7   # encoder-only
+torch>=2.2                    # encoder-only

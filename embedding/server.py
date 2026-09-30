@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import threading
 from contextlib import asynccontextmanager
 from typing import Any, Literal
@@ -208,7 +209,8 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    uvicorn.run(app, host="127.0.0.1", port=ENCODER_PORT, log_level="info")
+    uvicorn.run(app, host=os.getenv("BIND_HOST", "127.0.0.1"),
+                port=ENCODER_PORT, log_level="info")
 
 
 if __name__ == "__main__":
