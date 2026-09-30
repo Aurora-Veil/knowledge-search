@@ -1,3 +1,5 @@
+-- users / search_history / search_log 的建表语句。
+-- 无建库语句
 
 
 CREATE TABLE IF NOT EXISTS users (
