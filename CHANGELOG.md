@@ -27,3 +27,9 @@
 - API 改多实例：`serve.py` 起 `WEB_WORKERS` 个单进程实例，套一个本地转发层负责轮询与故障摘除，对外仍是 `127.0.0.1:8000`；`run.py` 变薄壳，`--instances 1` 同样走转发层
 - 单次检索给 ES 的时间改用 `ES_REQUEST_TIMEOUT`，默认 10 秒
 - 新增 `stress/report.md` 与结果归档 `stress/stress-results-20260929.zip`，压测结论见 [stress/report.md](stress/report.md)
+
+### 2026-09-30 · 整体容器化
+
+- API、PostgreSQL、独立编码服务进容器，与原有 ES / Kibana / Mongo 合成一套 compose，删掉转发层
+- 新增 `docker/app.Dockerfile`和 `.dockerignore`；API 镜像的依赖靠 `requirements.txt` 的 `encoder-only` 标记过滤；编码服务走 GPU
+- 配置收敛：端口一律绑回环，`COMPOSE_PROJECT_NAME` 钉死 `98`，空数据目录上建集群改由 `.env` 的 `ES_INITIAL_MASTER_NODES` 控制

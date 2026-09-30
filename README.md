@@ -10,43 +10,66 @@ OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词�
 
 ## 依赖
 
+- Docker   内含 Elasticsearch - analysis-ik、Kibana、MongoDB、PostgreSQL、独立编码服务、API
 - Python 3.12
-- Docker   MongoDB + Elasticsearch 包括 analysis-ik 插件
-- PostgreSQL 17  账号与检索记录；目前不在 docker compose 内
+- 编码服务使用 GPU 依赖 torch，需要可用的 NVIDIA 驱动和容器运行时
 
 ## 启动
 
 ```bash
-cp .env.example .env   # ES 凭据、PG_DSN、JWT 密钥
-
-docker compose up -d
-
-# try: 三节点es集群 + kibana
-# 首次启动需在 docker/es0*.yml 取消 cluster.initial_master_nodes 的注释
-docker compose -f docker-compose.cluster.yml up -d
-
-pip install -r requirements.txt
-
-# 下载向量模型
-python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
-
-python scripts/init_es_auth.py # 在 ES 上建 knowledge_app 角色与用户
-python scripts/ingest.py       # example/*.json  -> MongoDB
-python scripts/full_sync.py    # MongoDB -> Elasticsearch 一次性同步数据 + vector
-python scripts/ingest_reports.py # example/reports.json -> ES 报告索引
-python scripts/init_pg.py      # PostgreSQL 建表 users / search_history / search_log
-
-# 编码服务
-python -m embedding.server     # 默认 127.0.0.1:8020
-
-# 起动 API
-python run.py                                  # http://127.0.0.1:8000，检索页 /ui
+git clone git@github.com:Aurora-Veil/knowledge-search.git
+cd knowledge-search
+git checkout auth
+cp .env.example .env
 ```
 
-`run.py` 起 `WEB_WORKERS` 个单进程实例（8001、8002…），前面套一个本地转发层（8000）；
-单实例（`--instances 1`）同样走转发层，方便和 4 实例对比。这么做的原因：
-Windows 上多进程共用同一个监听 socket 会抢 accept，表现为连接被接受却无人处理、客户端挂满超时。
-单进程开发用 `python run.py --instances 1 --reload`，实例日志在 `logs/worker-<端口>.log`。
+`.env` 必填 `ES_ELASTIC_PASSWORD`、`ES_PASSWORD`、`KIBANA_PASSWORD`、`POSTGRES_PASSWORD`、`SECRET_KEY`、`PG_DSN`。
+
+```bash
+pip install huggingface_hub
+python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
+
+mkdir -p data/es01 data/es02 data/es03 data/mongo data/kibana
+sudo chown -R 1000:1000 data/es01 data/es02 data/es03 data/kibana
+sudo chown -R 999:999  data/mongo
+```
+
+空数据目录上首次起集群，需在 `.env` 加如下一行，集群就绪后删掉：
+
+```ini
+ES_INITIAL_MASTER_NODES=es01,es02,es03
+```
+
+```bash
+docker compose up -d
+curl 127.0.0.1:8000/api/v1/health/ready   # 200 即就绪
+```
+
+无 NVIDIA 容器运行时：`docker/app.Dockerfile` 的 cu126 换成 cpu，并删掉 `docker-compose.app.yml` 里 encoder 的 `gpus: all`。
+
+## 数据灌入脚本
+
+依赖：
+
+```bash
+pip install -r requirements.txt
+```
+
+按顺序灌入数据：
+
+```bash
+python scripts/ingest.py          # example/*.json -> MongoDB
+python scripts/full_sync.py       # MongoDB -> ES，含向量
+python scripts/ingest_reports.py  # example/reports.json  -> ES 报告索引
+```
+
+索引与 ES 角色由 `es-init` 容器在 `up` 时建好，也可用脚本手动管理：
+
+```bash
+python scripts/init_es_structure.py                    # 缺什么建什么
+python scripts/init_es_structure.py --list             # 看结构清单
+python scripts/init_es_structure.py --recreate 索引名   # 先删后建，数据会丢
+```
 
 ## 接口
 
@@ -127,25 +150,27 @@ embedding/                  向量化
   server.py                 独立编码服务：单进程、query 合批
 mapping/                    四个索引 mapping
 schema/auth.sql             PostgreSQL 建表：用户与检索记录
-docker-compose.yml          MongoDB + Elasticsearch
 docker-compose.cluster.yml  三节点 ES 集群
+docker-compose.app.yml      MongoDB + PostgreSQL + 编码服务 + API
+docker/app.Dockerfile       应用镜像，两个 target：API / 编码服务
 docker/es0*.yml             各节点 ES 配置
 docker/instances.yml        节点证书清单
 docker/Dockerfile           ES + analysis-ik
+requirements.txt            依赖清单；带 encoder-only 标记的只在编码服务装
+.dockerignore               构建上下文排除项
 example/                    示例数据
 structure/                  OIRF v3.0 schema
 docs/search-api-usage.md    接口用法
 .env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数
-scripts/                    一次性脚本
+scripts/
+  init_es_auth.py           在 ES 上建角色与用户，已由 es-init 容器自动跑
+  init_es_structure.py      按 mapping/ 建索引，已由 es-init 容器自动跑
   ingest.py                 example -> MongoDB
   full_sync.py              MongoDB -> ES - 含向量
   ingest_reports.py         example/reports.json -> ES - 报告索引
-  init_es_auth.py           在 ES 上建角色与用户
-  init_pg.py                schema/auth.sql -> PostgreSQL 建表
+  smoke_report_search.py    端到端冒烟：登录 + 报告检索，退 0 即通过
 static/                     静态页面：登录 / 检索 / 记录，无构建
 stress/                     压测：任务书、脚本与结果
-serve.py                    启动实现：N 实例 + 本地转发层
-run.py                      启动入口
 ```
 
 ## 许可

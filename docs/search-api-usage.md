@@ -1,19 +1,22 @@
 # 知识图谱搜索 API 使用文档
 
 ```bash
-pip install -r requirements.txt
+cp .env.example .env
 
-python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
-
-python scripts/init_pg.py   # PostgreSQL 建表
-python run.py
+docker compose up -d
 ```
 
-`run.py` 等价于 `uvicorn app.main:app --reload`。
 服务地址 `http://127.0.0.1:8000`，交互文档 `http://127.0.0.1:8000/docs`。
 示例中的 `$API` 代表 `http://127.0.0.1:8000/api/v1`。
 
-启动后会在后台预热向量模型，约 15 秒。
+改代码时不必重建镜像，直接单进程跑：
+
+```bash
+python -m uvicorn app.main:app --reload
+```
+
+容器里编码是独立服务（`encoder` 容器），API 进程内不加载模型；单进程直跑时
+`ENCODER_URL` 留空就在进程内加载，启动后后台预热约 15 秒。
 
 除 `/health`、`/health/ready`、`/auth/register`、`/auth/token` 外都要带
 `Authorization: Bearer $TOKEN`：
