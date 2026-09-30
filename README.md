@@ -167,7 +167,6 @@ scripts/
   ingest.py                 example -> MongoDB
   full_sync.py              MongoDB -> ES - 含向量
   ingest_reports.py         example/reports.json -> ES - 报告索引
-  smoke_report_search.py    端到端冒烟：登录 + 报告检索，退 0 即通过
 static/                     静态页面：登录 / 检索 / 记录，无构建
 stress/                     压测：任务书、脚本与结果
 ```
