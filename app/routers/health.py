@@ -30,13 +30,28 @@ def health() -> dict:
 
 
 def _check_es() -> dict:
+    # 不用 _cluster/health：那要集群级 monitor 权限，应用用户只有索引级的。
+    # 改走真实检索这条路，有主分片未分配时 _shards.failed 会大于 0。
     try:
-        status = db.get_es().cluster.health(
-            index="knowledge_*",
-            timeout=f"{ES_HEALTH_TIMEOUT}s",
-            max_retries=0,     # the client retries by default, doubling the probe
-        )["status"]
-        return {"status": status, "ok": status != "red"}
+        es = db.get_es().options(max_retries=0, request_timeout=ES_HEALTH_TIMEOUT)
+        res = es.search(index="knowledge_*", size=0,
+                        ignore_unavailable=True, allow_no_indices=True)
+        shards = res.get("_shards", {})
+        total = int(shards.get("total", 0))
+        failed = int(shards.get("failed", 0))
+
+        if total == 0:
+            status = "unavailable"
+        elif failed:
+            status = "degraded"
+        else:
+            status = "available"
+
+        return {
+            "ok": status == "available",
+            "status": status,
+            "shards": f"{int(shards.get('successful', 0))}/{total}",
+        }
     except Exception as exc:                      # noqa: BLE001
         log.warning("readiness: elasticsearch unreachable: %s", exc)
         return {"status": "unreachable", "ok": False, "error": _safe_err(exc)}
