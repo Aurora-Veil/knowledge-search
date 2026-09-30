@@ -20,8 +20,8 @@ INDEX_PATTERN = "knowledge_*"
 
 # read                 search queries (all that app/ needs)
 # view_index_metadata  indices.exists
-# create_index         scripts/full_sync.py creates the indices on first run
-# write                scripts/full_sync.py bulk indexing
+# create_index         scripts/init_es_structure.py creates the indices
+# write                the ingest scripts bulk index
 # manage               creating an index with settings/mappings
 PRIVILEGES = ["read", "view_index_metadata", "create_index", "write", "manage"]
 

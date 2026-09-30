@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..auth.deps import ActiveUser
 from ..search.objects import get_object as get_object_service
 
 router = APIRouter(prefix="/api/v1", tags=["objects"])
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/api/v1", tags=["objects"])
 def api_get_object(
     object_type: str,
     oirf_id: str,
+    user: ActiveUser,
     project_id: int = Query(..., description="project_id is required"),
 ) -> dict[str, Any]:
     try:

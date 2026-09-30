@@ -5,6 +5,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..auth.deps import ActiveUser
 from ..config import OBJECT_TYPES
 from ..search.associations import DEFAULT_LIMIT, MAX_HOPS, MAX_LIMIT, neighborhood
 
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/v1", tags=["associations"])
 def api_associations(
     object_type: Literal["source", "evidence", "viewpoint"],
     oirf_id: str,
+    user: ActiveUser,
     # oirf_id unique in project → project_id required
     project_id: int = Query(..., description="project_id is required"),
     hops: int = Query(1, ge=1, le=MAX_HOPS, description="hops max = 2"),

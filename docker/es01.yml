@@ -2,8 +2,9 @@ cluster.name: knowledge-cluster
 node.name: es01
 network.host: 0.0.0.0
 discovery.seed_hosts: ["es02", "es03"]
-# set this only on the first start of a new cluster
-# cluster.initial_master_nodes: ["es01", "es02", "es03"]
+# Bootstrapping an empty cluster needs this on the very first start, then it must go away again.
+# The value comes from ES_INITIAL_MASTER_NODES in .env, e.g. es01,es02,es03.
+cluster.initial_master_nodes: ${ES_INITIAL_MASTER_NODES:}
 
 xpack.security.enabled: true
 xpack.security.http.ssl.enabled: false

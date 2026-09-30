@@ -69,6 +69,9 @@
 
       <button id="submit" class="submit" type="submit">搜索</button>
     </form>
+
+    <!-- 用户名 / 我的搜索 / 退出，由 auth.js 的 mountUser() 填 -->
+    <div id="userBox" class="user-box"></div>
   </header>
 
   <!-- 左右两栏：左列表、右详情 -->
@@ -98,7 +101,9 @@
 
   </main>
 
-  <!-- defer = 等 HTML 解析完再执行，所以脚本里可以直接 getElementById -->
+  <!-- defer = 等 HTML 解析完再执行，所以脚本里可以直接 getElementById。
+       顺序不能反：report.js 用 auth.js 提供的 apiFetch / requireLogin -->
+  <script src="/ui/auth.js" defer></script>
   <script src="/ui/report.js" defer></script>
 </body>
 </html>

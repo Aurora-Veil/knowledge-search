@@ -1,7 +1,5 @@
-# scripts/full_sync.py —— 用 mapping 建索引，并 Mongo -> ES（含向量）
+# scripts/full_sync.py —— Mongo -> ES（含向量）。索引结构由 init_es_structure.py 建。
 
-import json
-import os
 import sys
 import time
 from datetime import datetime
@@ -19,13 +17,12 @@ from elasticsearch.helpers import bulk
 from app.config import DB_NAME, MONGO_URI, es_auth, es_hosts
 from embedding.encoder import Encoder, resolve_snapshot
 from embedding.spec import MODEL, build_text, text_hash
-
-MAPPING = str(ROOT / "mapping")
+from scripts.init_es_structure import require
 
 INDICES = {
-    "source":    {"index": "knowledge_source",    "mapping": "source_mapping.json",    "collection": "sources"},
-    "evidence":  {"index": "knowledge_evidence",  "mapping": "evidence_mapping.json",  "collection": "evidence"},
-    "viewpoint": {"index": "knowledge_viewpoint", "mapping": "viewpoint_mapping.json", "collection": "viewpoints"},
+    "source":    {"index": "knowledge_source",    "collection": "sources"},
+    "evidence":  {"index": "knowledge_evidence",  "collection": "evidence"},
+    "viewpoint": {"index": "knowledge_viewpoint", "collection": "viewpoints"},
 }
 
 
@@ -40,25 +37,6 @@ def _jsonable(v):
     if isinstance(v, (list, tuple)):
         return [_jsonable(x) for x in v]
     return v
-
-
-def load_mapping(name: str) -> dict:
-    with open(os.path.join(MAPPING, INDICES[name]["mapping"]), encoding="utf-8") as f:
-        return json.load(f)
-
-
-def ensure_indices(es, name: str) -> None:
-    cfg = INDICES[name]
-    if es.indices.exists(index=cfg["index"]):
-        print(f"  index {cfg['index']} exists, skip create")
-        return
-    body = load_mapping(name)
-    es.indices.create(
-        index=cfg["index"],
-        settings=body.get("settings"),
-        mappings=body.get("mappings"),
-    )
-    print(f"  created {cfg['index']}")
 
 
 def _embed(name: str, docs: list[dict], encoder: Encoder) -> None:
@@ -110,9 +88,9 @@ def main() -> None:
     mongo = MongoClient(MONGO_URI)[DB_NAME]
     es = Elasticsearch(es_hosts(), basic_auth=es_auth())
     try:
-        print("== ensure indices ==")
+        print("== check structure ==")
         for name in INDICES:
-            ensure_indices(es, name)
+            require(es, INDICES[name]["index"])
 
         print("== full sync ==")
         encoder = Encoder()          # free: the model loads on the first encode

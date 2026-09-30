@@ -144,18 +144,20 @@ async function doSearch(targetPage = 1) {
 
   let data;
   try {
-    const res = await fetch(SEARCH_URL, {
+    // apiFetch（auth.js）= fetch + Authorization 头 + 401 自动跳登录页
+    const res = await apiFetch(SEARCH_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (mySeq !== seq) return;
-    data = await res.json();
+    data = await readJson(res);
     if (mySeq !== seq) return;
 
+    if (res.status === 401) return;   // apiFetch 正在跳登录页，别在这里报错
     if (!res.ok) {
-      // FastAPI 的报错格式是 {"detail": "..."}
-      showStatus("检索失败：" + (data.detail || res.status), "error");
+      // FastAPI 的报错格式是 {"detail": "..."}，422 时 detail 是数组
+      showStatus("检索失败：" + errorText(data, "HTTP " + res.status), "error");
       return;
     }
   } catch (err) {
@@ -296,13 +298,14 @@ async function loadDetail(hit) {
 
   let data;
   try {
-    const res = await fetch(DETAIL_URL(hit.report_id));
+    const res = await apiFetch(DETAIL_URL(hit.report_id));
     if (mySeq !== detailSeq) return;
-    data = await res.json();
+    data = await readJson(res);
     if (mySeq !== detailSeq) return;
 
+    if (res.status === 401) return;   // apiFetch 正在跳登录页
     if (!res.ok) {
-      renderDetail(hit, { error: "取详情失败：" + (data.detail || res.status) });
+      renderDetail(hit, { error: "取详情失败：" + errorText(data, "HTTP " + res.status) });
       return;
     }
   } catch (err) {
@@ -365,4 +368,36 @@ resultsEl.addEventListener("click", (e) => {
   loadDetail(hit);
 });
 
-qInput.focus();
+/* ---------- 初始化 ---------- */
+
+/* 从 URL 预填表单：搜索记录页的「重搜」链接会带 q / layout / mode / go。
+ * 认不出来的值（比如手改 URL 塞 layout=foo）一律退回默认。
+ * 注意这里**不**碰 period / decay：历史里存的是绝对日期
+ * （publish_date_from/to），而下拉框是「近一年」「2024 年」这种区间表达，
+ * 没有可靠的对应关系 —— 硬猜会把筛选条件悄悄改错，不如不填。 */
+function applyUrlParams() {
+  const p = new URLSearchParams(location.search);
+
+  const q = p.get("q");
+  if (q !== null) qInput.value = q;
+
+  const layout = p.get("layout");
+  if (layout && Array.from(layoutSel.options).some((o) => o.value === layout)) {
+    layoutSel.value = layout;
+  }
+
+  const mode = p.get("mode");
+  if (mode && Array.from(modeSel.options).some((o) => o.value === mode)) {
+    modeSel.value = mode;
+  }
+
+  return p.get("go") === "1";
+}
+
+// 没登录就跳登录页，后面的初始化不做（requireLogin 已经在跳了）
+if (requireLogin()) {
+  mountUser();
+  // 报告接口要求 q 非空（min_length=1），所以没带 q 时不自动开搜
+  if (applyUrlParams() && qInput.value.trim()) doSearch(1);
+  qInput.focus();
+}

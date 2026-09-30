@@ -5,10 +5,21 @@ elasticsearch>=8,<10
 pymongo>=4.6
 python-dotenv>=1.0        # 从 .env 读 ES / Mongo 凭据
 
+# Auth —— 密码哈希（Argon2id）与 JWT 登录令牌
+pwdlib[argon2]>=0.3
+pyjwt>=2.10,<3            # 2.10 起 sub 必须是字符串，解码时会校验
+python-multipart>=0.0.20  # /token 的 OAuth2PasswordRequestForm 靠它解析表单
+
+# PostgreSQL —— 用户与搜索记录
+psycopg[binary,pool]>=3.2
+
 # MCP server. The official SDK v2 renamed FastMCP to MCPServer
 mcp>=2,<3
 
-# Vector search
+# API 侧访问独立编码服务（ENCODER_URL）；fastapi 只在 [standard] extra 里带它
+httpx>=0.27
+
+# Vector search —— 下面两行只在编码服务装，Dockerfile 按 encoder-only 标记排除
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
-sentence-transformers>=6,<7
-torch>=2.2
+sentence-transformers>=6,<7   # encoder-only
+torch>=2.2                    # encoder-only

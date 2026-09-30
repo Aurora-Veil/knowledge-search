@@ -1,4 +1,4 @@
-# scripts/ingest_reports.py —— example/reports.json -> ES
+# scripts/ingest_reports.py —— example/reports.json -> ES。索引结构由 init_es_structure.py 建。
 
 import argparse
 import json
@@ -16,9 +16,9 @@ from elasticsearch.helpers import bulk
 from app.config import es_auth, es_hosts
 from embedding.encoder import Encoder, resolve_snapshot
 from embedding.spec import MODEL, build_text, text_hash
+from scripts.init_es_structure import require
 
 INDEX = "knowledge_report_index"
-MAPPING_PATH = ROOT / "mapping" / "report_mapping.json"
 SOURCE_PATH = ROOT / "example" / "reports.json"
 
 TOKEN_LIMIT = 512          # == embedding/fields.json 的 model.max_tokens
@@ -31,21 +31,6 @@ def load_reports(limit: int | None) -> list[dict]:
     with SOURCE_PATH.open(encoding="utf-8") as f:
         reports = json.load(f)["reports"]
     return reports[:limit] if limit else reports
-
-
-def ensure_index(es: Elasticsearch, recreate: bool) -> None:
-    exists = es.indices.exists(index=INDEX)
-    if recreate and exists:
-        es.indices.delete(index=INDEX)
-        print(f"  dropped {INDEX}")
-        exists = False
-    if exists:
-        print(f"  {INDEX} exists, keep mapping")
-        return
-    body = json.loads(MAPPING_PATH.read_text(encoding="utf-8"))
-    es.indices.create(index=INDEX, settings=body.get("settings"),
-                      mappings=body.get("mappings"))
-    print(f"  created {INDEX}")
 
 
 def count_truncated(texts: list[str]) -> int:
@@ -106,16 +91,13 @@ def write(es: Elasticsearch, reports: list[dict]) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="report json -> elasticsearch")
-    ap.add_argument("--recreate", action="store_true",
-                    help="drop and recreate the index (full re-embed)")
     ap.add_argument("--limit", type=int, default=None,
                     help="only ingest the first N reports (smoke test)")
     args = ap.parse_args()
 
     es = Elasticsearch(es_hosts(), basic_auth=es_auth())
     try:
-        print("== ensure index ==")
-        ensure_index(es, args.recreate)
+        require(es, INDEX)
 
         reports = load_reports(args.limit)
         print(f"== ingest {len(reports)} reports from {SOURCE_PATH.name} ==")

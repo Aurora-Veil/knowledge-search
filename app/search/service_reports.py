@@ -15,7 +15,7 @@ from ..db import get_es
 from .query_reports import (
     INDEX, build_detail_query, build_knn_query, build_query, window,
 )
-from .encoder import get_encoder
+from .encoder import encode_query_optional
 from .rank import LEXICAL, VECTOR, fuse, plain
 from .response import hit_to_card_report
 
@@ -31,8 +31,8 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
     return max(int(p.get("page", 1)), 1), max(int(p.get("size", 20)), 1)
 
 
-def _query_vector(q: str) -> list[float]:
-    return get_encoder().encode_query(q)
+def _query_vector(q: str) -> list[float] | None:
+    return encode_query_optional(q)
 
 
 # def _get_encoder() -> Any:
@@ -106,13 +106,14 @@ def search(p: Mapping[str, Any]) -> dict[str, Any]:
 
     need = window(p)
     vector = _query_vector(q.strip()) if ENABLE_VECTOR_SEARCH else None
+    degraded = ENABLE_VECTOR_SEARCH and vector is None
 
     pools, total = _pools(p, need, vector)
 
     # A filter-only request has no relevance signal to fuse
     ranked = fuse(pools, page, size) if vector is not None else plain(pools, page, size)
 
-    return {"total": total, "page": page, "size": size,
+    return {"total": total, "page": page, "size": size, "degraded": degraded,
             "hits": [_card(f) for f in ranked]}
 
 

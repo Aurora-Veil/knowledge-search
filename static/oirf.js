@@ -149,17 +149,19 @@ async function doSearch(targetPage = 1) {
 
   let data;
   try {
-    const res = await fetch(SEARCH_URL, {
+    // apiFetch（auth.js）= fetch + Authorization 头 + 401 自动跳登录页
+    const res = await apiFetch(SEARCH_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     if (mySeq !== seq) return;
-    data = await res.json();
+    data = await readJson(res);
     if (mySeq !== seq) return;
 
+    if (res.status === 401) return;   // apiFetch 正在跳登录页，别在这里报错
     if (!res.ok) {
-      showStatus("检索失败：" + (data.detail || res.status), "error");
+      showStatus("检索失败：" + errorText(data, "HTTP " + res.status), "error");
       return;
     }
   } catch (err) {
@@ -318,13 +320,14 @@ async function loadDetail(hit) {
 
   let data;
   try {
-    const res = await fetch(OBJECT_URL(hit.object_type, hit.oirf_id, hit.project_id));
+    const res = await apiFetch(OBJECT_URL(hit.object_type, hit.oirf_id, hit.project_id));
     if (mySeq !== detailSeq) return;
-    data = await res.json();
+    data = await readJson(res);
     if (mySeq !== detailSeq) return;
 
+    if (res.status === 401) return;   // apiFetch 正在跳登录页
     if (!res.ok) {
-      renderCard(hit, { error: "取对象失败：" + (data.detail || res.status) });
+      renderCard(hit, { error: "取对象失败：" + errorText(data, "HTTP " + res.status) });
       return;
     }
   } catch (err) {
@@ -374,4 +377,33 @@ resultsEl.addEventListener("click", (e) => {
   loadDetail(hit);
 });
 
-qInput.focus();
+/* ---------- 初始化 ---------- */
+
+/* 从 URL 预填表单：搜索记录页的「重搜」链接会带 q / type / mode / go。
+ * 认不出来的值（比如手改 URL 塞 type=foo）一律退回默认 —— 让它进到请求里
+ * 只会被后端 422 打回来。 */
+function applyUrlParams() {
+  const p = new URLSearchParams(location.search);
+
+  const q = p.get("q");
+  if (q !== null) qInput.value = q;
+
+  const type = p.get("type");
+  if (type && Array.from(typeSel.options).some((o) => o.value === type)) {
+    typeSel.value = type;
+  }
+
+  const mode = p.get("mode");
+  if (mode && Array.from(modeSel.options).some((o) => o.value === mode)) {
+    modeSel.value = mode;
+  }
+
+  return p.get("go") === "1";
+}
+
+// 没登录就跳登录页，后面的初始化不做（requireLogin 已经在跳了）
+if (requireLogin()) {
+  mountUser();
+  if (applyUrlParams()) doSearch(1);   // go=1 才自动开搜，否则只预填
+  qInput.focus();
+}

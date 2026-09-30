@@ -1,28 +1,50 @@
 # 知识图谱搜索 API 使用文档
 
 ```bash
-pip install -r requirements.txt
+cp .env.example .env
 
-python -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-base-zh-v1.5', cache_dir='.hf-cache/hub')"
-
-python run.py
+docker compose up -d
 ```
 
-`run.py` 等价于 `uvicorn app.main:app --reload`。
 服务地址 `http://127.0.0.1:8000`，交互文档 `http://127.0.0.1:8000/docs`。
 示例中的 `$API` 代表 `http://127.0.0.1:8000/api/v1`。
 
-启动后会在后台预热向量模型，约 15 秒。
+改代码时不必重建镜像，直接单进程跑：
+
+```bash
+python -m uvicorn app.main:app --reload
+```
+
+容器里编码是独立服务（`encoder` 容器），API 进程内不加载模型；单进程直跑时
+`ENCODER_URL` 留空就在进程内加载，启动后后台预热约 15 秒。
+
+除 `/health`、`/health/ready`、`/auth/register`、`/auth/token` 外都要带
+`Authorization: Bearer $TOKEN`：
+
+```bash
+# 注册
+curl -s -X POST $API/auth/register -H "Content-Type: application/json" \
+  -d '{"username":"demo","password":"demo-password"}'
+
+# 换令牌
+TOKEN=$(curl -s -X POST $API/auth/token -d 'username=demo&password=demo-password' \
+  | python -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+```
 
 ## 1. 端点总览
 
 | 方法 | 路径 | 用途 | `project_id` |
 | --- | --- | --- | --- |
 | GET | `/api/v1/health` | 健康检查 | 无 |
+| GET | `/api/v1/health/ready` | 依赖就绪检查 | 无 |
+| POST | `/api/v1/auth/register` | 注册 | 无 |
+| POST | `/api/v1/auth/token` | 登录，换令牌 | 无 |
+| GET | `/api/v1/auth/me` | 当前账号 | 无 |
 | POST | `/api/v1/search` | 搜索，词法加向量再加筛选 | 缺省为全部项目 |
 | GET | `/api/v1/objects/{object_type}/{oirf_id}` | 取完整对象 | 必填 |
 | GET | `/api/v1/associations/{object_type}/{oirf_id}` | 取关联子图，含节点与边 | 必填 |
 | GET | `/api/v1/projects` | 列出项目与各类对象数量 | 无 |
+| GET | `/api/v1/history` | 当前用户的检索记录 | 无 |
 | POST | `/api/v1/reports/search` | 报告检索，词法加向量再加筛选 | 无 |
 | GET | `/api/v1/reports/{report_id}` | 取报告详情，含摘要 | 无 |
 
@@ -125,35 +147,35 @@ python run.py
 
 ```bash
 # 全文加多项筛选
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"空间计算","type":"evidence","project_id":1,"industry":"空间计算设备","size":3}'
 
 # 收紧召回：73 条变 8 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"空间计算设备","type":"all","mode":"and"}'
 
 # 只看来自澎湃新闻的材料，2 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"publisher":"澎湃新闻"}'
 
 # 多个来源取并集，24 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"publisher":["知乎","知乎专栏"]}'
 
 # 来源与内容同时限定，2 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"空间计算","publisher":"澎湃新闻"}'
 
 # 多项目取并集
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"空间计算","type":"all","project_id":[1,2]}'
 
 # 引用溯源：谁引用了这份材料，179 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"type":"all","project_id":1,"source_ids":["source:S001"]}'
 
 # 引用溯源：同一步内同时引用该材料与该证据，1 条
-curl -s -X POST $API/search -H "Content-Type: application/json" \
+curl -s -X POST $API/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"type":"viewpoint","project_id":1,"source_ids":["source:S002"],"evidence_ids":["evidence:E005"]}'
 ```
 
@@ -162,6 +184,7 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 ```jsonc
 {
   "total": 23, "page": 1, "size": 3,
+  "degraded": false,                   // 编码不可用、这次只走了词法时为 true
   "hits": [
     {
       "id": "6a9fbd1b270db0c081be679d",  // ObjectId 字符串，全局唯一
@@ -184,6 +207,9 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 
 三个分数含义不同，都不要跨查询比较：`score` 由名次算出（量级 `0.016`~`0.033`），`raw_score` 是 BM25（无上界，随查询漂移），`knn_score` 是余弦映射到 `[0,1]`。
 
+`degraded` 恒存在：只有"带 `q`、该走向量分支、却没走上"（编码服务挂了或编码失败）才是 `true`，此时
+`match_source` 全是 `bm25`、`knn_score` 是 `null`。没有 `q` 的纯筛选请求不走向量，不算降级。
+
 响应只含卡片字段，长文本如 `presentation.content`、`presentation.explanation`、`presentation.raw_texts`、`presentation.summary`、`reasoning.narrative`、`*_reason`、`lifecycle` 需用 `/objects` 取。
 
 ## 3. 完整对象 `GET /api/v1/objects/{object_type}/{oirf_id}`
@@ -193,7 +219,7 @@ curl -s -X POST $API/search -H "Content-Type: application/json" \
 `project_id` 是必填查询参数，缺省返回 `422`，因为 `oirf_id` 只在项目内唯一
 
 ```bash
-curl "$API/objects/viewpoint/viewpoint:V001?project_id=1"
+curl -H "Authorization: Bearer $TOKEN" "$API/objects/viewpoint/viewpoint:V001?project_id=1"
 ```
 
 响应为完整对象，含 `id`、`oirf_id`、`project_id`、`identity`、`presentation`、`reasoning`、`experience`、`responsibility`、`lifecycle`。
@@ -215,16 +241,16 @@ curl "$API/objects/viewpoint/viewpoint:V001?project_id=1"
 
 ```bash
 # 一个观点的证据与来源，10 节点 / 11 边
-curl "$API/associations/viewpoint/viewpoint:V001?project_id=1&direction=out"
+curl -H "Authorization: Bearer $TOKEN" "$API/associations/viewpoint/viewpoint:V001?project_id=1&direction=out"
 
 # 一份材料被谁用了，179 节点：160 证据加 19 观点
-curl "$API/associations/source/source:S001?project_id=1&direction=in&limit=200"
+curl -H "Authorization: Bearer $TOKEN" "$API/associations/source/source:S001?project_id=1&direction=in&limit=200"
 
 # 只要引用它的观点，跳过证据，19 节点
-curl "$API/associations/source/source:S001?project_id=1&direction=in&types=viewpoint"
+curl -H "Authorization: Bearer $TOKEN" "$API/associations/source/source:S001?project_id=1&direction=in&types=viewpoint"
 
 # 一条证据的上下文：它的来源加引用它的观点，2 节点
-curl "$API/associations/evidence/evidence:E005?project_id=1"
+curl -H "Authorization: Bearer $TOKEN" "$API/associations/evidence/evidence:E005?project_id=1"
 ```
 
 ```jsonc
@@ -253,7 +279,7 @@ curl "$API/associations/evidence/evidence:E005?project_id=1"
 列出库里有哪几个 `project_id`，以及每个项目三类对象的数量。无参数。
 
 ```bash
-curl "$API/projects"
+curl -H "Authorization: Bearer $TOKEN" "$API/projects"
 ```
 
 ```jsonc
@@ -300,19 +326,19 @@ curl "$API/projects"
 
 ```bash
 # 检索加筛选，3 条
-curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+curl -s -X POST $API/reports/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"氢能产业园发展格局","layout":"横版","size":3}'
 
 # 收紧词法召回
-curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+curl -s -X POST $API/reports/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"新能源汽车销量预测","mode":"and"}'
 
 # 只要 2025 年之后发布的
-curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+curl -s -X POST $API/reports/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"新能源汽车销量预测","publish_date_from":"2025-01-01"}'
 
 # 排序偏向新报告
-curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
+curl -s -X POST $API/reports/search -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"q":"新能源汽车销量预测","time_weight":0.2}'
 ```
 
@@ -321,6 +347,7 @@ curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
   "total": 9,                                      // 只是词法分支的命中数，不含向量分支
   "page": 1,
   "size": 3,
+  "degraded": false,                               // 与 /search 同义
   "hits": [
     {
       "report_id": "62e33fbc2f669532f23e1cd8", 
@@ -343,12 +370,43 @@ curl -s -X POST $API/reports/search -H "Content-Type: application/json" \
 ### 6.2 详情 `GET /api/v1/reports/{report_id}`
 
 ```bash
-curl "$API/reports/62e33fbc2f669532f23e1cd8"
+curl -H "Authorization: Bearer $TOKEN" "$API/reports/62e33fbc2f669532f23e1cd8"
 ```
 
 字段与列表相同，多一个 `summary`、少 `score` / `raw_score` / `knn_score` / `match_source` / `highlight`。`report_id` 不存在返回 `404`。
 
-## 7. 错误码
+## 7. 检索记录 `GET /api/v1/history`
+
+每次 `/search` 或 `/reports/search` 都会记一行，按 `last_seen_at` 倒序返回当前用户的记录。
+
+| 参数 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- |
+| `kind` | `oirf` / `report` | 无 | 不传为全部 |
+| `limit` | int | `20` | 最大 `100` |
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "$API/history?kind=oirf&limit=5"
+```
+
+```jsonc
+[
+  {
+    "id": 1, "kind": "oirf",
+    "query": "空间计算",
+    "filters": { "type": "evidence", "industry": "空间计算设备" },  // 不含 q / page / size / highlight
+    "last_page": 3,          // 翻到过的最深页
+    "size": 20,
+    "result_total": 23,      // 最近一次的命中数
+    "search_count": 3,       // 同一个检索搜过几次
+    "first_seen_at": "2025-01-01T10:00:00+08:00",
+    "last_seen_at": "2025-01-01T10:05:00+08:00"
+  }
+]
+```
+
+`kind`、`query`、`filters` 三者相同就是一行：翻页、改 `size`、开关 `highlight` 都不新增行，只推深 `last_page`、把 `search_count` 加一。
+
+## 8. 错误码
 
 | 状态码 | 场景 | 响应 |
 | --- | --- | --- |
@@ -356,8 +414,14 @@ curl "$API/reports/62e33fbc2f669532f23e1cd8"
 | `400` | `/search` 的 `page`×`size` 超过 `200` | `{"detail":"page*size = 220 exceeds RESULT_WINDOW = 200; …"}` |
 | `400` | `/reports/search` 的 `q` 是空白串 | `{"detail":"q is required: reports search needs a query"}` |
 | `400` | `/reports/search` 的 `page`×`size` 超过 `200` | `{"detail":"page*size = 220 exceeds RESULT_WINDOW = 200; …"}` |
+| `401` | 缺令牌，或令牌无效、过期 | `{"detail":"Could not validate credentials"}`，带 `WWW-Authenticate: Bearer` |
+| `401` | `/auth/token` 用户名或密码不对 | `{"detail":"Incorrect username or password"}` |
+| `403` | 令牌有效但账号已停用 | `{"detail":"Inactive user"}` |
 | `404` | `/objects` 找不到对象，或 `project_id` 指向没有数据的项目 | `{"detail":"object not found"}` |
 | `404` | `/associations` 找不到对象 | `{"detail":"viewpoint 'viewpoint:V999' not found in project 1"}` |
 | `404` | `/reports/{report_id}` 找不到报告 | `{"detail":"report not found: …"}` |
+| `409` | `/auth/register` 用户名已被占用 | `{"detail":"username already taken: demo"}` |
 | `422` | 参数校验失败：类型不对、超出范围、缺必填、`mode`/`direction`/`include` 取值非法、标量参数传了数组 | FastAPI 字段级错误 |
 | `422` | `/associations` 的 `oirf_id` 前缀与 `object_type` 不一致 | `{"detail":"oirf_id prefix must match object_type: …"}` |
+| `503` | PostgreSQL 不可用 | `{"detail":"User database unavailable"}`；`/history` 是 `{"detail":"search history unavailable"}` |
+| `503` | `/health/ready` 任一依赖不可用 | detail 是 ES / MongoDB / PostgreSQL 各自的检查结果 |
