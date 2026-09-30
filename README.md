@@ -19,7 +19,6 @@ OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词�
 ```bash
 git clone git@github.com:Aurora-Veil/knowledge-search.git
 cd knowledge-search
-git checkout auth
 cp .env.example .env
 ```
 
