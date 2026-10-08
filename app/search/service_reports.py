@@ -1,7 +1,6 @@
 """
 报告检索 service。
 
-词法 + 向量两路召回，RRF 融合排序；列表不带摘要，摘要在详情里单独取。
 """
 
 from __future__ import annotations
@@ -13,7 +12,8 @@ from typing import Any, Mapping
 from ..config import ENABLE_VECTOR_SEARCH, ES_SEARCH_WORKERS
 from ..db import get_es
 from .query_reports import (
-    INDEX, build_detail_query, build_knn_query, build_query, window,
+    INDEX, build_detail_query, build_hydrate_query, build_knn_query, build_query,
+    window,
 )
 from .encoder import encode_query_optional
 from .rank import LEXICAL, VECTOR, fuse, plain
@@ -54,11 +54,12 @@ def _pools(p: Mapping[str, Any], need: int, vector: list[float] | None
     page_1 = {**p, "page": 1, "size": need}
 
     tasks: list[tuple[str, str, Any]] = [
-        (TYPE, LEXICAL, _search_pool.submit(_run, build_query(page_1))),
+        (TYPE, LEXICAL, _search_pool.submit(
+            _run, build_query(page_1, ranked_only=True))),
     ]
     if vector is not None:
         tasks.append((TYPE, VECTOR, _search_pool.submit(
-            _run, build_knn_query(page_1, vector))))
+            _run, build_knn_query(page_1, vector, ranked_only=True))))
 
     pools: list[tuple[str, str, list[dict[str, Any]]]] = []
     total = 0
@@ -71,8 +72,16 @@ def _pools(p: Mapping[str, Any], need: int, vector: list[float] | None
     return pools, total
 
 
-def _card(ranked: Any) -> dict[str, Any]:
-    card = hit_to_card_report(ranked.hit)
+def _hydrate(ids: list[str], p: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """把融合选中的这一页取回成卡片用的 document，按 _id 索引。"""
+    if not ids:
+        return {}
+    res = _search_pool.submit(_run, build_hydrate_query(ids, p)).result()
+    return {hit["_id"]: hit for hit in res["hits"]["hits"]}
+
+
+def _card(ranked: Any, hit: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    card = hit_to_card_report(dict(hit) if hit is not None else ranked.hit)
     card.pop("summary")                              # 摘要不进列表
     card["score"] = ranked.score                     # RRF 分
     card["raw_score"] = ranked.bm25                  # BM25，词法没命中时为 None
@@ -113,8 +122,10 @@ def search(p: Mapping[str, Any]) -> dict[str, Any]:
     # A filter-only request has no relevance signal to fuse
     ranked = fuse(pools, page, size) if vector is not None else plain(pools, page, size)
 
+    docs = _hydrate([f.hit["_id"] for f in ranked if f.hit.get("_id")], p)
+
     return {"total": total, "page": page, "size": size, "degraded": degraded,
-            "hits": [_card(f) for f in ranked]}
+            "hits": [_card(f, docs.get(f.hit.get("_id"))) for f in ranked]}
 
 
 def get(report_id: str) -> dict[str, Any] | None:

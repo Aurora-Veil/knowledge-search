@@ -9,6 +9,7 @@ import re
 from datetime import date
 from typing import Any, Mapping, Sequence
 
+from ..config import capped_rank_window
 from . import time_decay
 
 INDEX = "knowledge_report_index"
@@ -33,6 +34,7 @@ LAYOUTS = ("横版", "竖版")
 
 KNN_NUM_CANDIDATES_FACTOR = 5
 
+# The deepest page
 RESULT_WINDOW = 200
 
 # DECAY_SCALE_DAYS = 365
@@ -50,14 +52,13 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
 
 
 def window(p: Mapping[str, Any]) -> int:
-    """How many hits every retriever is asked for, or raise if the page is too deep."""
     page, size = _page_size(p)
     if page * size > RESULT_WINDOW:
         raise WindowTooDeep(
             f"page*size = {page * size} exceeds RESULT_WINDOW = {RESULT_WINDOW}; "
             f"fusion re-reads that many hits from every retriever to stay page-stable"
         )
-    return RESULT_WINDOW
+    return capped_rank_window(page, size, RESULT_WINDOW)
 
 # def _decay_weight(p: Mapping[str, Any]) -> float:
 #     return min(max(float(p.get("time_weight") or 0.0), 0.0), 1.0)
@@ -113,8 +114,7 @@ def _multi_match(q: str, mode: str = "or") -> dict[str, Any]:
     return {"multi_match": mm}
 
 
-def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
-    """ return a dict for Elasticsearch query body."""
+def _match_must(p: Mapping[str, Any]) -> list[dict[str, Any]]:
     mode = p.get("mode") or "or"
     if mode not in MATCH_MODES:
         raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
@@ -123,7 +123,24 @@ def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
     q = p.get("q")
     if q:
         must.append(_multi_match(q, mode))
+    return must
 
+
+def _highlight(p: Mapping[str, Any], must: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Highlight block, or None when there is nothing to highlight or it was turned off."""
+    if not must or p.get("highlight", True) is False:
+        return None
+    return {
+        "pre_tags": ["<em>"],
+        "post_tags": ["</em>"],
+        "fields": {f.split("^", 1)[0]: {} for f in REPORT_FIELDS},
+        "highlight_query": {"bool": {"must": must}},
+    }
+
+
+def build_query(p: Mapping[str, Any], *, ranked_only: bool = False) -> dict[str, Any]:
+    """ return a dict for Elasticsearch query body."""
+    must = _match_must(p)
     filters = build_filters(p)
 
     query: dict[str, Any] = {"bool": {}}
@@ -137,7 +154,7 @@ def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
 
     body: dict[str, Any] = {
         "query": query,
-        "source": SOURCE_FIELDS,
+        "source": False if ranked_only else SOURCE_FIELDS,
         "from_": (page - 1) * size,
         "size": size,
         "track_total_hits": True,
@@ -147,18 +164,16 @@ def build_query(p: Mapping[str, Any]) -> dict[str, Any]:
     if w > 0.0:
         body["rescore"] = time_decay.rescore(DECAY_FIELD, w, size)
 
-    if must and p.get("highlight", True) is not False:
-        body["highlight"] = {
-            "pre_tags": ["<em>"],
-            "post_tags": ["</em>"],
-            "fields": {f.split("^", 1)[0]: {} for f in REPORT_FIELDS},
-            "highlight_query": {"bool": {"must": must}},
-        }
+    if not ranked_only:
+        highlight = _highlight(p, must)
+        if highlight is not None:
+            body["highlight"] = highlight
 
     return body
 
 
-def build_knn_query(p: Mapping[str, Any], vector: Sequence[float]) -> dict[str, Any]:
+def build_knn_query(p: Mapping[str, Any], vector: Sequence[float],
+                    *, ranked_only: bool = False) -> dict[str, Any]:
     need = window(p)
 
     knn: dict[str, Any] = {
@@ -172,11 +187,36 @@ def build_knn_query(p: Mapping[str, Any], vector: Sequence[float]) -> dict[str, 
     if filters:
         knn["filter"] = filters
 
-    body: dict[str, Any] = {"knn": knn, "source": SOURCE_FIELDS, "size": need}
+    body: dict[str, Any] = {
+        "knn": knn,
+        "source": False if ranked_only else SOURCE_FIELDS,
+        "size": need,
+    }
 
     w = time_decay.weight(p)
     if w > 0.0:
         body["rescore"] = time_decay.rescore(DECAY_FIELD, w, need)
+
+    return body
+
+
+def build_hydrate_query(ids: Sequence[str], p: Mapping[str, Any]) -> dict[str, Any]:
+    """Fetch the cards for the ids fusion selected."""
+    filters = build_filters(p)
+
+    query: dict[str, Any] = {
+        "bool": {"filter": [{"ids": {"values": list(ids)}}, *filters]}
+    }
+
+    body: dict[str, Any] = {
+        "query": query,
+        "source": SOURCE_FIELDS,
+        "size": len(ids),
+    }
+
+    highlight = _highlight(p, _match_must(p))
+    if highlight is not None:
+        body["highlight"] = highlight
 
     return body
 
@@ -193,5 +233,5 @@ __all__ = [
     "INDEX", "SOURCE_FIELDS", "DETAIL_FIELDS", "EMBED_FIELD", "LAYOUTS",
     "RESULT_WINDOW", "KNN_NUM_CANDIDATES_FACTOR", "MATCH_MODES", "DECAY_FIELD",
     "WindowTooDeep", "window", "build_filters", "build_query",
-    "build_knn_query", "build_detail_query",
+    "build_knn_query", "build_detail_query", "build_hydrate_query",
 ]
