@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
+from ..config import capped_rank_window
 from .fields import *
 
 MATCH_MODES = ("or","and","phrase")
@@ -33,25 +34,18 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
 
 
 def window(p: Mapping[str, Any]) -> int:
-    """How many hits every retriever is asked for, or raise if the page is too deep."""
     page, size = _page_size(p)
     if page * size > RESULT_WINDOW:
         raise WindowTooDeep(
             f"page*size = {page * size} exceeds RESULT_WINDOW = {RESULT_WINDOW}; "
             f"fusion re-reads that many hits from every retriever to stay page-stable"
         )
-    return RESULT_WINDOW
+    return capped_rank_window(page, size, RESULT_WINDOW)
 
 
 def build_filters(type_: str, p: Mapping[str, Any], inner_hits: bool = True) -> list[dict[str, Any]]:
     """
     build bool.filter by type. 
-    type_ must be one of WEIGHTS keys.
-    p is a dict of filter parameters.
-
-    Only filters that FIELD_TYPES declares applicable to ``type_`` are emitted;
-
-    inner_hits is off for the kNN branch
     """
     f: list[dict[str, Any]] = []
 
@@ -134,11 +128,7 @@ def _multi_match(q: str, type_: str, mode: str = "or") -> dict[str, Any]:
         mm["type"] = "phrase"
     return {"multi_match": mm}
 
-def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
-    """ return a dict for Elasticsearch query body."""
-    if type_ not in WEIGHTS:
-        raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
-
+def _match_must(type_: str, p: Mapping[str, Any]) -> list[dict[str, Any]]:
     mode = p.get("mode") or "or"
     if mode not in MATCH_MODES:
         raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
@@ -147,8 +137,29 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     q = p.get("q")
     if q:
         must.append(_multi_match(q, type_, mode))
+    return must
 
-    filters = build_filters(type_, p)
+
+def _highlight(type_: str, must: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Highlight block, or None when there is no query term to highlight."""
+    if not must:
+        return None
+    return {
+        "pre_tags": ["<em>"],
+        "post_tags": ["</em>"],
+        "fields": {f.split("^", 1)[0]: {} for f in WEIGHTS[type_]},
+        "highlight_query": {"bool": {"must": must}},
+    }
+
+
+def build_query(type_: str, p: Mapping[str, Any], *,
+                ranked_only: bool = False) -> dict[str, Any]:
+    """ return a dict for Elasticsearch query body."""
+    if type_ not in WEIGHTS:
+        raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
+
+    must = _match_must(type_, p)
+    filters = build_filters(type_, p, inner_hits=not ranked_only)
 
     query: dict[str, Any] = {"bool": {}}
     if must:
@@ -156,31 +167,27 @@ def build_query(type_: str, p: Mapping[str, Any]) -> dict[str, Any]:
     if filters:
         query["bool"]["filter"] = filters
 
-    highlight = {
-        "pre_tags": ["<em>"],
-        "post_tags": ["</em>"],
-        "fields": {f.split("^", 1)[0]: {} for f in WEIGHTS[type_]},
-    }
-
     page, size = _page_size(p)
     window(p)   # depth guard, shared with the kNN branch
 
     body: dict[str, Any] = {
         "query": query,
-        "highlight": highlight,
-        "source": SOURCE_BY_TYPE[type_],
+        "source": False if ranked_only else SOURCE_BY_TYPE[type_],
         "from_": (page - 1) * size,
         "size": size,
         "track_total_hits": True,
     }
 
-    if p.get("highlight", True) is False:
-        body.pop("highlight")
+    if not ranked_only and p.get("highlight", True) is not False:
+        highlight = _highlight(type_, must)
+        if highlight is not None:
+            body["highlight"] = highlight
 
     return body
 
 
-def build_knn_query(type_: str, p: Mapping[str, Any], vector: Sequence[float]) -> dict[str, Any]:
+def build_knn_query(type_: str, p: Mapping[str, Any], vector: Sequence[float],
+                    *, ranked_only: bool = False) -> dict[str, Any]:
     """
     kNN-only body: the vector branch, with no lexical clause and no highlight.
     """
@@ -199,7 +206,31 @@ def build_knn_query(type_: str, p: Mapping[str, Any], vector: Sequence[float]) -
     if filters:
         knn["filter"] = filters
 
-    return {"knn": knn, "source": SOURCE_BY_TYPE[type_], "size": need}
+    return {"knn": knn,
+            "source": False if ranked_only else SOURCE_BY_TYPE[type_],
+            "size": need}
 
 
-__all__ = ["build_query", "build_knn_query", "build_filters", "window", "MATCH_MODES"]
+def build_hydrate_query(type_: str, ids: Sequence[str],
+                        p: Mapping[str, Any]) -> dict[str, Any]:
+    if type_ not in WEIGHTS:
+        raise ValueError(f"unknown type: {type_!r} (expected one of {list(WEIGHTS)})")
+
+    filters = build_filters(type_, p)
+
+    body: dict[str, Any] = {
+        "query": {"bool": {"filter": [{"ids": {"values": list(ids)}}, *filters]}},
+        "source": SOURCE_BY_TYPE[type_],
+        "size": len(ids),
+    }
+
+    if p.get("highlight", True) is not False:
+        highlight = _highlight(type_, _match_must(type_, p))
+        if highlight is not None:
+            body["highlight"] = highlight
+
+    return body
+
+
+__all__ = ["build_query", "build_knn_query", "build_hydrate_query",
+           "build_filters", "window", "MATCH_MODES"]

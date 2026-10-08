@@ -39,7 +39,7 @@ ES_HOSTS = ES_HOSTS or [_ES_URL_DEFAULT]
 ES_HEALTH_TIMEOUT = float(os.getenv("ES_HEALTH_TIMEOUT", "2"))
 PG_HEALTH_TIMEOUT = float(os.getenv("PG_HEALTH_TIMEOUT", "2"))
 
-# 单次检索给 ES 的时间。早先这里复用健康检查的 2 秒，上万篇的索引下会误杀检索。
+# time for a single ES request, including retries.
 ES_REQUEST_TIMEOUT = float(os.getenv("ES_REQUEST_TIMEOUT", "10"))
 
 
@@ -58,12 +58,20 @@ PG_POOL_MAX = int(os.getenv("PG_POOL_MAX", "10"))
 # changes it, so it lives here rather than in the env.
 _ES_POOL_SIZE = 25
 
-# Per process. Fusing BM25 and kNN means two ES requests per index
-# (the Retriever API RRF is disabled on Basic), so in flight is
-# WEB_WORKERS * this. Unset spreads the pool across workers: 4 -> 6, 8 -> 3.
+# Per process. 
 _ES_SEARCH_WORKERS_ENV = os.getenv("ES_SEARCH_WORKERS")
 ES_SEARCH_WORKERS = (int(_ES_SEARCH_WORKERS_ENV) if _ES_SEARCH_WORKERS_ENV
                      else max(1, _ES_POOL_SIZE // WEB_WORKERS))
+
+
+RANK_BUFFER = max(0, int(os.getenv("RANK_BUFFER", "0")))
+
+
+def capped_rank_window(page: int, size: int, ceiling: int) -> int:
+    """Hits every retriever is read for, capped by the ceiling."""
+    if RANK_BUFFER <= 0:
+        return ceiling
+    return min(page * size * RANK_BUFFER, ceiling)
 
 
 def _check_concurrency() -> None:
