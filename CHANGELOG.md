@@ -2,7 +2,7 @@
 
 ## 未发布
 
-相对 `main`（`1ef7bff`）：
+相对 `origin/main`（`041ed14`）：
 
 ### 2026-09-23 · 登录与检索记录
 
@@ -33,3 +33,11 @@
 - API、PostgreSQL、独立编码服务进容器，与原有 ES / Kibana / Mongo 合成一套 compose，删掉转发层
 - 新增 `docker/app.Dockerfile`和 `.dockerignore`；API 镜像的依赖靠 `requirements.txt` 的 `encoder-only` 标记过滤；编码服务走 GPU
 - 配置收敛：端口一律绑回环，`COMPOSE_PROJECT_NAME` 钉死 `98`，空数据目录上建集群改由 `.env` 的 `ES_INITIAL_MASTER_NODES` 控制
+
+### 2026-10-08 · 排序窗口与翻页取数 & 压测资产更替
+
+- 两路召回只取排序窗口的排名；融合选出当页后再按 `_id` 取回该页的 `_source` 与高亮
+- 单请求 ES 开销从 47 ms / 259 KB 降到 16 ms / 29 KB，高亮结果不变
+- 新增 `RANK_BUFFER` 控制排序窗口大小，`0` = 默认 读满 200 条
+- 删去原先的压测脚本与结果
+- 新增服务端压力测试报告 `stress/report-p3.md`：并发 120→8192，成功吞吐天花板 119–197 req/s，七个容器无 OOM、无退出、无重启
