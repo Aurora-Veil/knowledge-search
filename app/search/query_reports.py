@@ -32,7 +32,7 @@ EMBED_FIELD = "embedding"
 
 LAYOUTS = ("横版", "竖版")
 
-KNN_NUM_CANDIDATES_FACTOR = 5
+KNN_NUM_CANDIDATES_FACTOR = 2
 
 # The deepest page
 RESULT_WINDOW = 200

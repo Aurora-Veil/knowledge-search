@@ -39,7 +39,7 @@ ES_HOSTS = ES_HOSTS or [_ES_URL_DEFAULT]
 ES_HEALTH_TIMEOUT = float(os.getenv("ES_HEALTH_TIMEOUT", "2"))
 PG_HEALTH_TIMEOUT = float(os.getenv("PG_HEALTH_TIMEOUT", "2"))
 
-# time for a single ES request, including retries.
+# timeout for one ES attempt, retries are not included.
 ES_REQUEST_TIMEOUT = float(os.getenv("ES_REQUEST_TIMEOUT", "10"))
 
 

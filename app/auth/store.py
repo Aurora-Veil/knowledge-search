@@ -64,11 +64,13 @@ def validate_password(password: str) -> str:
     return password
 
 
+_CONNECT_TIMEOUT = 2  # seconds
+
 @contextmanager
 def _connection() -> Generator[psycopg.Connection, None, None]:
     """Borrow a pooled connection, turning outages into UserStoreUnavailable."""
     try:
-        with get_pg().connection() as conn:
+        with get_pg().connection(timeout=_CONNECT_TIMEOUT) as conn:
             yield conn
     except psycopg.OperationalError as exc:
         raise UserStoreUnavailable("database unavailable") from exc

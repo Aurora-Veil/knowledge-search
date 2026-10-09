@@ -32,6 +32,9 @@ def get_es() -> Elasticsearch:
             request_timeout=ES_REQUEST_TIMEOUT,
             # Room for the whole search pool, not the transport default of 10
             connections_per_node=ES_SEARCH_WORKERS,
+            max_retries=1,
+            retry_on_status=(),
+            retry_on_timeout=False
         )
     return _es
 

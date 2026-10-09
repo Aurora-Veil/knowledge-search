@@ -39,7 +39,7 @@ EMBED_FIELD = "embedding"
 RRF_RANK_CONSTANT = 60
 
 # kNN recall window.
-KNN_NUM_CANDIDATES_FACTOR = 5
+KNN_NUM_CANDIDATES_FACTOR = 2
 
 # How deep every retriever is asked to rank, and therefore the deepest page the fusion can serve.
 RESULT_WINDOW = 200
