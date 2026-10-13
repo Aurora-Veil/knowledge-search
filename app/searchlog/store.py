@@ -42,9 +42,16 @@ class Observation:
     error_type: str | None = None
     result_total: int | None = None
     latency_ms: int = field(default=0)
+    _written: bool = field(default=False, repr=False)
 
     def ok(self, result_total: int | None) -> None:
         self.result_total = result_total
+
+    def flush(self) -> None:
+        """Write this observation to search_log, if it has not been written."""
+        if not self._written:
+            self._written = True
+            _write(self)
 
     @property
     def outcome(self) -> str:
@@ -83,7 +90,7 @@ def _write(obs: Observation) -> None:
 
 @contextmanager
 def observe(kind: str, user_id: int, req: Recordable) -> Generator[Observation, None, None]:
-    """记下一次请求：正常退出记 ok/200，抛异常记 error/状态码，然后原样抛出。"""
+    """记下一次请求：成功由调用方在响应之后 flush，失败在抛出前同步写。"""
     query, filters = split_request(req)
     obs = Observation(
         request_id=secrets.token_hex(6),
@@ -99,18 +106,11 @@ def observe(kind: str, user_id: int, req: Recordable) -> Generator[Observation, 
     try:
         yield obs
     except Exception as exc:
+        # 异常路径没有 BackgroundTasks 可用，必须在这里同步写掉
         obs.status_code = _status_of(exc)
         obs.error_type = type(exc).__name__
         obs.latency_ms = int((time.perf_counter() - started) * 1000)
-        _write(obs)
+        obs.flush()
         raise
     else:
         obs.latency_ms = int((time.perf_counter() - started) * 1000)
-        _write(obs)
-    finally:
-        log.info(
-            "search request_id=%s kind=%s user_id=%s page=%s size=%s"
-            " outcome=%s status=%s total=%s latency_ms=%s",
-            obs.request_id, obs.kind, obs.user_id, obs.page, obs.size,
-            obs.outcome, obs.status_code, obs.result_total, obs.latency_ms,
-        )

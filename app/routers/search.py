@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, Union
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from ..auth.deps import ActiveUser
@@ -61,7 +61,8 @@ class SearchRequest(BaseModel):
 #         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/search")
-def api_search(req: SearchRequest, user: ActiveUser) -> dict:
+def api_search(req: SearchRequest, background: BackgroundTasks,
+               user: ActiveUser) -> dict:
     try:
         # observe() 把这次请求记进 search_log（成功和失败都记），
         # 异常仍然原样抛出，下面的处理逻辑不受影响
@@ -69,13 +70,16 @@ def api_search(req: SearchRequest, user: ActiveUser) -> dict:
                                 req=req) as obs:
             result = search_service(req.model_dump(exclude_none=True))
             obs.ok(result_total=result.get("total"))
+        # 写入放在响应之后，避免把两次 PG 往返挂在请求路径上
+        background.add_task(obs.flush)
     except WindowTooDeep as e:
         # Paging this deep is not a server fault, but it cannot be served
         # either: fusion reads page*size hits from every retriever.
         raise HTTPException(status_code=400, detail=str(e))
 
     # 记的是"一次检索"：翻页只会更新既有那行，不会新增（见 app/history/store.py）
-    history.record_search(
+    background.add_task(
+        history.record_search,
         user_id=user.id,
         kind=history.KIND_OIRF,
         req=req,
