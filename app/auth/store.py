@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -78,9 +79,19 @@ def _connection() -> Generator[psycopg.Connection, None, None]:
 
 _USER_COLUMNS = "id, username, password_hash, is_active, created_at"
 
+# The auth dependency calls get() once per request, so the same few rows are
+# re-read thousands of times a second. Five seconds is long enough that a hot
+# account is read once per TTL instead of once per request, and short enough
+# that disabling an account takes effect within five seconds.
+_USER_CACHE_TTL = 5.0
+_USER_CACHE_MAX = 1024
+
 
 class UserStore:
     """PostgreSQL-backed user table."""
+    def __init__(self) -> None:
+        self._cache: dict[int, tuple[float, User]] = {}
+
     def create(self, username: str, password_hash: str) -> User:
         cleaned = validate_username(username)
 
@@ -96,15 +107,36 @@ class UserStore:
                 ).fetchone()
             except psycopg.errors.UniqueViolation as exc:
                 raise UsernameTaken(f"username already taken: {cleaned}") from exc
-        return _row_to_user(row)
+        user = _row_to_user(row)
+        self._cache.pop(user.id, None)
+        return user
 
     def get(self, user_id: int) -> User | None:
+        cached = self._cache.get(user_id)
+        if cached is not None and cached[0] > time.monotonic():
+            return cached[1]
+
         with _connection() as conn:
             row = conn.execute(
                 f"SELECT {_USER_COLUMNS} FROM users WHERE id = %s",
                 (user_id,),
             ).fetchone()
-        return _row_to_user(row) if row else None
+        user = _row_to_user(row) if row else None
+        if user is not None:
+            self._store_cached(user)
+        return user
+
+    def _store_cached(self, user: User) -> None:
+        now = time.monotonic()
+        if len(self._cache) >= _USER_CACHE_MAX:
+            # Cheap sweep on the rare overflow: drop what already expired.
+            for key in [k for k, (deadline, _) in self._cache.items()
+                        if deadline <= now]:
+                del self._cache[key]
+        self._cache[user.id] = (now + _USER_CACHE_TTL, user)
+
+    def cache_clear(self) -> None:
+        self._cache.clear()
 
     def find_by_username(self, username: str) -> User | None:
         key = (username or "").strip().lower()
@@ -130,6 +162,8 @@ class UserStore:
                 """,
                 (password_hash, user_id),
             )
+            if cur.rowcount > 0:
+                self._cache.pop(user_id, None)
             return cur.rowcount > 0
 
     def set_active(self, user_id: int, active: bool) -> bool:
@@ -138,6 +172,8 @@ class UserStore:
                 "UPDATE users SET is_active = %s, updated_at = now() WHERE id = %s",
                 (active, user_id),
             )
+            if cur.rowcount > 0:
+                self._cache.pop(user_id, None)
             return cur.rowcount > 0
 
     def count(self) -> int:
