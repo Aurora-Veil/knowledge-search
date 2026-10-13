@@ -22,7 +22,7 @@
 - Docker VM：15.49 GiB RAM + 4 GiB swap（实测用量 7 MiB）
 - 容器内存限额合计 **16.0 GiB > VM 15.49 GiB**
 - 入口：`127.0.0.1:8000` 经 Docker Desktop 宿主机端口转发进容器（非直连）
-- 监控：`stress/watch_containers.py`，每 2 s 采集 `docker stats` + `docker inspect` + `docker events`
+- 监控：`stress/archive/watch_containers.py`，每 2 s 采集 `docker stats` + `docker inspect` + `docker events`
 
 ---
 
@@ -179,12 +179,12 @@ encode failed, lexical only: ReadError: [Errno 104] Connection reset by peer
 
 ```powershell
 # 阶梯加压（总并发 = 档位 × 进程数）
-python stress/ramp_load.py --levels 192 --procs 8 --duration 60 --no-abort `
-    --tag p8 --out stress/run/p8.json
+python stress/archive/ramp_load.py --levels 192 --procs 8 --duration 60 --no-abort `
+    --tag p8 --out stress/archive/run/p8.json
 
 # 容器哨兵（与压测并行）
-python stress/watch_containers.py --duration 300 --interval 2 --out stress/run/watch.json
+python stress/archive/watch_containers.py --duration 300 --interval 2 --out stress/archive/run/watch.json
 
 # 结果分析
-python stress/analyze.py stress/run/p8.json
+python stress/archive/analyze.py stress/archive/run/p8.json
 ```

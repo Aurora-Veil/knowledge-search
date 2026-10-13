@@ -114,8 +114,8 @@ example/reports.json ──scripts/ingest_reports.py──> Elasticsearch
 
 ## 压测
 
-任务书 `stress/plan.md`，脚本 `stress/stress_search.py`、`stress/make_reports_stress.py`。
-结果与结论见 [stress/report.md](stress/report.md)，原始 JSON 与日志见 `stress/stress-results-20260929.zip`。
+任务书 `stress/archive/plan.md`，脚本 `stress/archive/stress_search.py`、`stress/archive/make_reports_stress.py`。
+结果与结论见 [stress/archive/report.md](stress/archive/report.md)，原始 JSON 与日志见 `stress/archive/stress-results-20260929.zip`。
 
 ## 目录
 
@@ -168,7 +168,7 @@ scripts/
   full_sync.py              MongoDB -> ES - 含向量
   ingest_reports.py         example/reports.json -> ES - 报告索引
 static/                     静态页面：登录 / 检索 / 记录，无构建
-stress/                     压测：任务书、脚本与结果
+stress/archive/             压测：任务书、脚本与结果
 ```
 
 ## 许可

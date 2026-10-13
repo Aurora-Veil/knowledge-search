@@ -29,6 +29,7 @@ scratch/
 
 # 压测结果
 stress/*.json
+stress/archive/
 
 # pytest, when its cache dir cannot be written
 pytest-cache-files-*/

@@ -20,13 +20,13 @@
 - `/api/v1/health/ready` 增加 `encoder` 字段
 - 新增并发参数 `WEB_WORKERS` / `PG_POOL_MAX` / `ES_SEARCH_WORKERS`，`app/config.py` 导入时校验
 - `app/main.py` 压掉 httpx 的 INFO 日志，检索词不再进日志
-- 新增压测任务书 `stress/plan.md`、压测脚本 `stress/stress_search.py`、造数脚本 `stress/make_reports_stress.py`
+- 新增压测任务书 `stress/archive/plan.md`、压测脚本 `stress/archive/stress_search.py`、造数脚本 `stress/archive/make_reports_stress.py`
 
 ### 2026-09-29 · 多实例与压测结果
 
 - API 改多实例：`serve.py` 起 `WEB_WORKERS` 个单进程实例，套一个本地转发层负责轮询与故障摘除，对外仍是 `127.0.0.1:8000`；`run.py` 变薄壳，`--instances 1` 同样走转发层
 - 单次检索给 ES 的时间改用 `ES_REQUEST_TIMEOUT`，默认 10 秒
-- 新增 `stress/report.md` 与结果归档 `stress/stress-results-20260929.zip`，压测结论见 [stress/report.md](stress/report.md)
+- 新增 `stress/archive/report.md` 与结果归档 `stress/archive/stress-results-20260929.zip`，压测结论见 [stress/archive/report.md](stress/archive/report.md)
 
 ### 2026-09-30 · 整体容器化
 
