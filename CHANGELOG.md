@@ -55,3 +55,8 @@
 - API 空闲连接超时从 5 秒改为 60 秒，新增 `KEEPALIVE_TIMEOUT`
 - 新增复跑报告 `stress/report-p3-repro.md` 与 `stress/report-p3-rerun.md`：三档吞吐均高于原报告，8192 档的连接建立失败未复现，keep-alive 改为 60 秒后失败全部归零
 - 压测脚本与结果归档，只留报告
+
+### 2026-10-14 · 监听队列与内存定位
+
+- 定位 `ConnectError`，解决方案为 API 监听队列抬到 8192
+- 定位 api 内存增长：非每请求泄漏，是 glibc 分配器与线程栈的高水位

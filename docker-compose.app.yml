@@ -97,7 +97,15 @@ services:
     container_name: api
     restart: "no"
     init: true
-    command: sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_WORKERS:-4} --timeout-keep-alive ${KEEPALIVE_TIMEOUT:-60}"
+    command: sh -c "exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_WORKERS:-4} --timeout-keep-alive ${KEEPALIVE_TIMEOUT:-60} --backlog ${BACKLOG:-8192}"
+    # 监听队列：并发建连洪峰会一次性挤满 accept 队列，溢出时内核直接丢 SYN，
+    # 客户端重传不过来就报 ConnectError。实测 4096 并发下队列打到 2044（当时
+    # 上限 2048），内核 ListenOverflows 一轮涨 2447 次。生效值是
+    # min(--backlog, net.core.somaxconn)，两个都要抬；tcp_max_syn_backlog
+    # 管半连接队列，容器内默认 1024。
+    sysctls:
+      net.core.somaxconn: 8192
+      net.ipv4.tcp_max_syn_backlog: 8192
     environment:
       - WEB_WORKERS=${WEB_WORKERS:-4}
       - ES_URL=http://es01:9200,http://es02:9200,http://es03:9200
