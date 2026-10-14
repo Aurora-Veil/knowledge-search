@@ -106,7 +106,6 @@ def observe(kind: str, user_id: int, req: Recordable) -> Generator[Observation, 
     try:
         yield obs
     except Exception as exc:
-        # 异常路径没有 BackgroundTasks 可用，必须在这里同步写掉
         obs.status_code = _status_of(exc)
         obs.error_type = type(exc).__name__
         obs.latency_ms = int((time.perf_counter() - started) * 1000)
