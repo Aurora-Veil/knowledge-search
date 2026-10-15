@@ -60,3 +60,12 @@
 
 - 定位 `ConnectError`，解决方案为 API 监听队列抬到 8192
 - 定位 api 内存增长：非每请求泄漏，是 glibc 分配器与线程栈的高水位
+
+### 2026-10-15 · 报告检索结果缓存
+
+- `POST /api/v1/reports/search` 的响应体进 Redis：命中时零次 ES 往返，也不再调编码服务
+- 键是规范化参数的 sha256；过期时刻固定为下一个午夜，不设固定 TTL，因此命中的必然是当天写入的
+- Redis 侧任何异常都当未命中回落 ES，不向调用方报错，也不并入 `/health/ready` 的 503 判定
+- `/api/v1/health/ready` 新增 `cache` 段：`enabled` / `reachable` / `errors` / `keys`
+- 新增 `ENABLE_REPORT_CACHE`，默认开；`REDIS_URL` 留空同样停用
+- 分页越界与非法 `mode` 的校验提前到查缓存之前，非法请求仍是 400

@@ -10,7 +10,7 @@ OIRF 知识图谱的检索服务：数据导入 Elasticsearch，提供中文词�
 
 ## 依赖
 
-- Docker   内含 Elasticsearch - analysis-ik、Kibana、MongoDB、PostgreSQL、独立编码服务、API
+- Docker   内含 Elasticsearch - analysis-ik、Kibana、MongoDB、PostgreSQL、Redis、独立编码服务、API
 - Python 3.12
 - 编码服务使用 GPU 依赖 torch，需要可用的 NVIDIA 驱动和容器运行时
 
@@ -85,7 +85,7 @@ python scripts/init_es_structure.py --recreate 索引名   # 先删后建，数�
 | GET | `/api/v1/projects` | 登录 | 列出项目 |
 | GET | `/api/v1/history` | 登录 | 当前用户的检索记录 |
 | GET | `/api/v1/health` | 公开 | 健康检查 |
-| GET | `/api/v1/health/ready` | 公开 | 依赖就绪检查，ES / MongoDB / PostgreSQL 任一不可用返回 503；`encoder` 字段只报状态 |
+| GET | `/api/v1/health/ready` | 公开 | 依赖就绪检查，ES / MongoDB / PostgreSQL 任一不可用返回 503；`encoder` 与 `cache` 字段只报状态 |
 
 参数、筛选取值与响应字段见 [docs/search-api-usage.md](docs/search-api-usage.md)。
 
@@ -101,6 +101,12 @@ python scripts/init_es_structure.py --recreate 索引名   # 先删后建，数�
 
 - `search_history` —— 一行 = **用户指定q的检索**。
 - `search_log` —— 一行 = **一次检索请求**。目前只写不读，没有对应接口，只能直接查表。
+
+## 检索缓存
+
+`POST /api/v1/reports/search` 的响应体进 Redis，键是规范化参数的 sha256，过期时刻固定为下一个午夜。
+
+Redis 只是加速器：连不上、超时、值坏掉都当未命中回落 ES，不影响正确性。
 
 ## 数据链路
 
@@ -127,6 +133,7 @@ app/                        FastAPI 服务
   serializers.py            BSON -> JSON
   routers/                  八个路由
   auth/                     注册、登录、JWT、鉴权依赖
+  cache/                    检索结果缓存：键规范化与 Redis 读写
   history/                  检索记录读写
   searchlog/                请求日志，只写不读
   search/                   检索实现
@@ -160,7 +167,7 @@ requirements.txt            依赖清单；带 encoder-only 标记的只在编�
 example/                    示例数据
 structure/                  OIRF v3.0 schema
 docs/search-api-usage.md    接口用法
-.env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数
+.env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数、缓存开关
 scripts/
   init_es_auth.py           在 ES 上建角色与用户，已由 es-init 容器自动跑
   init_es_structure.py      按 mapping/ 建索引，已由 es-init 容器自动跑
