@@ -7,6 +7,7 @@ import re
 from fastapi import APIRouter, HTTPException
 
 from .. import db
+from ..cache import redis as cache
 from ..config import ES_HEALTH_TIMEOUT, PG_HEALTH_TIMEOUT
 from ..search.encoder import status as encoder_status
 
@@ -30,8 +31,6 @@ def health() -> dict:
 
 
 def _check_es() -> dict:
-    # 不用 _cluster/health：那要集群级 monitor 权限，应用用户只有索引级的。
-    # 改走真实检索这条路，有主分片未分配时 _shards.failed 会大于 0。
     try:
         es = db.get_es().options(max_retries=0, request_timeout=ES_HEALTH_TIMEOUT)
         res = es.search(index="knowledge_*", size=0,
@@ -82,6 +81,9 @@ def health_ready() -> dict:
     mongo = _check_mongo()
     postgres = _check_pg()
     encoder = encoder_status()
+    # 局部名不能叫 cache：那会遮蔽上面 `from ..cache import redis as cache`，
+    # 函数里任何读 cache 的语句都会 UnboundLocalError。
+    cache_status = cache.status()
 
     body = {
         "ready": bool(es["ok"] and mongo["ok"] and postgres["ok"]),
@@ -89,6 +91,7 @@ def health_ready() -> dict:
         "mongodb": mongo,
         "postgresql": postgres,
         "encoder": encoder,
+        "cache": cache_status,
     }
     if not body["ready"]:
         raise HTTPException(status_code=503, detail=body)

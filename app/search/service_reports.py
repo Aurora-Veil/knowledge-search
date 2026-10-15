@@ -9,11 +9,13 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Mapping
 
+from ..cache import redis as cache
+from ..cache.keys import cache_key
 from ..config import ENABLE_VECTOR_SEARCH, ES_SEARCH_WORKERS
 from ..db import get_es
 from .query_reports import (
     INDEX, build_detail_query, build_hydrate_query, build_knn_query, build_query,
-    window,
+    validate,
 )
 from .encoder import encode_query_optional
 from .rank import LEXICAL, VECTOR, fuse, plain
@@ -113,7 +115,13 @@ def search(p: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(q, str) or not q.strip():
         raise ValueError("q is required: reports search needs a query")
 
-    need = window(p)
+    need = validate(p)
+
+    key = cache_key(p, page, size)
+    hit = cache.load(key)
+    if hit is not None:
+        return hit
+
     vector = _query_vector(q.strip()) if ENABLE_VECTOR_SEARCH else None
     degraded = ENABLE_VECTOR_SEARCH and vector is None
 
@@ -124,8 +132,12 @@ def search(p: Mapping[str, Any]) -> dict[str, Any]:
 
     docs = _hydrate([f.hit["_id"] for f in ranked if f.hit.get("_id")], p)
 
-    return {"total": total, "page": page, "size": size, "degraded": degraded,
-            "hits": [_card(f, docs.get(f.hit.get("_id"))) for f in ranked]}
+    result = {"total": total, "page": page, "size": size, "degraded": degraded,
+              "hits": [_card(f, docs.get(f.hit.get("_id"))) for f in ranked]}
+
+    if not degraded:
+        cache.store(key, result)
+    return result
 
 
 def get(report_id: str) -> dict[str, Any] | None:

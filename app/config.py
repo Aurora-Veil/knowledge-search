@@ -140,6 +140,13 @@ def pg_dsn() -> str:
     return PG_DSN
 
 
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+# 报告检索结果缓存的总开关。关掉或 REDIS_URL 留空，search() 都不碰 Redis。
+ENABLE_REPORT_CACHE = (os.getenv("ENABLE_REPORT_CACHE", "true").strip().lower()
+                       not in ("", "0", "false", "no", "off"))
+
+
 def jwt_secret() -> str:
     if not SECRET_KEY:
         raise RuntimeError(

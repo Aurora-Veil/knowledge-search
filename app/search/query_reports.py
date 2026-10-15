@@ -51,6 +51,13 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
     return max(int(p.get("page", 1)), 1), max(int(p.get("size", 20)), 1)
 
 
+def check_mode(mode: Any) -> str:
+    mode = mode or "or"
+    if mode not in MATCH_MODES:
+        raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
+    return mode
+
+
 def window(p: Mapping[str, Any]) -> int:
     page, size = _page_size(p)
     if page * size > RESULT_WINDOW:
@@ -59,6 +66,11 @@ def window(p: Mapping[str, Any]) -> int:
             f"fusion re-reads that many hits from every retriever to stay page-stable"
         )
     return capped_rank_window(page, size, RESULT_WINDOW)
+
+
+def validate(p: Mapping[str, Any]) -> int:
+    check_mode(p.get("mode"))
+    return window(p)
 
 # def _decay_weight(p: Mapping[str, Any]) -> float:
 #     return min(max(float(p.get("time_weight") or 0.0), 0.0), 1.0)
@@ -115,9 +127,7 @@ def _multi_match(q: str, mode: str = "or") -> dict[str, Any]:
 
 
 def _match_must(p: Mapping[str, Any]) -> list[dict[str, Any]]:
-    mode = p.get("mode") or "or"
-    if mode not in MATCH_MODES:
-        raise ValueError(f"unknown mode: {mode!r} (expected one of {MATCH_MODES})")
+    mode = check_mode(p.get("mode"))
 
     must: list[dict[str, Any]] = []
     q = p.get("q")
@@ -232,6 +242,6 @@ def build_detail_query(report_id: str) -> dict[str, Any]:
 __all__ = [
     "INDEX", "SOURCE_FIELDS", "DETAIL_FIELDS", "EMBED_FIELD", "LAYOUTS",
     "RESULT_WINDOW", "KNN_NUM_CANDIDATES_FACTOR", "MATCH_MODES", "DECAY_FIELD",
-    "WindowTooDeep", "window", "build_filters", "build_query",
-    "build_knn_query", "build_detail_query", "build_hydrate_query",
+    "WindowTooDeep", "window", "check_mode", "validate", "build_filters",
+    "build_query", "build_knn_query", "build_detail_query", "build_hydrate_query",
 ]
