@@ -1,15 +1,4 @@
-"""把 search_log 里出现过的查询批量编码进 query_vec。
-
-键材料与线上读写是同一份（``app.search.vector_cache.identity/text_hash``），编码
-走同一个 ``/encode`` 服务，所以灌进去的行就是线上会命中的行。可重复执行：已经
-存在的键直接跳过，不会重复编码。
-
-用法（仓库根目录，宿主机直连 5433 与 8020）：
-
-    python scripts/backfill_query_vec.py --dry-run
-    python scripts/backfill_query_vec.py --limit 5000 --days 7
-    python scripts/backfill_query_vec.py                 # 近 30 天全部
-"""
+"""把 search_log 里出现过的查询批量编码进 query_vec。"""
 
 from __future__ import annotations
 
