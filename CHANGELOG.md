@@ -79,4 +79,4 @@
 - 新增 `schema/query_vec.sql`，在 compose 里挂成 pg 的 initdb 脚本；api 服务注入 `QUERY_VEC_ENABLED`，默认开
 - 新增 `scripts/backfill_query_vec.py`：近 30 天去重查询词向量化入库作为缓存
 - 更新压测脚本，增加更多 query 种类与过滤的查询请求，模拟真实用户查询与翻页
-- 新增压测报告 [stress/reports/report-mid-ladder.md]，包含固定redis缓存下不同并发的 req/s 与缓存全命中时的理想数据
+- 新增压测报告 [stress/reports/report-mid-ladder.md](stress/reports/report-mid-ladder.md)，包含固定redis缓存下不同并发的 req/s 与缓存全命中时的理想数据
