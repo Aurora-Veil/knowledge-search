@@ -69,3 +69,14 @@
 - `/api/v1/health/ready` 新增 `cache` 段：`enabled` / `reachable` / `errors` / `keys`
 - 新增 `ENABLE_REPORT_CACHE`，默认开；`REDIS_URL` 留空同样停用
 - 分页越界与非法 `mode` 的校验提前到查缓存之前，非法请求仍是 400
+
+### 2026-10-19 · 缓存开关注入、扩容 & query 向量缓存 & 测试脚本改造与结果
+
+- `docker-compose.app.yml` 的 api 服务注入 `ENABLE_REPORT_CACHE`，默认 `true`
+- redis `maxmemory` 256 MB → 512 MB，`mem_limit` 384m → 768m，键容量约 15.7k → 31.5k
+- 检索 q 的向量存 PostgreSQL 表 `query_vec`：命中时不再调编码服务，
+- 点查超时或异常一律当未命中，回落编码服务
+- 新增 `schema/query_vec.sql`，在 compose 里挂成 pg 的 initdb 脚本；api 服务注入 `QUERY_VEC_ENABLED`，默认开
+- 新增 `scripts/backfill_query_vec.py`：近 30 天去重查询词向量化入库作为缓存
+- 更新压测脚本，增加更多 query 种类与过滤的查询请求，模拟真实用户查询与翻页
+- 新增压测报告 [stress/reports/report-mid-ladder.md]，包含固定redis缓存下不同并发的 req/s 与缓存全命中时的理想数据
