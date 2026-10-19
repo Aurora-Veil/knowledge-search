@@ -49,6 +49,11 @@ def es_hosts() -> list[str]:
 # Vector search. 
 ENABLE_VECTOR_SEARCH = True
 
+# Query vector cache.
+QUERY_VEC_ENABLED = (os.getenv("QUERY_VEC_ENABLED", "true").strip().lower()
+                     not in ("0", "false", "no", "off"))
+QUERY_VEC_TIMEOUT_MS = int(os.getenv("QUERY_VEC_TIMEOUT_MS", "100"))
+
 # API processes. One pool per process, connections = WEB_WORKERS * PG_POOL_MAX,
 # against PG max_connections = 100.
 WEB_WORKERS = int(os.getenv("WEB_WORKERS", "4"))

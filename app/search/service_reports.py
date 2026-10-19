@@ -17,6 +17,7 @@ from .query_reports import (
     INDEX, build_detail_query, build_hydrate_query, build_knn_query, build_query,
     validate,
 )
+from . import vector_cache
 from .encoder import encode_query_optional
 from .rank import LEXICAL, VECTOR, fuse, plain
 from .response import hit_to_card_report
@@ -34,7 +35,7 @@ def _page_size(p: Mapping[str, Any]) -> tuple[int, int]:
 
 
 def _query_vector(q: str) -> list[float] | None:
-    return encode_query_optional(q)
+    return vector_cache.get_or_encode(q, encode_query_optional)
 
 
 # def _get_encoder() -> Any:
