@@ -106,7 +106,9 @@ python scripts/init_es_structure.py --recreate 索引名   # 先删后建，数�
 
 `POST /api/v1/reports/search` 的响应体进 Redis，键是规范化参数的 sha256，过期时刻固定为下一个午夜。
 
-Redis 只是加速器：连不上、超时、值坏掉都当未命中回落 ES，不影响正确性。
+q 的向量另存 PostgreSQL 的 `query_vec` 表：结果未命中时先取向量，取到就不再调编码服务。键含模型与指令哈希，编码配置一变整表失效。
+
+两侧都只是检索加速器。
 
 ## 数据链路
 
@@ -120,62 +122,32 @@ example/reports.json ──scripts/ingest_reports.py──> Elasticsearch
 
 ## 压测
 
-任务书 `stress/archive/plan.md`，脚本 `stress/archive/stress_search.py`、`stress/archive/make_reports_stress.py`。
-结果与结论见 [stress/archive/report.md](stress/archive/report.md)，原始 JSON 与日志见 `stress/archive/stress-results-20260929.zip`。
+脚本在 `stress/scripts/`：`ramp_load.py` 固定词表加压，`ramp_mixed.py` 按页面真实的请求形态组合词、翻页与筛选，`watch_containers.py` 采容器指标。
+
+报告在 [stress/reports/](stress/reports/)，仅有最新报告。
 
 ## 目录
 
 ```
-app/                        FastAPI 服务
-  main.py                   应用装配、健康检查
-  config.py                 连接串、索引名、检索开关
-  db.py                     ES / Mongo / PostgreSQL 客户端
-  serializers.py            BSON -> JSON
-  routers/                  八个路由
-  auth/                     注册、登录、JWT、鉴权依赖
-  cache/                    检索结果缓存：键规范化与 Redis 读写
-  history/                  检索记录读写
+app/                        FastAPI 服务：路由、鉴权、检索、缓存
+  search/                   查询体、RRF、时间衰减、q 向量缓存
+  cache/                    结果缓存：键规范化与 Redis 读写
+  routers/ auth/ history/   路由、鉴权、检索记录
   searchlog/                请求日志，只写不读
-  search/                   检索实现
-    query.py                构造 ES 查询体
-    query_reports.py        构造报告查询体
-    time_decay.py           时间衰减，两分支共用 rescore
-    rank.py                 RRF 按名次融合
-    service.py              编码、并发请求、组装响应
-    service_reports.py      报告检索
-    encoder.py              编码器入口：远端客户端 + 熔断 + 降级
-    fields.py               权重、白名单、常量
-    response.py             ES hit -> 卡片
-    objects.py              /objects
-    associations.py         关联子图
   mcp/server.py             MCP 工具
-embedding/                  向量化
-  fields.json               向量文本规范
-  spec.py                   拼文本、算 hash
-  encoder.py                bge 编码器
-  server.py                 独立编码服务：单进程、query 合批
+embedding/                  文本规范、bge 编码器、独立编码服务
 mapping/                    四个索引 mapping
-schema/auth.sql             PostgreSQL 建表：用户与检索记录
-docker-compose.cluster.yml  三节点 ES 集群
-docker-compose.app.yml      MongoDB + PostgreSQL + 编码服务 + API
-docker/app.Dockerfile       应用镜像，两个 target：API / 编码服务
-docker/es0*.yml             各节点 ES 配置
-docker/instances.yml        节点证书清单
-docker/Dockerfile           ES + analysis-ik
-requirements.txt            依赖清单；带 encoder-only 标记的只在编码服务装
-.dockerignore               构建上下文排除项
+schema/                     PostgreSQL 建表：用户、检索记录、q 向量缓存
+docker/                     应用镜像与 ES 节点配置
+docker-compose*.yml         三节点 ES 集群 / 应用栈
 example/                    示例数据
 structure/                  OIRF v3.0 schema
-docs/search-api-usage.md    接口用法
-.env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数、缓存开关
-scripts/
-  init_es_auth.py           在 ES 上建角色与用户，已由 es-init 容器自动跑
-  init_es_structure.py      按 mapping/ 建索引，已由 es-init 容器自动跑
-  ingest.py                 example -> MongoDB
-  full_sync.py              MongoDB -> ES - 含向量
-  ingest_reports.py         example/reports.json -> ES - 报告索引
+docs/                       接口用法、缓存方案、容量方案
+scripts/                    灌数、初始化 ES、q 向量灌库
 static/                     静态页面：登录 / 检索 / 记录，无构建
-stress/archive/             压测：任务书、脚本与结果
+stress/                     压测脚本与报告，archive 为历史资产
+requirements.txt            依赖清单，encoder-only 标记的只在编码服务装
+.env.example                ES 凭据、PG_DSN、JWT 密钥、编码服务与并发参数、缓存开关
 ```
 
 ## 许可
