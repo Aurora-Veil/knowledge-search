@@ -13,10 +13,6 @@ from datetime import datetime, timedelta
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
-# try:
-#     import redis
-# except ImportError:                               # 没装 redis 包 = 停用缓存。
-#     redis = None                                  # 不能让整个 app 因此起不来
 import redis
 
 from ..config import ENABLE_REPORT_CACHE, REDIS_URL
@@ -33,16 +29,6 @@ _errors = 0
 
 
 def _ip_url(url: str) -> str:
-    """把 URL 里的主机名换成解析后的 IP，让请求路径上不再有域名解析。
-
-    socket_timeout 与 socket_connect_timeout 只管套接字，管不到解析：redis 容器
-    一停，Docker 内嵌 DNS 就不再解析该名字，getaddrinfo 实测 3.5 秒；而 redis-py
-    每建一条连接都要解析一次，Redis 不可达时每条连接都建不起来，于是每个请求都
-    解析一遍，get 加 set 使每次检索涨到 6.7 秒。
-
-    换成 IP 后不可达的代价只剩 connect 超时（实测 107 毫秒）。client 建好即复用，
-    整段解析一个进程只发生一次。解析失败时退回原名。
-    """
     parts = urlsplit(url)
     if not parts.hostname:
         return url
