@@ -48,14 +48,14 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: "no"
-    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env} --maxmemory 256mb --maxmemory-policy allkeys-lru --save "" --appendonly no
+    command: redis-server --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env} --maxmemory 512mb --maxmemory-policy allkeys-lru --save "" --appendonly no
     ports: ["${BIND_ADDR:-127.0.0.1}:${REDIS_PORT:-6379}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
-    mem_limit: 384m
+    mem_limit: 768m
     logging: *logcap
 
   encoder:
@@ -124,6 +124,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017
       - PG_DSN=postgresql://postgres:${POSTGRES_PASSWORD}@pg:5432/knowledge_db
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - ENABLE_REPORT_CACHE=${ENABLE_REPORT_CACHE-true}
+      - QUERY_VEC_ENABLED=${QUERY_VEC_ENABLED:-true}
       - ENCODER_URL=http://encoder:8020
       - SECRET_KEY=${SECRET_KEY}
       - ES_REQUEST_TIMEOUT=${ES_REQUEST_TIMEOUT:-10}
