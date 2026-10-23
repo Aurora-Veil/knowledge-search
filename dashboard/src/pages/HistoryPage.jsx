@@ -20,13 +20,10 @@ function formatWhen(iso) {
   if (diff < 7 * 24 * 60 * 60 * 1000)
     return `${Math.floor(diff / (24 * 60 * 60 * 1000))} 天前`;
 
-  // 一周以外就不说“几天前”了，直接给日期
   const pad = (n) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-// filters 是对象，键名和请求体一致。
-// 注意 layout 是字符串，industry 才是数组，别对 layout 调 join。
 function describeFilters(filters) {
   const parts = [];
 
@@ -45,10 +42,8 @@ function describeFilters(filters) {
 export default function HistoryPage() {
   const [kind, setKind] = useState("report");
   const [limit, setLimit] = useState(20);
-  // 条件没变也要能重新拉一次，靠它把 useEffect 顶一下
   const [tick, setTick] = useState(0);
 
-  // null = 还没数据：第一次进来、切换条件之后都是 null
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
 
@@ -66,15 +61,11 @@ export default function HistoryPage() {
         setError(err.message);
       });
 
-    // 依赖变了或者组件卸载时跑这里：把上一次的请求作废，
-    // 否则慢的旧请求回来会盖掉新数据
     return () => {
       alive = false;
     };
   }, [kind, limit, tick]);
 
-  // 下面三个都先把 rows 清空：清空的动作放在事件里，
-  // 放进 useEffect 就是同步 setState，lint 会拦
   function changeKind(value) {
     setRows(null);
     setError("");
