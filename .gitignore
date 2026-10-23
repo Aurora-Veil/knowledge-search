@@ -46,3 +46,6 @@ example/reports.csv
 example/*.xlsx
 scripts/reports_to_json.py
 
+# 旧静态页面：已被 dashboard/ 的 React 版取代，本地留着跑，不进仓库
+static/
+
