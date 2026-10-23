@@ -1,0 +1,89 @@
+/* 右上角轻提示：3 秒后自己消失，点一下也能关 */
+
+.toast-stack {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: toast-in 0.18s ease-out;
+}
+
+/* 小圆点里的符号，和表单错误条保持同一套语言 */
+.toast::before {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.toast-success {
+  border-color: #abefc6;
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.toast-success::before {
+  content: "✓";
+  background: var(--success);
+}
+
+.toast-error {
+  border-color: #fecdca;
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.toast-error::before {
+  content: "!";
+  background: var(--danger);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .toast-stack {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

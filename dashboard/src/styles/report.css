@@ -1,0 +1,294 @@
+/* ---------- 报告检索页 ---------- */
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* 检索页自己撑满一屏：列表和详情各自滚动，页面不整体滚 */
+  height: calc(100vh - var(--topbar-h) - 48px);
+}
+
+/* 搜索卡：检索的主入口，独立成块，不再挤在顶栏 */
+.search-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-card .input {
+  flex: 1 1 320px;
+  height: 40px;
+  padding: 0 12px;
+}
+
+.search-card .select,
+.search-card .btn {
+  height: 40px;
+}
+
+.search-card .btn-primary {
+  padding: 0 22px;
+}
+
+/* 列表头：页码 + 词法命中 */
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+
+.list-head-note {
+  color: var(--text-3);
+}
+
+/* 两栏：左列表、右详情 */
+.panes {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 400px minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.pane {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.list-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.results {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+/* 尚未搜索 / 加载中 / 出错 / 搜不到：都占满列表区并居中 */
+.list-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.result {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.result:last-child {
+  border-bottom: 0;
+}
+
+.result:hover {
+  background: var(--surface-muted);
+}
+
+/* 整行可点、可用 Tab 聚焦，键盘用户要知道焦点在哪 */
+.result:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.result.is-selected {
+  background: var(--accent-weak);
+  border-left-color: var(--accent);
+}
+
+.result-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.result-idx {
+  flex: none;
+  min-width: 22px;
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-title {
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.chip {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--text-2);
+}
+
+/* 命中词。后端给的是 <em>，前端映射成 mark.hl，
+   这样样式只认自己的类，不受用户代理对 em 的默认斜体影响 */
+mark.hl {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--warn-bg);
+  color: inherit;
+  font-weight: 500;
+}
+
+/* 列表里的摘要片段：两行截断，别把列表撑高 */
+.result-snippet {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* 标签太小，行内底色会从圆角上方顶出去 2px，命中时直接把整块标签点亮 */
+.chip-hit {
+  background: var(--warn-bg);
+  color: var(--text);
+}
+
+.chip-accent {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.result-score {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 翻页条贴在列表底部 */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.pager-info {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 详情 */
+.detail-pane {
+  padding: 24px 26px;
+  min-height: 340px;
+  overflow-y: auto;
+}
+
+.detail-title {
+  margin-bottom: 10px;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+.detail-summary {
+  margin-top: 18px;
+  font-size: var(--text-base);
+  line-height: 1.8;
+  color: #344054;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 290px;
+  text-align: center;
+}
+
+.detail-empty .placeholder-title {
+  font-size: var(--text-base);
+}
+
+/* ---------- 窄屏：两栏变上下 ---------- */
+
+@media (max-width: 1100px) {
+  .report {
+    height: auto;
+  }
+
+  .panes {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .list-pane {
+    /* 用 height 而不是 max-height：列表内部靠 flex:1 撑开滚动区 */
+    height: 44vh;
+  }
+
+  .detail-pane {
+    min-height: 260px;
+    overflow: visible;
+  }
+}

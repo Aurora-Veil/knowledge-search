@@ -1,0 +1,194 @@
+import { useEffect, useState } from "react";
+import { listHistory } from "../lib/reports.js";
+
+const MODE_LABEL = {
+  or: "任一匹配",
+  and: "全部匹配",
+  phrase: "短语匹配",
+};
+
+const LIMIT_OPTIONS = [20, 50, 100];
+
+function formatWhen(iso) {
+  const date = new Date(iso);
+  const diff = Date.now() - date.getTime();
+
+  if (diff < 60 * 1000) return "刚刚";
+  if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))} 分钟前`;
+  if (diff < 24 * 60 * 60 * 1000)
+    return `${Math.floor(diff / (60 * 60 * 1000))} 小时前`;
+  if (diff < 7 * 24 * 60 * 60 * 1000)
+    return `${Math.floor(diff / (24 * 60 * 60 * 1000))} 天前`;
+
+  // 一周以外就不说“几天前”了，直接给日期
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// filters 是对象，键名和请求体一致。
+// 注意 layout 是字符串，industry 才是数组，别对 layout 调 join。
+function describeFilters(filters) {
+  const parts = [];
+
+  if (filters.layout) parts.push(filters.layout);
+  if (filters.mode) parts.push(MODE_LABEL[filters.mode] ?? filters.mode);
+  if (filters.time_weight) parts.push(`时间衰减 ${filters.time_weight}`);
+  if (filters.publish_date_from) parts.push(`≥ ${filters.publish_date_from}`);
+  if (filters.publish_date_to) parts.push(`≤ ${filters.publish_date_to}`);
+  if (filters.industry && filters.industry.length > 0) {
+    parts.push(`行业 ${filters.industry.join("、")}`);
+  }
+
+  return parts;
+}
+
+export default function HistoryPage() {
+  const [kind, setKind] = useState("report");
+  const [limit, setLimit] = useState(20);
+  // 条件没变也要能重新拉一次，靠它把 useEffect 顶一下
+  const [tick, setTick] = useState(0);
+
+  // null = 还没数据：第一次进来、切换条件之后都是 null
+  const [rows, setRows] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    listHistory({ kind, limit })
+      .then((data) => {
+        if (!alive) return;
+        setRows(data);
+        setError("");
+      })
+      .catch((err) => {
+        if (!alive) return;
+        setError(err.message);
+      });
+
+    // 依赖变了或者组件卸载时跑这里：把上一次的请求作废，
+    // 否则慢的旧请求回来会盖掉新数据
+    return () => {
+      alive = false;
+    };
+  }, [kind, limit, tick]);
+
+  // 下面三个都先把 rows 清空：清空的动作放在事件里，
+  // 放进 useEffect 就是同步 setState，lint 会拦
+  function changeKind(value) {
+    setRows(null);
+    setError("");
+    setKind(value);
+  }
+
+  function changeLimit(value) {
+    setRows(null);
+    setError("");
+    setLimit(Number(value));
+  }
+
+  function refresh() {
+    setRows(null);
+    setError("");
+    setTick((n) => n + 1);
+  }
+
+  return (
+    <section className="card">
+      {/* 标题顶栏已经有了，这里只说一句这张表怎么算一行 */}
+      <p className="lead">一行 = 一次检索，同样的条件重复搜只累加次数</p>
+
+      <div className="history-toolbar">
+        <div className="field">
+          <label className="field-label" htmlFor="history-kind">
+            类型
+          </label>
+          <select
+            id="history-kind"
+            className="select"
+            value={kind}
+            onChange={(event) => changeKind(event.target.value)}
+          >
+            <option value="report">报告检索</option>
+            <option value="oirf">OIRF 检索</option>
+          </select>
+        </div>
+
+        <div className="field">
+          <label className="field-label" htmlFor="history-limit">
+            条数
+          </label>
+          <select
+            id="history-limit"
+            className="select"
+            value={limit}
+            onChange={(event) => changeLimit(event.target.value)}
+          >
+            {LIMIT_OPTIONS.map((value) => (
+              <option value={value} key={value}>
+                最近 {value} 条
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button type="button" className="btn" onClick={refresh}>
+          刷新
+        </button>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+      {!rows && !error && <p className="placeholder-note">正在读取…</p>}
+
+      {rows && rows.length === 0 && (
+        <div className="placeholder">
+          <p className="placeholder-title">还没有搜索记录</p>
+          <p className="placeholder-note">去检索页搜一次，这里就会出现。</p>
+        </div>
+      )}
+
+      {rows && rows.length > 0 && (
+        <div className="history-scroll">
+          <table className="history-table">
+            <thead>
+              <tr>
+                <th>检索词</th>
+                <th>筛选条件</th>
+                <th>结果数</th>
+                <th>搜索次数</th>
+                <th>最后搜索</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td className="history-query">{row.query}</td>
+                  <td>
+                    <div className="history-filters">
+                      {describeFilters(row.filters).map((text) => (
+                        <span className="chip" key={text}>
+                          {text}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="history-num">
+                    {row.result_total === null ? (
+                      <span className="history-dash">—</span>
+                    ) : (
+                      row.result_total
+                    )}
+                  </td>
+                  <td className="history-num">{row.search_count}</td>
+                  <td className="history-time">
+                    {formatWhen(row.last_seen_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}

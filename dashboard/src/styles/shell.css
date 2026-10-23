@@ -1,0 +1,283 @@
+/* ---------- 外壳：左侧栏 + 顶栏 + 内容区 ---------- */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  height: 100vh;
+  padding: 20px 14px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px;
+  color: var(--text);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-label {
+  padding: 0 10px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.nav-item {
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.nav-item:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+}
+
+.nav-item.is-active {
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.sidebar-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px;
+}
+
+.legacy-link {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.legacy-link:hover {
+  color: var(--accent);
+}
+
+.sidebar-version {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* 侧栏最下方：头像 + 用户名 + 退出 */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-user .avatar {
+  flex: none;
+}
+
+.sidebar-user .user-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-logout {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.user-logout:hover {
+  color: var(--accent);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: var(--topbar-h);
+  padding: 0 24px;
+  background: rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.topbar-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.topbar-link {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+/* 退出是按钮，不是链接，按钮默认外观在 .user-logout 里清掉了 */
+.topbar-link:hover {
+  color: var(--accent);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e8edf7;
+  color: #3d5478;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.content {
+  width: 100%;
+  max-width: 1440px;
+  padding: 24px;
+}
+
+/* ---------- 窄屏：侧栏变成横向导航 ---------- */
+
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    height: auto;
+    padding: 10px 16px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand-text,
+  .nav-label,
+  .sidebar-foot {
+    display: none;
+  }
+
+  .sidebar-bottom {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  .sidebar-user {
+    padding: 0;
+    border-top: 0;
+  }
+
+  .nav {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .nav-item {
+    white-space: nowrap;
+  }
+
+  .topbar {
+    padding: 0 16px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+}
+
+/* 手机：顶栏只留标题，侧栏只留头像和退出 */
+@media (max-width: 600px) {
+  .topbar-actions {
+    display: none;
+  }
+
+  .sidebar-user .user-name {
+    display: none;
+  }
+}
