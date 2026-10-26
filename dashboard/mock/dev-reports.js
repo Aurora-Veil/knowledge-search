@@ -1,6 +1,7 @@
 import { mockReports } from '../src/mock/data.js'
 import { tokenUser } from './dev-auth.js'
 import { recordSearch } from './dev-history.js'
+import { recordSearchEvent } from './dev-stats.js'
 
 const RESULT_WINDOW = 200
 const MAX_SIZE = 100
@@ -267,6 +268,8 @@ export default function devReportsMock() {
         const isDetail = req.method === 'GET' && pathname.startsWith('/api/v1/reports/')
         if (!isSearch && !isDetail) return next()
 
+        const started = Date.now()
+
         await delay(250)
 
         const user = tokenUser(req)
@@ -294,7 +297,16 @@ export default function devReportsMock() {
         if (errors.length) return send(res, 422, { detail: errors })
 
         const out = handleSearch(body)
-        if (out.status === 200) recordSearch(user, body, out.body.total)
+        if (out.status === 200) {
+          recordSearch(user, body, out.body.total)
+          recordSearchEvent({
+            userId: user.id,
+            query: body.q,
+            page: body.page ?? 1,
+            total: out.body.total,
+            latencyMs: Date.now() - started,
+          })
+        }
         return send(res, out.status, out.body)
       })
 

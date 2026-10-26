@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import devAuthMock from './mock/dev-auth.js'
 import devHistoryMock from './mock/dev-history.js'
 import devReportsMock from './mock/dev-reports.js'
+import devStatsMock from './mock/dev-stats.js'
 
 const mockApi = process.env.MOCK_API !== '0' && process.env.MOCK_AUTH !== '0'
 
@@ -13,6 +14,7 @@ export default defineConfig({
     mockApi ? devAuthMock() : null,
     mockApi ? devReportsMock() : null,
     mockApi ? devHistoryMock() : null,
+    mockApi ? devStatsMock() : null,
   ].filter(Boolean),
   server: {
     host: '127.0.0.1',

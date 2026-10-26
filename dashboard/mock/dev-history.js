@@ -140,6 +140,42 @@ function seedRows() {
       search_count: 2,
       minutesAgo: 51 * 60,
     },
+    {
+      query: '人形机器人 减速器',
+      filters: { mode: 'or', time_weight: 0 },
+      last_page: 1,
+      size: 20,
+      result_total: 4,
+      search_count: 1,
+      minutesAgo: 3 * 24 * 60,
+    },
+    {
+      query: '储能 出货量',
+      filters: { mode: 'and', layout: '横版' },
+      last_page: 1,
+      size: 20,
+      result_total: 5,
+      search_count: 2,
+      minutesAgo: 5 * 24 * 60,
+    },
+    {
+      query: '低空经济 eVTOL',
+      filters: { mode: 'phrase', publish_date_from: '2024-01-01' },
+      last_page: 2,
+      size: 20,
+      result_total: 2,
+      search_count: 1,
+      minutesAgo: 8 * 24 * 60,
+    },
+    {
+      query: '钙钛矿 组件',
+      filters: { mode: 'or', layout: '竖版' },
+      last_page: 1,
+      size: 20,
+      result_total: 0,
+      search_count: 1,
+      minutesAgo: 12 * 24 * 60,
+    },
   ]
 
   for (const seed of seeds) {
