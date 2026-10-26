@@ -1,8 +1,23 @@
 const users = new Map([
-  ['demo', { id: 1, username: 'demo', password: 'demo1234', is_active: true }],
+  [
+    'demo',
+    {
+      id: 1,
+      username: 'demo',
+      password: 'demo1234',
+      is_active: true,
+      created_at: '2026-09-01T09:00:00+08:00',
+    },
+  ],
   [
     'disabled',
-    { id: 2, username: 'disabled', password: 'disabled1234', is_active: false },
+    {
+      id: 2,
+      username: 'disabled',
+      password: 'disabled1234',
+      is_active: false,
+      created_at: '2026-09-02T09:00:00+08:00',
+    },
   ],
 ])
 
@@ -30,7 +45,7 @@ function publicUser(user) {
     id: user.id,
     username: user.username,
     is_active: user.is_active,
-    created_at: new Date().toISOString(),
+    created_at: user.created_at,
   }
 }
 
@@ -111,6 +126,7 @@ async function handle(req, res, pathname) {
       username,
       password,
       is_active: true,
+      created_at: new Date().toISOString(),
     }
     users.set(username.toLowerCase(), user)
     return send(res, 201, publicUser(user))

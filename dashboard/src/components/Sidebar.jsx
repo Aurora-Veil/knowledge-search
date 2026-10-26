@@ -1,5 +1,5 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext.jsx";
+import { Link, NavLink } from "react-router-dom";
+import UserMenu from "./UserMenu.jsx";
 
 const ITEMS = [
   { to: "/", label: "概览", end: true },
@@ -8,14 +8,6 @@ const ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  function handleLogout() {
-    logout();
-    navigate("/login", { replace: true });
-  }
-
   return (
     <aside className="sidebar">
       <NavLink className="brand" to="/">
@@ -47,24 +39,10 @@ export default function Sidebar() {
           <Link className="legacy-link" to="/oirf">
             OIRF 检索（旧版）
           </Link>
-          <p className="sidebar-version">静态界面版</p>
+          <p className="sidebar-version">前端重构版</p>
         </div>
 
-        {user && (
-          <div className="sidebar-user">
-            <span className="avatar">
-              {user.username.slice(0, 1).toUpperCase()}
-            </span>
-            <span className="user-name">{user.username}</span>
-            <button
-              className="user-logout"
-              type="button"
-              onClick={handleLogout}
-            >
-              退出
-            </button>
-          </div>
-        )}
+        <UserMenu />
       </div>
     </aside>
   );

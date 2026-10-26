@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useToast } from "../components/Toast.jsx";
@@ -18,6 +18,10 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState("login");
   const isRegister = mode === "register";
+
+  useEffect(() => {
+    document.title = `${isRegister ? "注册" : "登录"} · knowledge-search`;
+  }, [isRegister]);
 
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
