@@ -14,6 +14,8 @@ _CONNECT_TIMEOUT = 2.0
 
 UNAVAILABLE = (psycopg.OperationalError, RuntimeError)
 
+# 先聚合再和日期序列 join：直接 join 原始行会把百万级数据拖进 join，
+# 聚合后只有 days 行。latency_sum / ok_count 只为算全局平均，不返回。
 _DAILY = """
 WITH days AS (
     SELECT generate_series(
@@ -21,18 +23,30 @@ WITH days AS (
                (now() AT TIME ZONE 'Asia/Shanghai')::date,
                interval '1 day'
            )::date AS day
+),
+buckets AS (
+    SELECT (created_at AT TIME ZONE 'Asia/Shanghai')::date AS day,
+           count(*) AS searches,
+           count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0) AS zero_result,
+           count(*) FILTER (WHERE outcome = 'error') AS errors,
+           sum(latency_ms) FILTER (WHERE outcome = 'ok') AS latency_sum,
+           count(*) FILTER (WHERE outcome = 'ok') AS ok_count
+    FROM search_log
+    WHERE page = 1
+      AND (%(kind)s::text IS NULL OR kind = %(kind)s)
+      AND (created_at AT TIME ZONE 'Asia/Shanghai')::date
+          >= (now() AT TIME ZONE 'Asia/Shanghai')::date - (%(days)s::int - 1)
+      AND (%(only_me)s::boolean = false OR user_id = %(user_id)s)
+    GROUP BY 1
 )
 SELECT d.day,
-       count(l.id) AS searches,
-       count(l.id) FILTER (WHERE l.outcome = 'ok' AND l.result_total = 0) AS zero_result,
-       count(l.id) FILTER (WHERE l.outcome = 'error') AS errors
+       coalesce(b.searches, 0) AS searches,
+       coalesce(b.zero_result, 0) AS zero_result,
+       coalesce(b.errors, 0) AS errors,
+       coalesce(b.latency_sum, 0) AS latency_sum,
+       coalesce(b.ok_count, 0) AS ok_count
 FROM days d
-LEFT JOIN search_log l
-       ON (l.created_at AT TIME ZONE 'Asia/Shanghai')::date = d.day
-      AND l.page = 1
-      AND (%(kind)s::text IS NULL OR l.kind = %(kind)s)
-      AND (%(only_me)s::boolean = false OR l.user_id = %(user_id)s)
-GROUP BY d.day
+LEFT JOIN buckets b ON b.day = d.day
 ORDER BY d.day
 """
 
@@ -47,18 +61,6 @@ WHERE page = 1
 GROUP BY query
 ORDER BY count DESC, query ASC
 LIMIT %(limit)s
-"""
-
-_TOTALS = """
-SELECT count(*) AS searches,
-       count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0) AS zero_result,
-       avg(latency_ms) FILTER (WHERE outcome = 'ok') AS avg_latency_ms
-FROM search_log
-WHERE page = 1
-  AND (%(kind)s::text IS NULL OR kind = %(kind)s)
-  AND (created_at AT TIME ZONE 'Asia/Shanghai')::date
-      >= (now() AT TIME ZONE 'Asia/Shanghai')::date - (%(days)s::int - 1)
-  AND (%(only_me)s::boolean = false OR user_id = %(user_id)s)
 """
 
 
@@ -81,11 +83,11 @@ def overview(user_id: int | None, days: int, scope: Literal["all", "me"],
             daily = cur.fetchall()
             cur.execute(_TOP, params)
             top = cur.fetchall()
-            cur.execute(_TOTALS, params)
-            totals = cur.fetchone()
 
-    searches = int(totals["searches"] or 0)
-    zero_result = int(totals["zero_result"] or 0)
+    searches = sum(int(row["searches"]) for row in daily)
+    zero_result = sum(int(row["zero_result"]) for row in daily)
+    latency_sum = sum(int(row["latency_sum"]) for row in daily)
+    ok_count = sum(int(row["ok_count"]) for row in daily)
 
     return {
         "days": days,
@@ -105,6 +107,6 @@ def overview(user_id: int | None, days: int, scope: Literal["all", "me"],
         "totals": {
             "searches": searches,
             "zero_result_rate": round(zero_result / searches, 4) if searches else 0.0,
-            "avg_latency_ms": int(round(totals["avg_latency_ms"] or 0)),
+            "avg_latency_ms": int(round(latency_sum / ok_count)) if ok_count else 0,
         },
     }
