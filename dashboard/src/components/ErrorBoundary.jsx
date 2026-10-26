@@ -1,10 +1,5 @@
 import { Component } from 'react'
 
-// 渲染阶段抛异常时，React 会把整棵树卸载掉，页面上什么都不剩，
-// 也就是俗称的“白屏”。这个组件接住异常，把错误显示出来。
-//
-// 它只能接住 render 期间抛的错：比 setState 回调、事件处理函数、
-// setTimeout、await 之后的异常都要自己 try/catch，边界接不到。
 export default class ErrorBoundary extends Component {
   state = { error: null }
 
@@ -13,7 +8,6 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // 控制台里保留完整堆栈，页面上的短文案只是给眼睛一个落点
     console.error('页面渲染出错：', error, info?.componentStack)
   }
 

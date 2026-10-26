@@ -4,11 +4,9 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  /* 检索页自己撑满一屏：列表和详情各自滚动，页面不整体滚 */
   height: calc(100vh - var(--topbar-h) - 48px);
 }
 
-/* 搜索卡：检索的主入口，独立成块，不再挤在顶栏 */
 .search-card {
   display: flex;
   flex-wrap: wrap;
@@ -35,7 +33,6 @@
   padding: 0 22px;
 }
 
-/* 列表头：页码 + 词法命中 */
 .list-head {
   display: flex;
   align-items: center;
@@ -50,7 +47,6 @@
   color: var(--text-3);
 }
 
-/* 两栏：左列表、右详情 */
 .panes {
   display: grid;
   flex: 1;
@@ -83,7 +79,6 @@
   overflow-y: auto;
 }
 
-/* 尚未搜索 / 加载中 / 出错 / 搜不到：都占满列表区并居中 */
 .list-state {
   flex: 1;
   display: flex;
@@ -111,7 +106,6 @@
   background: var(--surface-muted);
 }
 
-/* 整行可点、可用 Tab 聚焦，键盘用户要知道焦点在哪 */
 .result:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -161,8 +155,6 @@
   color: var(--text-2);
 }
 
-/* 命中词。后端给的是 <em>，前端映射成 mark.hl，
-   这样样式只认自己的类，不受用户代理对 em 的默认斜体影响 */
 mark.hl {
   padding: 0 1px;
   border-radius: 2px;
@@ -171,7 +163,6 @@ mark.hl {
   font-weight: 500;
 }
 
-/* 列表里的摘要片段：两行截断，别把列表撑高 */
 .result-snippet {
   display: -webkit-box;
   margin-top: 6px;
@@ -183,7 +174,6 @@ mark.hl {
   -webkit-line-clamp: 2;
 }
 
-/* 标签太小，行内底色会从圆角上方顶出去 2px，命中时直接把整块标签点亮 */
 .chip-hit {
   background: var(--warn-bg);
   color: var(--text);
@@ -201,7 +191,6 @@ mark.hl {
   font-variant-numeric: tabular-nums;
 }
 
-/* 翻页条贴在列表底部 */
 .pager {
   display: flex;
   align-items: center;
@@ -219,7 +208,6 @@ mark.hl {
   font-variant-numeric: tabular-nums;
 }
 
-/* 详情 */
 .detail-pane {
   padding: 24px 26px;
   min-height: 340px;
@@ -276,17 +264,13 @@ mark.hl {
   .report {
     height: auto;
   }
-
   .panes {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
-
   .list-pane {
-    /* 用 height 而不是 max-height：列表内部靠 flex:1 撑开滚动区 */
     height: 44vh;
   }
-
   .detail-pane {
     min-height: 260px;
     overflow: visible;

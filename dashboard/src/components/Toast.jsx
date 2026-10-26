@@ -1,7 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 
-// 全局轻提示：登录成功这类“一句话就走”的消息用它。
-// 放在路由外面，所以跳转之后提示还在，不会跟着页面一起消失。
 const ToastContext = createContext(null);
 
 export function ToastProvider({ children }) {

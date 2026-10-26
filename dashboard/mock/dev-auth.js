@@ -1,10 +1,3 @@
-// 开发环境用的假后端：只在 npm run dev 时生效，打包不会带进 dist。
-//
-// 它挡在 /api/v1/auth/* 前面，返回和真后端一样形状的响应，
-// 所以页面里的 fetch 代码不用改，等真后端起来再把它关掉即可。
-//
-// 关掉的办法：启动前设 MOCK_AUTH=0，或者在 vite.config.js 里去掉 devAuthMock()。
-
 const users = new Map([
   ['demo', { id: 1, username: 'demo', password: 'demo1234', is_active: true }],
   [
@@ -46,8 +39,6 @@ function tokenOf(req) {
   return header.startsWith('Bearer ') ? header.slice(7) : ''
 }
 
-// 给别的假接口用：拿通行证换用户，换不到就是未登录。
-// dev-reports.js 靠它判断 401，两个插件共享同一份 tokens。
 export function tokenUser(req) {
   return tokens.get(tokenOf(req)) || null
 }
@@ -57,7 +48,6 @@ function delay(ms) {
 }
 
 async function handle(req, res, pathname) {
-  // 真后端也有网络延迟，这里故意慢一点，方便看“登录中”的状态
   await delay(300)
 
   const method = req.method
@@ -93,7 +83,6 @@ async function handle(req, res, pathname) {
     const username = (body.username || '').trim()
     const password = body.password || ''
 
-    // 和后端 Pydantic 一样，校验失败返回 422 且 detail 是数组
     const errors = []
     if (!USERNAME_RE.test(username)) {
       errors.push({

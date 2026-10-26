@@ -27,7 +27,6 @@ export function AuthProvider({ children }) {
         const me = await readJson(res);
         setUser(me);
       } catch {
-        // 网络断了不是登录态的问题，先保持原状
       } finally {
         if (alive) setLoading(false);
       }
@@ -39,7 +38,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // 任何请求收到 401，apiFetch 会广播，这里把用户清掉，守卫自然会把人送去登录页
   useEffect(() => {
     function onUnauthorized() {
       setUser(null);
@@ -50,7 +48,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(username, password) {
-    // 登录接口是表单格式，不是 JSON；发错格式后端会回 422
     const body = new URLSearchParams({ username, password });
     const res = await fetch("/api/v1/auth/token", {
       method: "POST",
@@ -58,7 +55,6 @@ export function AuthProvider({ children }) {
       body,
     });
 
-    // 这里的 401 是“密码不对”，不能触发全局登出，所以不用 apiFetch
     if (res.status === 401) throw new Error("用户名或密码不对");
     if (res.status === 403) throw new Error("这个账号已停用");
     if (res.status === 503) throw new Error("用户数据库不可用，稍后再试");
@@ -71,7 +67,6 @@ export function AuthProvider({ children }) {
 
     saveSession(data.access_token, username);
 
-    // 再问一次 /me：登录响应里没有用户名，以服务端返回的为准
     const meRes = await apiFetch("/api/v1/auth/me");
     const me = meRes.ok ? await readJson(meRes) : { username };
     setUser(me);

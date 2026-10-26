@@ -1,12 +1,11 @@
 import { useRef, useState } from 'react'
 import Pager from '../../components/Pager.jsx'
-import { getReport, searchReports } from '../../lib/reports.js'
+import { REPORT_RESULT_WINDOW, getReport, searchReports } from '../../lib/reports.js'
 import ReportDetail from './ReportDetail.jsx'
 import ResultList from './ResultList.jsx'
 import SearchCard from './SearchCard.jsx'
 import { INITIAL_FORM, queryTerms, toSearchBody } from './searchParams.js'
 
-// 列表区的占位：加载中、出错、还没搜、搜不到，共用一套样式
 function ListState({ title, note }) {
   return (
     <div className="list-state">
@@ -17,8 +16,6 @@ function ListState({ title, note }) {
 }
 
 export default function ReportPage() {
-  // form 是“正在编辑的条件”，submitted 是“上次真正搜出去的条件”。
-  // 分开存：改表单不会打乱当前结果，翻页也不会吃进改了一半的输入。
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(null)
 
@@ -31,9 +28,10 @@ export default function ReportPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
 
-  // 每发一次请求就自增。回来时编号对不上，说明已经有更新的请求了，丢弃旧结果。
   const searchSeq = useRef(0)
   const detailSeq = useRef(0)
+
+  const maxPage = result ? Math.floor(REPORT_RESULT_WINDOW / result.size) : 1
 
   async function runSearch(values, page) {
     const seq = ++searchSeq.current
@@ -55,7 +53,6 @@ export default function ReportPage() {
     }
   }
 
-  // 列表接口不返回摘要，选中后单独取一次详情
   async function selectReport(reportId) {
     const seq = ++detailSeq.current
     setSelectedId(reportId)
@@ -82,10 +79,10 @@ export default function ReportPage() {
 
   function handlePage(page) {
     if (!submitted) return
+    if (page < 1 || page > maxPage) return
     runSearch(submitted, page)
   }
 
-  // 详情接口和行业标签都没有后端高亮，用“上次真正搜出去的词”在前端标
   const terms = queryTerms(submitted)
 
   function renderList() {
@@ -97,12 +94,17 @@ export default function ReportPage() {
       )
     }
     if (!result.hits.length) {
-      return <ListState title="没有匹配的报告" note="换个说法，或者放宽版式与时间。" />
+      return result.page > 1 ? (
+        <ListState title="这一页没有内容了" note="返回上一页继续看。" />
+      ) : (
+        <ListState title="没有匹配的报告" note="换个说法，或者放宽版式与时间。" />
+      )
     }
 
     return (
       <ResultList
         hits={result.hits}
+        startIndex={(result.page - 1) * result.size}
         selectedId={selectedId}
         onSelect={selectReport}
         terms={terms}
@@ -111,7 +113,17 @@ export default function ReportPage() {
   }
 
   const selectedHit = result?.hits.find((hit) => hit.report_id === selectedId) ?? null
-  const pageCount = result ? Math.max(1, Math.ceil(result.total / result.size)) : 1
+
+  const atCeiling = result
+    ? result.page >= maxPage && result.hits.length === result.size
+    : false
+  const hasNext = result
+    ? result.hits.length === result.size && !atCeiling
+    : false
+
+  const countText = result
+    ? `${result.degraded ? '仅词法命中' : '词法命中'} ${result.total} 条`
+    : '按相关度排序'
 
   return (
     <div className="report">
@@ -127,21 +139,24 @@ export default function ReportPage() {
           <div className="list-head">
             <span>{result ? `第 ${result.page} 页 · 每页 ${result.size} 条` : '检索结果'}</span>
             <span className="list-head-note">
-              {result
-                ? `${result.degraded ? '仅词法命中 · ' : ''}共 ${result.total} 条`
-                : '按相关度排序'}
+              {countText}
+              {result && atCeiling
+                ? ` · 已到服务端 ${REPORT_RESULT_WINDOW} 条上限`
+                : ''}
+              {result && !result.degraded && result.hits.length > result.total
+                ? ' · 本页含语义召回'
+                : ''}
             </span>
           </div>
 
           {renderList()}
 
-          {result && !error && (
+          {result && !error && (result.hits.length > 0 || result.page > 1) && (
             <Pager
               page={result.page}
-              pageCount={pageCount}
               size={result.size}
               hasPrev={result.page > 1}
-              hasNext={result.page < pageCount}
+              hasNext={hasNext}
               disabled={loading}
               onPrev={() => handlePage(result.page - 1)}
               onNext={() => handlePage(result.page + 1)}

@@ -2,7 +2,7 @@ import { formatScore } from "./format.js";
 import HighlightText from "./HighlightText.jsx";
 import { matchesTerm } from "./highlight.js";
 
-export default function ResultItem({ hit, index, selected, onSelect, terms = [] }) {
+export default function ResultItem({ hit, index, startIndex = 0, selected, onSelect, terms = [] }) {
   function select() {
     onSelect(hit.report_id);
   }
@@ -22,7 +22,7 @@ export default function ResultItem({ hit, index, selected, onSelect, terms = [] 
       }}
     >
       <div className="result-top">
-        <span className="result-idx">{index + 1}</span>
+        <span className="result-idx">{startIndex + index + 1}</span>
         <span className="result-title">
           <HighlightText html={hit.highlight?.title?.[0] ?? hit.title} />
         </span>
@@ -36,8 +36,6 @@ export default function ResultItem({ hit, index, selected, onSelect, terms = [] 
 
       <div className="result-meta">
         {hit.industry.slice(0, 2).map((name) => (
-          // 后端 industry.text 的高亮是把所有行业拼成一句话标的，
-          // 拆不回单个标签，所以标签用自己这一条的检索词判断
           <span className={matchesTerm(name, terms) ? "chip chip-hit" : "chip"} key={name}>
             {name}
           </span>

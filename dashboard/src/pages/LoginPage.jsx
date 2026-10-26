@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [mode, setMode] = useState("login"); // 'login' | 'register'
+  const [mode, setMode] = useState("login");
   const isRegister = mode === "register";
 
   const [passwordConfirm, setPasswordConfirm] = useState("");

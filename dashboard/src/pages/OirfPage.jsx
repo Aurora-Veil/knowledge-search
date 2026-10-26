@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 
-// OIRF 检索已停止维护，这个页面只作为旧链接的落点。
 export default function OirfPage() {
   return (
     <section className="card placeholder notice">

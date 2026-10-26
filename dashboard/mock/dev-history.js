@@ -1,23 +1,8 @@
-// 假后端：GET /api/v1/history
-//
-// 形状照 app/routers/history.py 和 app/history/store.py 抄：
-//
-//   · 返回的是**裸数组**，不是 { items: [...] }
-//   · 一行 = 一次检索，不是一次请求。翻页不算新记录
-//   · 身份是 (user_id, kind, query, filters)，同样的条件再搜一次只 UPDATE：
-//     search_count + 1、last_page 取最大值、last_seen_at 刷新，不会堆行
-//   · filters 是字典，键名和请求体一致（mode / time_weight / layout / publish_date_*）
-//   · kind 只认 report 和 oirf，limit 是 1..100，越界 422 且 detail 是数组
-//   · result_total 可能是 null（老记录没存结果数），页面要能显示成 “—”
-//
-// 数据只在内存里，vite 一重启就没了 —— 真后端是 Postgres 的 search_history 表。
-
 import { tokenUser } from './dev-auth.js'
 
 const KINDS = ['oirf', 'report']
 const MAX_LIMIT = 100
 
-// 这几项不算“筛选条件”，对应 store.py 里的 _NOT_FILTERS
 const NOT_FILTERS = ['q', 'page', 'size', 'highlight']
 
 const rows = new Map()
@@ -33,7 +18,6 @@ function send(res, status, body) {
   res.end(JSON.stringify(body))
 }
 
-// 条件是个对象，键顺序不同会拼出不同的键，所以排一下序再拼
 function keyOf(userId, kind, query, filters) {
   const parts = Object.keys(filters)
     .sort()
@@ -41,7 +25,6 @@ function keyOf(userId, kind, query, filters) {
   return [userId, kind, query, parts.join('&')].join('|')
 }
 
-// 对应 store.py 的 split_request：请求体拆成“检索词”和“筛选条件”
 function filtersOf(body) {
   const filters = {}
   for (const [key, value] of Object.entries(body)) {
@@ -50,21 +33,17 @@ function filtersOf(body) {
     filters[key] = value
   }
 
-  // mode 和 time_weight 在 pydantic 里有默认值，客户端不传也会被填上，
-  // 所以这两项永远在条件里 —— 页面上照实显示就行
   if (filters.mode === undefined) filters.mode = 'or'
   if (filters.time_weight === undefined) filters.time_weight = 0
   return filters
 }
 
-// owner 是我们自己加的，真后端不返回这个字段，别漏给前端
 function viewOf(row) {
   const copy = { ...row }
   delete copy.owner
   return copy
 }
 
-// 检索成功后被 dev-reports.js 调用，就是真后端那个 background task
 export function recordSearch(user, body, resultTotal) {
   const kind = 'report'
   const query = body.q ?? ''
@@ -102,7 +81,6 @@ export function recordSearch(user, body, resultTotal) {
 function handleHistory(user, params) {
   const kind = params.get('kind')
   const limitText = params.get('limit')
-  // FastAPI 的 Query 默认值：不传就是 20
   const limit = limitText === null ? 20 : Number(limitText)
 
   const errors = []
@@ -132,8 +110,6 @@ function handleHistory(user, params) {
   return { status: 200, body: list }
 }
 
-// 种子数据：真后端里这些是之前搜过的记录，这里先塞几条，
-// 免得第一次打开是一片空白，看不出表格长什么样。
 function seedRows() {
   const now = Date.now()
   const seeds = [
@@ -160,7 +136,6 @@ function seedRows() {
       filters: { mode: 'phrase', time_weight: 0 },
       last_page: 1,
       size: 20,
-      // 故意留一条 null：真表里老记录没有结果数，页面得显示得出来
       result_total: null,
       search_count: 2,
       minutesAgo: 51 * 60,
@@ -196,7 +171,6 @@ export default function devHistoryMock() {
         const url = new URL(req.url, 'http://localhost')
         if (req.method !== 'GET' || url.pathname !== '/api/v1/history') return next()
 
-        // 真后端查 Postgres，这里也慢一点，方便看加载态
         await delay(200)
 
         const user = tokenUser(req)

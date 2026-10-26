@@ -1,5 +1,4 @@
 :root {
-  /* 颜色 */
   --bg: #f6f7f9;
   --surface: #ffffff;
   --surface-muted: #f8f9fb;
@@ -19,27 +18,19 @@
   --success-bg: #ecfdf3;
   --warn: #b54708;
   --warn-bg: #fffaeb;
-
-  /* 圆角与阴影 */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
   --shadow-md: 0 8px 24px rgba(16, 24, 40, 0.08);
-
-  /* 尺寸 */
   --sidebar-w: 224px;
   --topbar-h: 56px;
-
-  /* 字号 */
   --text-xs: 12px;
   --text-sm: 13px;
   --text-base: 14px;
   --text-md: 15px;
   --text-lg: 18px;
   --text-xl: 22px;
-
-  /* 字体 */
   --font-sans: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei",
     "PingFang SC", "Hiragino Sans GB", sans-serif;
   --font-mono: ui-monospace, Consolas, "SF Mono", monospace;

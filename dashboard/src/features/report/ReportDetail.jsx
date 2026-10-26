@@ -2,11 +2,6 @@ import { formatScore, matchLabel, scoreLabel } from './format.js'
 import HighlightText from './HighlightText.jsx'
 import { markTerms, matchesTerm } from './highlight.js'
 
-// 两份数据合起来用：
-//   report 来自 GET /reports/{id}，有摘要
-//   hit 来自列表，有分值、命中来源
-// 后端把摘要从列表里摘掉了，所以详情必须单独请求，这里就得分开放。
-// 详情接口也不返回 highlight，标题和摘要只能用当前检索词在前端标。
 export default function ReportDetail({ report, hit, terms = [], loading, error }) {
   if (loading) {
     return (

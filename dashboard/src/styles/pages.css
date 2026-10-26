@@ -101,12 +101,10 @@
   color: var(--text-3);
 }
 
-/* 旧入口只留一句低存在感的说明 */
 .notice {
   max-width: 560px;
 }
 
-/* 最近搜索 */
 .recent-row {
   display: grid;
   grid-template-columns: 88px minmax(0, 1fr) auto;
@@ -168,14 +166,12 @@
   margin-left: auto;
 }
 
-/* 窄屏时表格横向滚动，不拆列也不换行 */
 .history-scroll {
   overflow-x: auto;
 }
 
 .history-table {
   width: 100%;
-  /* 窄屏别把表格挤成一列竖排：撑住宽度，让 .history-scroll 横向滚 */
   min-width: 640px;
   border-collapse: collapse;
   font-size: var(--text-sm);
@@ -212,13 +208,11 @@
   gap: 4px;
 }
 
-/* 表格里字号比报告页大，标签跟着缩回去，不然像正文 */
 .history-filters .chip {
   border: 1px solid var(--line);
   font-size: var(--text-xs);
 }
 
-/* 数字列右对齐，好扫 */
 .history-table th:nth-child(3),
 .history-table th:nth-child(4),
 .history-table td:nth-child(3),
@@ -239,7 +233,6 @@
   white-space: nowrap;
 }
 
-/* 空值统一用短横线，别显示 null / undefined */
 .history-dash {
   color: var(--text-3);
 }
@@ -349,7 +342,6 @@
   text-align: center;
 }
 
-/* 校验登录态时的占位，不套壳也能单独显示 */
 .page-loading {
   display: grid;
   place-items: center;
@@ -359,7 +351,6 @@
   color: var(--text-3);
 }
 
-/* 表单内的错误条：贴在提交按钮上方，不遮挡内容，也不用关闭 */
 .form-error {
   display: flex;
   align-items: flex-start;
@@ -375,7 +366,6 @@
   animation: form-error-in 0.16s ease-out;
 }
 
-/* 小圆点里的感叹号 */
 .form-error::before {
   content: "!";
   display: grid;
@@ -415,19 +405,16 @@
   }
 }
 
-/* 手机：最近搜索把时间挪到第二行 */
 @media (max-width: 640px) {
   .recent-row {
     grid-template-columns: 62px minmax(0, 1fr);
     row-gap: 4px;
   }
-
   .recent-time {
     grid-column: 2;
   }
 }
 
-/* 渲染出错时的兜底页：替掉白屏，把错误摆到脸上 */
 .crash {
   display: flex;
   flex-direction: column;

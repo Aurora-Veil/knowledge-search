@@ -1,35 +1,14 @@
-// 假后端：POST /api/v1/reports/search、GET /api/v1/reports/{report_id}
-//
-// 形状严格照 app/routers/reports.py 抄，目的是让页面代码里没有一行
-// “因为没后端所以先这样”的分支：
-//
-//   · 请求体字段名是 q / layout / mode / page / size / time_weight /
-//     publish_date_from / publish_date_to，不是 UI 上的中文标签
-//   · 返回 { total, page, size, degraded, hits }
-//   · hits 里没有 summary（真后端把它 pop 掉了），摘要必须走详情接口
-//   · hits 里可能有 highlight，形如 { title: ["…<em>词</em>…"], summary: [...] }，
-//     字段名是 title / industry.text / summary，值是字符串数组；详情接口没有这个字段
-//   · 参数校验失败 → 422，detail 是数组；page*size 超窗口 → 400，detail 是字符串
-//
-// 唯一和真后端不一样的地方是打分：真后端是 Elasticsearch 的 BM25 加 kNN 融合，
-// 这里用加权词频代替，只保证排序方向大致一致，页面不该依赖具体分值。
-//
-// 关掉的办法和 auth mock 一样：启动前设 MOCK_API=0。
-
 import { mockReports } from '../src/mock/data.js'
 import { tokenUser } from './dev-auth.js'
 import { recordSearch } from './dev-history.js'
 
-// 与 app/search/query_reports.py 的常量对齐
 const RESULT_WINDOW = 200
 const MAX_SIZE = 100
 const LAYOUTS = ['横版', '竖版']
 const MODES = ['or', 'and', 'phrase']
 
-// 对应 ES 里的 title^3 industry^2 summary
 const FIELD_WEIGHTS = { title: 3, industry: 2, summary: 1 }
 
-// 与 app/search/time_decay.py 对齐：365 天半衰、前 90 天不衰减
 const DAY_MS = 24 * 60 * 60 * 1000
 const DECAY_SCALE_DAYS = 365
 const DECAY_OFFSET_DAYS = 90
@@ -55,7 +34,6 @@ function readBody(req) {
   })
 }
 
-// pydantic 的 422 detail 是 [{loc, msg, type}]，loc 的第一个元素永远是 body
 function field(key, msg, type) {
   return { loc: ['body', key], msg, type }
 }
@@ -101,7 +79,6 @@ function validate(body) {
   return errors
 }
 
-// 一个词在一段文字里出现几次
 function occurrences(text, term) {
   if (!text || !term) return 0
   let count = 0
@@ -134,7 +111,6 @@ function scoreOf(report, terms) {
   return score
 }
 
-// 真后端的公式是 _score * (1 - w + w * decayDateExp(...))
 function decayFactor(publishDate, timeWeight) {
   if (!timeWeight) return 1
   const ageDays = Math.max((Date.now() - Date.parse(`${publishDate}T00:00:00`)) / DAY_MS, 0)
@@ -142,7 +118,6 @@ function decayFactor(publishDate, timeWeight) {
   return 1 - timeWeight + timeWeight * Math.pow(DECAY_HALF, overdue / DECAY_SCALE_DAYS)
 }
 
-// 列表卡片：没有 summary，这是有意的
 function toCard(report, score, highlight) {
   const rounded = Number(score.toFixed(6))
   const card = {
@@ -161,11 +136,6 @@ function toCard(report, score, highlight) {
   return card
 }
 
-// --- 高亮片段 ---
-// 真后端由 Elasticsearch 的 highlight 生成，pre_tags 是 <em>、post_tags 是 </em>，
-// 字段名是 title / industry.text / summary，值是字符串数组。
-// 这里手动造出同样的形状，页面代码不用为 mock 写分支。
-
 const HL_PRE = '<em>'
 const HL_POST = '</em>'
 
@@ -173,7 +143,6 @@ function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// 一次扫描把所有词都包上，长词优先，避免“机器人”先命中把“工业机器人”切碎
 function termRegex(terms) {
   const parts = [...new Set(terms)].filter(Boolean).sort((a, b) => b.length - a.length)
   if (!parts.length) return null
@@ -185,7 +154,6 @@ function markText(text, regex) {
   return text.replace(regex, (match) => `${HL_PRE}${match}${HL_POST}`)
 }
 
-// 摘要太长，只截命中处附近的一小段，像搜索结果的摘要那样
 function snippetOf(text, terms, width = 60) {
   const regex = termRegex(terms)
   if (!regex) return null
@@ -236,9 +204,7 @@ function handleSearch(body) {
   const mode = body.mode ?? 'or'
   const timeWeight = body.time_weight ?? 0
 
-  // 后端默认开高亮；highlight: false 时整个字段都不返回
   const useHighlight = body.highlight !== false
-  // 短语匹配整串算一个词，不能拆
   const highlightTerms = mode === 'phrase' ? [keyword] : terms
 
   const ranked = mockReports
@@ -257,11 +223,9 @@ function handleSearch(body) {
   return {
     status: 200,
     body: {
-      // total 只统计词法分支，和真后端一致
       total: ranked.length,
       page,
       size,
-      // 假的没有向量通道，如实说降级
       degraded: true,
       hits: ranked
         .slice(start, start + size)
@@ -278,7 +242,6 @@ function handleDetail(reportId) {
     return { status: 404, body: { detail: `report not found: ${reportId}` } }
   }
 
-  // 详情接口带 summary，不带 score 系列字段
   return {
     status: 200,
     body: {
@@ -304,10 +267,8 @@ export default function devReportsMock() {
         const isDetail = req.method === 'GET' && pathname.startsWith('/api/v1/reports/')
         if (!isSearch && !isDetail) return next()
 
-        // 真后端要过 ES，这里也慢一点，方便看加载态
         await delay(250)
 
-        // 报告接口都要求登录，忘了带通行证就是 401
         const user = tokenUser(req)
         if (!user) {
           return send(res, 401, { detail: 'Not authenticated' })
@@ -333,7 +294,6 @@ export default function devReportsMock() {
         if (errors.length) return send(res, 422, { detail: errors })
 
         const out = handleSearch(body)
-        // 真后端在 background task 里记一笔，而且只记成功的（400/422 不记）
         if (out.status === 200) recordSearch(user, body, out.body.total)
         return send(res, out.status, out.body)
       })

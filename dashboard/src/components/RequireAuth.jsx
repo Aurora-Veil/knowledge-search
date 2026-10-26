@@ -1,7 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 
-// 门卫：没登录就别进去，顺便记住原来想去的地址，登录完再送回来。
 export default function RequireAuth() {
   const { user, loading } = useAuth();
   const location = useLocation();

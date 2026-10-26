@@ -117,7 +117,6 @@
   color: var(--text-3);
 }
 
-/* 侧栏最下方：头像 + 用户名 + 退出 */
 .sidebar-user {
   display: flex;
   align-items: center;
@@ -193,7 +192,6 @@
   font-size: var(--text-sm);
 }
 
-/* 退出是按钮，不是链接，按钮默认外观在 .user-logout 里清掉了 */
 .topbar-link:hover {
   color: var(--accent);
 }
@@ -222,7 +220,6 @@
   .shell {
     grid-template-columns: minmax(0, 1fr);
   }
-
   .sidebar {
     position: static;
     flex-direction: row;
@@ -234,49 +231,40 @@
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-
   .brand-text,
   .nav-label,
   .sidebar-foot {
     display: none;
   }
-
   .sidebar-bottom {
     flex-direction: row;
     align-items: center;
     margin-top: 0;
     margin-left: auto;
   }
-
   .sidebar-user {
     padding: 0;
     border-top: 0;
   }
-
   .nav {
     flex-direction: row;
     gap: 4px;
   }
-
   .nav-item {
     white-space: nowrap;
   }
-
   .topbar {
     padding: 0 16px;
   }
-
   .content {
     padding: 16px;
   }
 }
 
-/* 手机：顶栏只留标题，侧栏只留头像和退出 */
 @media (max-width: 600px) {
   .topbar-actions {
     display: none;
   }
-
   .sidebar-user .user-name {
     display: none;
   }

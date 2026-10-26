@@ -1,7 +1,5 @@
 import { YEAR_OPTIONS } from './searchParams.js'
 
-// 受控组件：输入框和下拉框的值都存在 ReportPage 里，这里只负责显示和上报。
-// 好处是点“搜索”时所有条件一次就能拿到，不用 ref 到处捞。
 export default function SearchCard({ values, onChange, onSubmit, loading }) {
   const canSubmit = values.q.trim() !== '' && !loading
 
@@ -9,7 +7,6 @@ export default function SearchCard({ values, onChange, onSubmit, loading }) {
     <form
       className="search-card"
       onSubmit={(event) => {
-        // 表单默认会刷新整页，必须拦掉
         event.preventDefault()
         onSubmit()
       }}

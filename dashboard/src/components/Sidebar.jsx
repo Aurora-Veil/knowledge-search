@@ -43,7 +43,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        {/* OIRF 检索已停止维护，只留一个小入口给旧链接 */}
         <div className="sidebar-foot">
           <Link className="legacy-link" to="/oirf">
             OIRF 检索（旧版）

@@ -86,7 +86,6 @@ export default function HistoryPage() {
 
   return (
     <section className="card">
-      {/* 标题顶栏已经有了，这里只说一句这张表怎么算一行 */}
       <p className="lead">一行 = 一次检索，同样的条件重复搜只累加次数</p>
 
       <div className="history-toolbar">

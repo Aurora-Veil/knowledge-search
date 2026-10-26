@@ -1,8 +1,3 @@
-// 假数据，字段名和接口返回保持一致：
-// 报告来自 POST /api/v1/reports/search 的 hits，
-// 最近搜索来自 GET /api/v1/history 的 items。
-// 接真实接口时只换数据来源，组件不用改。
-
 export const mockReports = [
   {
     report_id: '62e33fbc2f669532f23e1cd8',
