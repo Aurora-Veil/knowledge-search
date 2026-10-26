@@ -22,6 +22,8 @@ from ..search.projects import list_projects as list_projects_service
 from ..search.service import search as search_service
 from ..search.service_reports import get as get_report_service
 from ..search.service_reports import search as search_reports_service
+from ..search.stats_reports import overview as report_stats_service
+from ..searchlog.stats import overview as search_stats_service
 
 # REVIEW_STATUSES = ("FORMAL", "PENDING", "DISPUTED", "REJECTED")
 # CONFIDENCE_LEVELS = ("high", "medium", "low")
@@ -37,18 +39,22 @@ SERVER_NAME = "oirf-search"
 
 SERVER_INSTRUCTIONS = """
 
-OIRF 知识图谱检索 MCP Server
+行业报告知识检索 MCP Server
 
-知识图谱检索工具：
+OIRF图谱检索工具：
 - 全文检索 —— search_knowledge：按检索词与筛选条件查材料，返回卡片
 - 取对象全文 —— get_object：取单个对象的完整内容
 - 取关联 —— get_associations：取某对象的关联子图，可沿推理链向下追溯与反查
 
 先给命中摘要，再按需展开
 
-报告检索工具（独立索引，与上面的知识图谱无关）：
+报告序列检索工具：
 - 检索 —— search_reports：词法 + 向量融合，返回报告卡片，可控制时间衰减权重
 - 取报告正文 —— get_report：按 report_id 取报告完整内容
+
+统计工具：
+- 报告库分布 —— report_stats：总数、发布年份、行业 Top、版式
+- 检索行为 —— search_stats：近 N 天检索量、零结果、失败、Top 检索词
 
 """
 
@@ -501,6 +507,36 @@ def get_report(
             f"找不到 report_id={report_id!r}，请确认 report_id "
         )
     return report
+
+
+@mcp.tool(
+    title="报告库统计",
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def report_stats() -> dict[str, Any]:
+    """报告库的全局分布：总数、发布年份、行业 Top、版式、发布日期范围"""
+    try:
+        return report_stats_service()
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(f"报告统计失败：{type(exc).__name__}: {exc}") from exc
+
+
+@mcp.tool(
+    title="检索行为统计",
+    annotations={"readOnlyHint": True, "openWorldHint": False},
+)
+def search_stats(
+    days: Annotated[int, Field(ge=1, le=90, description="回看天数，default 14")] = 14,
+    kind: Annotated[
+        Optional[Literal["report", "oirf"]],
+        Field(description="检索类型；不传 = 全部"),
+    ] = None,
+) -> dict[str, Any]:
+    """全站检索行为：按天检索量、零结果、失败、Top 检索词。只统计 page = 1"""
+    try:
+        return search_stats_service(None, days, "all", kind)
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(f"检索统计失败：{type(exc).__name__}: {exc}") from exc
 
 
 __all__ = ["mcp", "SERVER_NAME"]

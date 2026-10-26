@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db
 from .mcp import mcp
-from .routers import associations, auth, health, objects, projects, reports, search, history
+from .routers import associations, auth, health, objects, projects, reports, search, history, stats
 from .search.encoder import _start_warmup
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -59,6 +59,7 @@ app.include_router(objects.router)
 app.include_router(associations.router)
 app.include_router(projects.router)
 app.include_router(history.router)
+app.include_router(stats.router)
 
 app.mount("/ui", StaticFiles(directory="static", html=True))
 app.mount("/mcp", mcp_app)
