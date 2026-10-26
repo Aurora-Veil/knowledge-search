@@ -301,6 +301,7 @@ export default function devReportsMock() {
           recordSearch(user, body, out.body.total)
           recordSearchEvent({
             userId: user.id,
+            kind: 'report',
             query: body.q,
             page: body.page ?? 1,
             total: out.body.total,

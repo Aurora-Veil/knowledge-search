@@ -7,6 +7,7 @@ const MAX_TOP_QUERIES = 5
 const SEED_USER_ID = 1
 
 const events = []
+const KINDS = ['oirf', 'report']
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -64,6 +65,7 @@ function seedEvents() {
     at.setHours(hour, 15, 0, 0)
     events.push({
       userId: SEED_USER_ID,
+      kind: 'report',
       query,
       total,
       ok: true,
@@ -76,6 +78,7 @@ function seedEvents() {
   failedAt.setHours(16, 40, 0, 0)
   events.push({
     userId: SEED_USER_ID,
+    kind: 'report',
     query: '工业软件 国产替代',
     total: null,
     ok: false,
@@ -86,12 +89,13 @@ function seedEvents() {
 
 seedEvents()
 
-export function recordSearchEvent({ userId, query, page = 1, total, latencyMs = 0 }) {
+export function recordSearchEvent({ userId, kind = 'report', query, page = 1, total, latencyMs = 0 }) {
   if (page !== 1) return
   if (typeof query !== 'string' || !query.trim()) return
 
   events.push({
     userId,
+    kind,
     query: query.trim(),
     total: typeof total === 'number' ? total : null,
     ok: true,
@@ -150,7 +154,7 @@ function reportStats() {
   }
 }
 
-function searchStats(user, days, scope) {
+function searchStats(user, days, scope, kind) {
   const daily = []
   const byDate = new Map()
 
@@ -162,6 +166,7 @@ function searchStats(user, days, scope) {
   }
 
   const hits = events.filter((event) => {
+    if (kind && event.kind !== kind) return false
     if (scope === 'me' && event.userId !== user.id) return false
     return byDate.has(event.date)
   })
@@ -212,6 +217,7 @@ function searchStats(user, days, scope) {
 function parseSearchParams(params) {
   const dayText = params.get('days')
   const scope = params.get('scope') ?? 'all'
+  const kind = params.get('kind')
   const days = dayText === null ? 14 : Number(dayText)
   const errors = []
 
@@ -231,7 +237,15 @@ function parseSearchParams(params) {
     })
   }
 
-  return { days, scope, errors }
+  if (kind !== null && !KINDS.includes(kind)) {
+    errors.push({
+      loc: ['query', 'kind'],
+      msg: "Input should be 'oirf' or 'report'",
+      type: 'literal_error',
+    })
+  }
+
+  return { days, scope, kind, errors }
 }
 
 export default function devStatsMock() {
@@ -257,7 +271,7 @@ export default function devStatsMock() {
         const parsed = parseSearchParams(url.searchParams)
         if (parsed.errors.length) return send(res, 422, { detail: parsed.errors })
 
-        return send(res, 200, searchStats(user, parsed.days, parsed.scope))
+        return send(res, 200, searchStats(user, parsed.days, parsed.scope, parsed.kind))
       })
 
       server.config.logger.info(

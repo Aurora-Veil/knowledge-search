@@ -10,11 +10,12 @@ export async function getReportStats() {
   return data;
 }
 
-export async function getSearchStats({ days = 14, scope = "all" } = {}) {
+export async function getSearchStats({ days = 14, scope = "all", kind = "" } = {}) {
   const params = new URLSearchParams({
     days: String(days),
     scope,
   });
+  if (kind) params.set("kind", kind);
 
   const res = await apiFetch(`/api/v1/stats/search?${params}`);
 
