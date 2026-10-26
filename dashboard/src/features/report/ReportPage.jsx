@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import Pager from '../../components/Pager.jsx'
 import { REPORT_RESULT_WINDOW, getReport, searchReports } from '../../lib/reports.js'
+import IndustryTags from './IndustryTags.jsx'
 import ReportDetail from './ReportDetail.jsx'
 import ResultList from './ResultList.jsx'
 import SearchCard from './SearchCard.jsx'
@@ -133,6 +134,8 @@ export default function ReportPage() {
         onSubmit={handleSubmit}
         loading={loading}
       />
+
+      {result && !error && result.hits.length > 0 && <IndustryTags hits={result.hits} />}
 
       <div className="panes">
         <section className="pane list-pane">

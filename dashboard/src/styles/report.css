@@ -33,6 +33,87 @@
   padding: 0 22px;
 }
 
+.industry {
+  padding: 10px 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.industry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  margin-bottom: 8px;
+  font-size: var(--text-xs);
+  color: var(--text-2);
+}
+
+.industry-note {
+  color: var(--text-3);
+}
+
+.industry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.industry-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 96px;
+  padding: 3px 8px 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--text-2);
+}
+
+.industry-tag-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.industry-tag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  margin-left: auto;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.industry-more {
+  border-style: dashed;
+  background: transparent;
+  color: var(--accent);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.industry-more:hover {
+  background: var(--accent-weak);
+}
+
 .list-head {
   display: flex;
   align-items: center;
@@ -274,5 +355,24 @@ mark.hl {
   .detail-pane {
     min-height: 260px;
     overflow: visible;
+  }
+}
+
+@media (max-width: 900px) {
+  .industry-tags:not(.is-expanded) {
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .industry-tags:not(.is-expanded)::-webkit-scrollbar {
+    display: none;
+  }
+  .industry-tag {
+    flex: none;
+    min-width: 0;
+    gap: 8px;
+    padding: 3px 7px;
   }
 }
