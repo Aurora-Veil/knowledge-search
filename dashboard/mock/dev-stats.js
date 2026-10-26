@@ -1,13 +1,15 @@
 import { mockReports } from '../src/mock/data.js'
 import { tokenUser } from './dev-auth.js'
 
-const MAX_DAYS = 90
+const MAX_SPAN_DAYS = 366
 const MAX_INDUSTRIES = 10
-const MAX_TOP_QUERIES = 5
+const MAX_QUERIES = 20
+const MAX_TOP_QUERIES = 20
 const SEED_USER_ID = 1
 
 const events = []
 const KINDS = ['oirf', 'report']
+const GRANULARITIES = ['day', 'week', 'month']
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -32,6 +34,47 @@ function dayStart(offset) {
   date.setHours(0, 0, 0, 0)
   date.setDate(date.getDate() - offset)
   return date
+}
+
+function addDays(date, days) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function dateFromKey(key) {
+  const [year, month, day] = key.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function parseDateText(text) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+  const [year, month, day] = text.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null
+  }
+  return date
+}
+
+function bucketStart(date, granularity) {
+  const start = new Date(date)
+  start.setHours(0, 0, 0, 0)
+  if (granularity === 'week') {
+    const offset = (start.getDay() + 6) % 7
+    start.setDate(start.getDate() - offset)
+  } else if (granularity === 'month') {
+    start.setDate(1)
+  }
+  return start
+}
+
+function nextBucket(date, granularity) {
+  const next = new Date(date)
+  if (granularity === 'week') next.setDate(next.getDate() + 7)
+  else if (granularity === 'month') next.setMonth(next.getMonth() + 1)
+  else next.setDate(next.getDate() + 1)
+  return next
 }
 
 function latencyOf(query, offset) {
@@ -154,36 +197,47 @@ function reportStats() {
   }
 }
 
-function searchStats(user, days, scope, kind) {
-  const daily = []
-  const byDate = new Map()
+function searchStats(user, { days, start, end, queries, scope, kind, granularity, limit }) {
+  const rangeEnd = end ?? dayStart(0)
+  const rangeStart = start ?? addDays(rangeEnd, -(days - 1))
+  const startKey = dateKey(rangeStart)
+  const endKey = dateKey(rangeEnd)
 
-  for (let offset = days - 1; offset >= 0; offset -= 1) {
-    const key = dateKey(dayStart(offset))
-    const row = { date: key, searches: 0, zero_result: 0, errors: 0 }
-    daily.push(row)
-    byDate.set(key, row)
-  }
-
-  const hits = events.filter((event) => {
+  const all = events.filter((event) => {
+    if (event.date < startKey || event.date > endKey) return false
     if (kind && event.kind !== kind) return false
     if (scope === 'me' && event.userId !== user.id) return false
-    return byDate.has(event.date)
+    return true
   })
 
-  const queryCounts = new Map()
+  const hits = queries.length
+    ? all.filter((event) => queries.includes(event.query))
+    : all
+
+  const daily = []
+  const byBucket = new Map()
+  for (let cursor = bucketStart(rangeStart, granularity);
+       cursor <= rangeEnd;
+       cursor = nextBucket(cursor, granularity)) {
+    const key = dateKey(cursor)
+    const row = { date: key, searches: 0, zero_result: 0, errors: 0 }
+    daily.push(row)
+    byBucket.set(key, row)
+  }
+
   let zeroResult = 0
-  let errors = 0
   let latencySum = 0
   let latencyCount = 0
 
   for (const event of hits) {
-    const row = byDate.get(event.date)
+    const key = dateKey(bucketStart(dateFromKey(event.date), granularity))
+    const row = byBucket.get(key)
+    if (!row) continue
+
     row.searches += 1
 
     if (!event.ok) {
       row.errors += 1
-      errors += 1
       continue
     }
 
@@ -194,37 +248,63 @@ function searchStats(user, days, scope, kind) {
 
     latencySum += event.latencyMs
     latencyCount += 1
+  }
+
+  const queryCounts = new Map()
+  for (const event of all) {
     queryCounts.set(event.query, (queryCounts.get(event.query) ?? 0) + 1)
   }
 
   const topQueries = [...queryCounts.entries()]
     .map(([query, count]) => ({ query, count }))
     .sort((a, b) => b.count - a.count || a.query.localeCompare(b.query, 'zh'))
-    .slice(0, MAX_TOP_QUERIES)
+    .slice(0, limit)
+
+  const searches = daily.reduce((sum, row) => sum + row.searches, 0)
 
   return {
-    days,
+    range: { start: startKey, end: endKey, granularity },
     daily,
     top_queries: topQueries,
+    selected: queries.map((query) => ({
+      query,
+      count: all.filter((event) => event.query === query).length,
+    })),
     totals: {
-      searches: hits.length,
-      zero_result_rate: hits.length ? Number((zeroResult / hits.length).toFixed(4)) : 0,
+      searches,
+      zero_result_rate: searches ? Number((zeroResult / searches).toFixed(4)) : 0,
       avg_latency_ms: latencyCount ? Math.round(latencySum / latencyCount) : 0,
     },
   }
 }
 
 function parseSearchParams(params) {
-  const dayText = params.get('days')
   const scope = params.get('scope') ?? 'all'
   const kind = params.get('kind')
-  const days = dayText === null ? 14 : Number(dayText)
+  const granularity = params.get('granularity') ?? 'day'
+  const daysText = params.get('days')
+  const limitText = params.get('limit')
+  const startText = params.get('start')
+  const endText = params.get('end')
+  const queries = [...new Set(
+    params.getAll('queries').map((item) => item.trim()).filter(Boolean),
+  )]
+  const days = daysText === null ? 14 : Number(daysText)
+  const limit = limitText === null ? 5 : Number(limitText)
   const errors = []
 
-  if (!Number.isInteger(days) || days < 1 || days > MAX_DAYS) {
+  if (!Number.isInteger(days) || days < 1 || days > MAX_SPAN_DAYS) {
     errors.push({
       loc: ['query', 'days'],
-      msg: `Input should be between 1 and ${MAX_DAYS}`,
+      msg: `Input should be between 1 and ${MAX_SPAN_DAYS}`,
+      type: 'less_than_equal',
+    })
+  }
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_TOP_QUERIES) {
+    errors.push({
+      loc: ['query', 'limit'],
+      msg: `Input should be between 1 and ${MAX_TOP_QUERIES}`,
       type: 'less_than_equal',
     })
   }
@@ -245,7 +325,58 @@ function parseSearchParams(params) {
     })
   }
 
-  return { days, scope, kind, errors }
+  if (!GRANULARITIES.includes(granularity)) {
+    errors.push({
+      loc: ['query', 'granularity'],
+      msg: "Input should be 'day', 'week' or 'month'",
+      type: 'literal_error',
+    })
+  }
+
+  const start = startText === null ? null : parseDateText(startText)
+  const end = endText === null ? null : parseDateText(endText)
+
+  if (startText !== null && !start) {
+    errors.push({
+      loc: ['query', 'start'],
+      msg: 'Input should be a valid date',
+      type: 'date_parsing',
+    })
+  }
+
+  if (endText !== null && !end) {
+    errors.push({
+      loc: ['query', 'end'],
+      msg: 'Input should be a valid date',
+      type: 'date_parsing',
+    })
+  }
+
+  let error = ''
+  if (!errors.length) {
+    const rangeEnd = end ?? dayStart(0)
+    const rangeStart = start ?? addDays(rangeEnd, -(days - 1))
+    if (rangeStart > rangeEnd) {
+      error = 'start must be <= end'
+    } else if ((rangeEnd - rangeStart) / 86400000 + 1 > MAX_SPAN_DAYS) {
+      error = `span: at most ${MAX_SPAN_DAYS} days`
+    } else if (queries.length > MAX_QUERIES) {
+      error = `queries: at most ${MAX_QUERIES} items`
+    }
+  }
+
+  return {
+    days,
+    start,
+    end,
+    queries,
+    scope,
+    kind,
+    granularity,
+    limit,
+    errors,
+    error,
+  }
 }
 
 export default function devStatsMock() {
@@ -270,8 +401,9 @@ export default function devStatsMock() {
 
         const parsed = parseSearchParams(url.searchParams)
         if (parsed.errors.length) return send(res, 422, { detail: parsed.errors })
+        if (parsed.error) return send(res, 422, { detail: parsed.error })
 
-        return send(res, 200, searchStats(user, parsed.days, parsed.scope, parsed.kind))
+        return send(res, 200, searchStats(user, parsed))
       })
 
       server.config.logger.info(

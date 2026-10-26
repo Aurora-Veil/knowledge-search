@@ -4,6 +4,7 @@ MCP surface for the OIRF knowledge-graph search API.
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated, Any, List, Literal, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -54,7 +55,7 @@ OIRF图谱检索工具：
 
 统计工具：
 - 报告库分布 —— report_stats：总数、发布年份、行业 Top、版式
-- 检索行为 —— search_stats：近 N 天检索量、零结果、失败、Top 检索词
+- 检索行为 —— search_stats：按日期区间和检索词统计检索量、零结果、失败、Top 检索词
 
 """
 
@@ -521,20 +522,61 @@ def report_stats() -> dict[str, Any]:
         raise ToolError(f"报告统计失败：{type(exc).__name__}: {exc}") from exc
 
 
+def _iso_date(value: str | None, name: str) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise ToolError(f"{name} 需要 YYYY-MM-DD，收到 {value!r}") from None
+
+
 @mcp.tool(
     title="检索行为统计",
     annotations={"readOnlyHint": True, "openWorldHint": False},
 )
 def search_stats(
-    days: Annotated[int, Field(ge=1, le=90, description="回看天数，default 14")] = 14,
+    days: Annotated[
+        int,
+        Field(ge=1, le=366, description="回看天数，没传 start/end 时生效，default 14"),
+    ] = 14,
+    start: Annotated[
+        Optional[str],
+        Field(description="起始日 YYYY-MM-DD，含"),
+    ] = None,
+    end: Annotated[
+        Optional[str],
+        Field(description="结束日 YYYY-MM-DD，含"),
+    ] = None,
+    queries: Annotated[
+        Optional[List[str]],
+        Field(description="只看这些检索词，最多 20 个"),
+    ] = None,
     kind: Annotated[
         Optional[Literal["report", "oirf"]],
         Field(description="检索类型；不传 = 全部"),
     ] = None,
+    granularity: Annotated[
+        Literal["day", "week", "month"],
+        Field(description="分桶粒度"),
+    ] = "day",
+    limit: Annotated[int, Field(ge=1, le=20, description="Top 检索词条数")] = 5,
 ) -> dict[str, Any]:
-    """全站检索行为：按天检索量、零结果、失败、Top 检索词。只统计 page = 1"""
+    """全站检索行为：按日期区间和检索词统计检索量、零结果、失败、Top 检索词。只统计 page = 1"""
     try:
-        return search_stats_service(None, days, "all", kind)
+        return search_stats_service(
+            None,
+            days=days,
+            start=_iso_date(start, "start"),
+            end=_iso_date(end, "end"),
+            queries=queries,
+            scope="all",
+            kind=kind,
+            granularity=granularity,
+            limit=limit,
+        )
+    except ToolError:
+        raise
     except Exception as exc:  # noqa: BLE001
         raise ToolError(f"检索统计失败：{type(exc).__name__}: {exc}") from exc
 

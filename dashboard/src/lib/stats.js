@@ -10,12 +10,28 @@ export async function getReportStats() {
   return data;
 }
 
-export async function getSearchStats({ days = 14, scope = "all", kind = "" } = {}) {
+export async function getSearchStats({
+  start = "",
+  end = "",
+  days = 14,
+  queries = [],
+  scope = "all",
+  kind = "",
+  granularity = "day",
+  limit = 5,
+} = {}) {
   const params = new URLSearchParams({
     days: String(days),
     scope,
+    granularity,
+    limit: String(limit),
   });
+  if (start) params.set("start", start);
+  if (end) params.set("end", end);
   if (kind) params.set("kind", kind);
+  for (const query of queries) {
+    params.append("queries", query);
+  }
 
   const res = await apiFetch(`/api/v1/stats/search?${params}`);
 
