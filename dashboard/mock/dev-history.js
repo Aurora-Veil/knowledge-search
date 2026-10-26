@@ -58,7 +58,7 @@ export function recordSearch(user, body, resultTotal) {
     row.last_page = Math.max(row.last_page, page)
     row.size = size
     row.result_total = resultTotal
-    row.search_count += 1
+    if (page === 1) row.search_count += 1
     row.last_seen_at = now
     return
   }

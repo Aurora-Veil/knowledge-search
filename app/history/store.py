@@ -2,6 +2,7 @@
 
 一行 = 一次检索，不是一次请求。身份 = (user_id, kind, query, filters)，
 由 schema/auth.sql 里的唯一索引强制 —— 所以翻页走 UPSERT 合并，不会堆行。
+search_count 只在 page = 1 时加 1，翻页只把 last_page 抬高。
 
 系统运行记录是另一张表（app/searchlog 的 search_log），它是"一次请求一行"。
 两张表的区别就在这个问题上：翻页算不算新的一行。
@@ -37,7 +38,8 @@ ON CONFLICT (user_id, kind, query, filters) DO UPDATE
    SET last_page    = GREATEST(search_history.last_page, EXCLUDED.last_page),
        size         = EXCLUDED.size,
        result_total = EXCLUDED.result_total,
-       search_count = search_history.search_count + 1,
+       search_count = search_history.search_count
+                      + (EXCLUDED.last_page = 1)::int,
        last_seen_at = now()
 """
 
