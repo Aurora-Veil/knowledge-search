@@ -86,7 +86,7 @@
 - 目前完成内容为：报告检索页，含检索卡、列表、详情、翻页与高亮；搜索记录页接 `GET /api/v1/history`；错误边界；开发期假后端；旧 `static/` 停止追踪
 - 待办内容为：概览页接历史接口、真实后端联调、图表（等后端聚合数据）、`/ui` 挂载点切到构建产物
 
-### 2026-10-26 · 概览统计接口
+### 2026-10-26 · 概览统计接口 & 用户相关界面
 
 - 新增 `GET /api/v1/stats/report-library`、`GET /api/v1/stats/search-activity`：用于提供前端集成图表的统计数据
 - MCP 新增 `report_stats`、`search_stats`，只有全站口径，不带用户维度
@@ -94,17 +94,14 @@
 - 报告检索页布局优化，加入当前页检索结果的行业标签数量显示
 - 用户相关：侧栏加入用户菜单：头像、账号状态、设置入口、退出登录，用户菜单带 MCP 状态检测；新增 `/settings` 页，显示用户 ID、状态与注册时间
 
-### 2026-10-27 · 检索统计按日汇总
+### 2026-10-27 · 检索统计与概览页
 
-- 新增 `search_daily` 表和 `app/searchlog/rollup.py`，从 `search_log` 汇总 `page=1` 的请求，支持单日、区间、最近 N 天与全量回填
+- 新增 `search_daily` 日汇总表和 `app/searchlog/rollup.py`，从 `search_log` 汇总 `page=1` 的请求，支持单日、区间、最近 N 天与全量回填
 - `/api/v1/stats/search-activity` 改为只读 `search_daily`，去掉 `scope`；响应增加 `data_until`、`zero_result`、`errors`、`latency_sum`、`ok_count`
 - 两个统计接口的结果写入 Redis：报告库 10 分钟，检索行为按区间缓存 24 小时或 60 秒
 - 报告库统计增加每年行业分布和 `industry_years` 逐年数量，缓存键升为 `stats:reports:v2`
 - MCP `search_stats` 同步新口径，数据截至昨天
-
-### 2026-10-27 · 概览页与检索联动
-
-- 概览页用 ECharts 接入真实统计，含统计卡、报告年份、行业分布、近 30 天趋势与 Top 5 检索词；图表支持联动筛选
+- 概览页用 ECharts 接入真实统计图表，图表支持联动筛选
 - 检索记录中的报告检索词可回填筛选条件并重新检索
 - `/ui/` 改为只提供 React 构建产物，旧手写静态页面删除；开发期 mock 后端移除，开发需连接真实 FastAPI
 - Vite 增加 `/docs` 与 `/openapi.json` 代理；登录页移除“回到概览”
