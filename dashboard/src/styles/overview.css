@@ -1,0 +1,417 @@
+/* ---------- 概览看板 ---------- */
+
+.entries,
+.overview-section {
+  animation: overview-enter 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+
+.overview-section:nth-of-type(2) {
+  animation-delay: 70ms;
+}
+
+.overview-section {
+  margin-bottom: 26px;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.section-sub {
+  margin-top: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.section-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.section-hint {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  background: #e3edff;
+}
+
+.filter-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-chip-x {
+  flex: none;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--text-3);
+}
+
+.filter-clear {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.filter-clear:hover {
+  color: var(--text-2);
+}
+
+.search-sub {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.search-sub span {
+  white-space: nowrap;
+}
+
+.search-sub span + span::before {
+  content: "·";
+  margin: 0 6px;
+  color: var(--text-3);
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+
+.stat-label {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+.stat-value {
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: value-enter 0.32s ease-out backwards;
+}
+
+.stat-value-skeleton {
+  position: relative;
+  display: block;
+  width: 62%;
+  height: 26px;
+  margin: 5px auto 0;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #eef1f6;
+}
+
+.stat-value-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.75),
+    transparent
+  );
+  transform: translateX(-120%);
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+
+.stat-note {
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  min-width: 0;
+  padding: 18px 20px 14px;
+  transition: border-color 0.18s ease;
+}
+
+.chart-card:hover {
+  border-color: var(--line-strong);
+}
+
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.chart-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.chart-note {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.chart-body {
+  height: 260px;
+}
+
+.chart {
+  width: 100%;
+}
+
+/* 图表载入骨架 */
+.chart-loading {
+  position: relative;
+  height: 100%;
+}
+
+.chart-skeleton {
+  position: absolute;
+  inset: 10px 6px 12px;
+  overflow: hidden;
+}
+
+.chart-skeleton::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: skeleton-sweep 1.7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.chart-skeleton-lines {
+  position: absolute;
+  inset: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.chart-skeleton-lines span {
+  border-top: 1px dashed var(--line-soft);
+}
+
+.chart-skeleton::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 14px;
+  left: 0;
+  border-top: 1px solid var(--line);
+}
+
+.chart-skeleton-bars {
+  position: absolute;
+  inset: 18px 4px 14px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+}
+
+.chart-skeleton-bar {
+  position: relative;
+  flex: 0 1 26px;
+  min-height: 8px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #e9edf4, #f5f7fa);
+}
+
+.chart-loading-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-3);
+  font-size: 11px;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(4px);
+}
+
+.chart-loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--accent-line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: chart-spin 0.8s linear infinite;
+}
+
+.chart-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  padding: 12px;
+  text-align: center;
+}
+
+.chart-state-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.chart-state-note {
+  max-width: 320px;
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  color: var(--text-3);
+}
+
+.chart-state .btn {
+  height: 32px;
+  margin-top: 4px;
+  padding: 0 12px;
+}
+
+@keyframes overview-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes value-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeleton-sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes chart-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entries,
+  .overview-section,
+  .stat-value,
+  .stat-value-skeleton::after,
+  .chart-skeleton::before,
+  .chart-loading-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-tile {
+    padding: 12px 14px;
+  }
+
+  .stat-value {
+    font-size: var(--text-lg);
+  }
+
+  .chart-card {
+    padding: 14px 14px 8px;
+  }
+}
