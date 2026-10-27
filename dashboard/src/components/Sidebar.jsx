@@ -37,7 +37,7 @@ export default function Sidebar() {
       <div className="sidebar-bottom">
         <div className="sidebar-foot">
           <Link className="legacy-link" to="/oirf">
-            OIRF 检索（旧版）
+            OIRF 检索（已停用）
           </Link>
           <p className="sidebar-version">前端重构版</p>
         </div>

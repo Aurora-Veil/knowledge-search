@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { getUsername, safeNext } from "../lib/auth.js";
@@ -182,10 +182,6 @@ export default function LoginPage() {
             {submitText}
           </button>
         </form>
-
-        <p className="login-foot">
-          <Link to="/">← 回到概览</Link>
-        </p>
       </div>
     </div>
   );
