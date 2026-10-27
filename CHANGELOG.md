@@ -94,12 +94,18 @@
 - 报告检索页布局优化，加入当前页检索结果的行业标签数量显示
 - 用户相关：侧栏加入用户菜单：头像、账号状态、设置入口、退出登录，用户菜单带 MCP 状态检测；新增 `/settings` 页，显示用户 ID、状态与注册时间
 
+### 2026-10-27 · 检索统计按日汇总
+
+- 新增 `search_daily` 表和 `app/searchlog/rollup.py`，从 `search_log` 汇总 `page=1` 的请求，支持单日、区间、最近 N 天与全量回填
+- `/api/v1/stats/search-activity` 改为只读 `search_daily`，去掉 `scope`；响应增加 `data_until`、`zero_result`、`errors`、`latency_sum`、`ok_count`
+- 两个统计接口的结果写入 Redis：报告库 10 分钟，检索行为按区间缓存 24 小时或 60 秒
+- 报告库统计增加每年行业分布和 `industry_years` 逐年数量，缓存键升为 `stats:reports:v2`
+- MCP `search_stats` 同步新口径，数据截至昨天
+
 ### 2026-10-27 · 概览页与检索联动
 
-- 概览页接入真实统计：报告总量、覆盖年份、行业数、最新发布、逐年发布量、行业 Top、近 30 天报告检索趋势与 Top 5 检索词
-- 图表支持联动筛选：点击年份看当年行业，点击行业看逐年数量，点击检索词看该词趋势；单卡失败可重试
-- 报告库统计新增每年的行业分布与 `industry_years` 逐年数据，缓存键升为 `stats:reports:v2`
-- 检索记录里的报告检索词可点击回填检索条件，包括版式、模式、时间衰减、日期和行业，并自动重搜
+- 概览页用 ECharts 接入真实统计，含统计卡、报告年份、行业分布、近 30 天趋势与 Top 5 检索词；图表支持联动筛选
+- 检索记录中的报告检索词可回填筛选条件并重新检索
 - `/ui/` 改为只提供 React 构建产物，旧手写静态页面删除；开发期 mock 后端移除，开发需连接真实 FastAPI
-- Vite 增加 `/docs` 与 `/openapi.json` 代理；登录页移除无意义的“回到概览”
-- 重写项目 README、`dashboard/README.md`、搜索 API 文档，新增概览统计 API 文档
+- Vite 增加 `/docs` 与 `/openapi.json` 代理；登录页移除“回到概览”
+- 重构文档：重写 README、`dashboard/README.md` 与搜索 API 文档，新增概览统计 API 文档
