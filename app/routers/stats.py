@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/v1/stats", tags=["stats"])
 
 _ES_UNAVAILABLE = (ApiError, TransportError)
 
-_REPORTS_KEY = "stats:reports"
+_REPORTS_KEY = "stats:reports:v2"
 _REPORTS_TTL = 600
 
 # 已结束的日期不会再变（汇总表凌晨才更新），可以缓存一天；
