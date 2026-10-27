@@ -94,13 +94,10 @@
 - 报告检索页布局优化，加入当前页检索结果的行业标签数量显示
 - 用户相关：侧栏加入用户菜单：头像、账号状态、设置入口、退出登录，用户菜单带 MCP 状态检测；新增 `/settings` 页，显示用户 ID、状态与注册时间
 
-### 2026-10-27 · 检索统计与概览页
+### 2026-10-27 · 概览统计改动与概览页
 
-- 新增 `search_daily` 日汇总表和 `app/searchlog/rollup.py`，从 `search_log` 汇总 `page=1` 的请求，支持单日、区间、最近 N 天与全量回填
-- `/api/v1/stats/search-activity` 改为只读 `search_daily`，去掉 `scope`；响应增加 `data_until`、`zero_result`、`errors`、`latency_sum`、`ok_count`
-- 两个统计接口的结果写入 Redis：报告库 10 分钟，检索行为按区间缓存 24 小时或 60 秒
-- 报告库统计增加每年行业分布和 `industry_years` 逐年数量，缓存键升为 `stats:reports:v2`
-- MCP `search_stats` 同步新口径，数据截至昨天
+- 新增 `search_daily` 日汇总表和 `app/searchlog/rollup.py` 维护该表
+- 两个统计接口的结果写入 Redis 缓存
 - 概览页用 ECharts 接入真实统计图表，图表支持联动筛选
 - 检索记录中的报告检索词可回填筛选条件并重新检索
 - `/ui/` 改为只提供 React 构建产物，旧手写静态页面删除；开发期 mock 后端移除，开发需连接真实 FastAPI
