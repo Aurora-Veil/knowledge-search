@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Pager from '../../components/Pager.jsx'
 import { REPORT_RESULT_WINDOW, getReport, searchReports } from '../../lib/reports.js'
 import IndustryTags from './IndustryTags.jsx'
@@ -6,6 +7,25 @@ import ReportDetail from './ReportDetail.jsx'
 import ResultList from './ResultList.jsx'
 import SearchCard from './SearchCard.jsx'
 import { INITIAL_FORM, queryTerms, toSearchBody } from './searchParams.js'
+
+const MODES = ['or', 'and', 'phrase']
+
+function formFromParams(params) {
+  const mode = params.get('mode')
+  const date = params.get('date') || ''
+
+  return {
+    ...INITIAL_FORM,
+    q: params.get('q') || '',
+    layout: params.get('layout') || '',
+    mode: MODES.includes(mode) ? mode : 'or',
+    date,
+    decay: params.get('decay') || '',
+    from: date ? '' : params.get('from') || '',
+    to: date ? '' : params.get('to') || '',
+    industry: params.getAll('industry'),
+  }
+}
 
 function ListState({ title, note }) {
   return (
@@ -17,7 +37,9 @@ function ListState({ title, note }) {
 }
 
 export default function ReportPage() {
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [searchParams] = useSearchParams()
+  const preset = useMemo(() => formFromParams(searchParams), [searchParams])
+  const [form, setForm] = useState(preset)
   const [submitted, setSubmitted] = useState(null)
 
   const [result, setResult] = useState(null)
@@ -31,10 +53,11 @@ export default function ReportPage() {
 
   const searchSeq = useRef(0)
   const detailSeq = useRef(0)
+  const lastPresetRef = useRef('')
 
   const maxPage = result ? Math.floor(REPORT_RESULT_WINDOW / result.size) : 1
 
-  async function runSearch(values, page) {
+  const runSearch = useCallback(async (values, page) => {
     const seq = ++searchSeq.current
     setLoading(true)
     setError('')
@@ -52,7 +75,19 @@ export default function ReportPage() {
     } finally {
       if (seq === searchSeq.current) setLoading(false)
     }
-  }
+  }, [])
+
+  // 从搜索记录跳进来时，按 URL 里的条件直接检索一次
+  useEffect(() => {
+    if (!preset.q.trim()) return
+
+    const key = searchParams.toString()
+    if (!key || key === lastPresetRef.current) return
+
+    lastPresetRef.current = key
+    setForm(preset)
+    runSearch(preset, 1)
+  }, [preset, searchParams, runSearch])
 
   async function selectReport(reportId) {
     const seq = ++detailSeq.current
@@ -76,6 +111,21 @@ export default function ReportPage() {
   function handleSubmit() {
     if (!form.q.trim()) return
     runSearch({ ...form }, 1)
+  }
+
+  function changeForm(key, value) {
+    setForm((prev) => {
+      const next = { ...prev, [key]: value }
+      if (key === 'date') {
+        next.from = ''
+        next.to = ''
+      }
+      return next
+    })
+  }
+
+  function clearExtraFilters() {
+    setForm((prev) => ({ ...prev, from: '', to: '', industry: [] }))
   }
 
   function handlePage(page) {
@@ -126,11 +176,34 @@ export default function ReportPage() {
     ? `${result.degraded ? '仅词法命中' : '词法命中'} ${result.total} 条`
     : '按相关度排序'
 
+  const extraFilters =
+    Boolean(form.from) || Boolean(form.to) || form.industry.length > 0
+
   return (
     <div className="report">
+      {extraFilters && (
+        <div className="preset-bar">
+          <span className="preset-label">附加筛选</span>
+          {form.from && <span className="chip">≥ {form.from}</span>}
+          {form.to && <span className="chip">≤ {form.to}</span>}
+          {form.industry.map((name) => (
+            <span className="chip" key={name}>
+              {name}
+            </span>
+          ))}
+          <button
+            className="preset-clear"
+            type="button"
+            onClick={clearExtraFilters}
+          >
+            清除
+          </button>
+        </div>
+      )}
+
       <SearchCard
         values={form}
-        onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}
+        onChange={changeForm}
         onSubmit={handleSubmit}
         loading={loading}
       />

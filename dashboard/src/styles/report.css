@@ -18,6 +18,34 @@
   box-shadow: var(--shadow-sm);
 }
 
+.preset-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: -4px;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.preset-bar .chip {
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.preset-clear {
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--text-3);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.preset-clear:hover {
+  color: var(--text-2);
+}
+
 .search-card .input {
   flex: 1 1 320px;
   height: 40px;

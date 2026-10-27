@@ -10,6 +10,9 @@ export const INITIAL_FORM = {
   mode: 'or',
   date: '',
   decay: '',
+  from: '',
+  to: '',
+  industry: [],
 }
 
 function isoDate(date) {
@@ -43,8 +46,15 @@ export function toSearchBody(values, page) {
 
   if (values.layout) body.layout = values.layout
   if (values.decay) body.time_weight = Number(values.decay)
+  if (values.industry?.length) body.industry = values.industry
 
-  return { ...body, ...dateRangeOf(values.date) }
+  const dateRange = dateRangeOf(values.date)
+  if (!Object.keys(dateRange).length) {
+    if (values.from) dateRange.publish_date_from = values.from
+    if (values.to) dateRange.publish_date_to = values.to
+  }
+
+  return { ...body, ...dateRange }
 }
 
 export function queryTerms(values) {

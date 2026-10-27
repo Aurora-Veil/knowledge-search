@@ -1,5 +1,7 @@
 import { YEAR_OPTIONS } from './searchParams.js'
 
+const DECAY_VALUES = ['0.1', '0.2', '0.35']
+
 export default function SearchCard({ values, onChange, onSubmit, loading }) {
   const canSubmit = values.q.trim() !== '' && !loading
 
@@ -71,6 +73,9 @@ export default function SearchCard({ values, onChange, onSubmit, loading }) {
         <option value="0.1">略偏新</option>
         <option value="0.2">偏新</option>
         <option value="0.35">更偏新</option>
+        {values.decay && !DECAY_VALUES.includes(values.decay) && (
+          <option value={values.decay}>自定义（{values.decay}）</option>
+        )}
       </select>
 
       <button className="btn btn-primary" type="submit" disabled={!canSubmit}>

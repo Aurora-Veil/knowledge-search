@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { listHistory } from "../lib/reports.js";
 
 const MODE_LABEL = {
@@ -37,6 +38,31 @@ function describeFilters(filters) {
   }
 
   return parts;
+}
+
+function searchUrlOf(row) {
+  const params = new URLSearchParams();
+  params.set("q", row.query);
+
+  const filters = row.filters ?? {};
+  if (filters.layout) params.set("layout", filters.layout);
+  if (filters.mode) params.set("mode", filters.mode);
+  if (filters.time_weight) {
+    params.set("decay", String(filters.time_weight));
+  }
+  if (filters.publish_date_from) {
+    params.set("from", filters.publish_date_from);
+  }
+  if (filters.publish_date_to) {
+    params.set("to", filters.publish_date_to);
+  }
+  if (Array.isArray(filters.industry)) {
+    for (const name of filters.industry) {
+      params.append("industry", name);
+    }
+  }
+
+  return `/report?${params.toString()}`;
 }
 
 export default function HistoryPage() {
@@ -152,7 +178,19 @@ export default function HistoryPage() {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td className="history-query">{row.query}</td>
+                  <td className="history-query">
+                    {(row.kind ?? kind) === "report" ? (
+                      <Link
+                        className="history-query-btn"
+                        to={searchUrlOf(row)}
+                        title="用这组条件重新检索"
+                      >
+                        {row.query}
+                      </Link>
+                    ) : (
+                      row.query
+                    )}
+                  </td>
                   <td>
                     <div className="history-filters">
                       {describeFilters(row.filters).map((text) => (
