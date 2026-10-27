@@ -86,9 +86,9 @@
 - 目前完成内容为：报告检索页，含检索卡、列表、详情、翻页与高亮；搜索记录页接 `GET /api/v1/history`；错误边界；开发期假后端；旧 `static/` 停止追踪
 - 待办内容为：概览页接历史接口、真实后端联调、图表（等后端聚合数据）、`/ui` 挂载点切到构建产物
 
-### 2026-10-26 · 概览统计接口与检索次数口径
+### 2026-10-26 · 概览统计接口
 
-- 新增 `GET /api/v1/stats/reports`、`GET /api/v1/stats/search`：用于提供前端集成图表的统计数据
+- 新增 `GET /api/v1/stats/report-library`、`GET /api/v1/stats/search-activity`：用于提供前端集成图表的统计数据
 - MCP 新增 `report_stats`、`search_stats`，只有全站口径，不带用户维度
 - 修 `search_count` 口径，保证不将翻页视为新的查询
 - 报告检索页布局优化，加入当前页检索结果的行业标签数量显示
