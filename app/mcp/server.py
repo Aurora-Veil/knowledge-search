@@ -562,15 +562,13 @@ def search_stats(
     ] = "day",
     limit: Annotated[int, Field(ge=1, le=20, description="Top 检索词条数")] = 5,
 ) -> dict[str, Any]:
-    """全站检索行为：按日期区间和检索词统计检索量、零结果、失败、Top 检索词。只统计 page = 1"""
+    """全站检索行为：按日期区间和检索词统计检索量、零结果、失败、Top 检索词，数据截至昨天"""
     try:
         return search_stats_service(
-            None,
             days=days,
             start=_iso_date(start, "start"),
             end=_iso_date(end, "end"),
             queries=queries,
-            scope="all",
             kind=kind,
             granularity=granularity,
             limit=limit,

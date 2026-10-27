@@ -89,4 +89,30 @@ CREATE INDEX IF NOT EXISTS search_log_error_idx
     ON search_log (created_at DESC) WHERE outcome = 'error';
 
 
+-- search_log 按天的折叠表
+-- 由 app/searchlog/rollup.py 维护
+CREATE TABLE IF NOT EXISTS search_daily (
+    day          DATE    NOT NULL,              -- Asia/Shanghai 自然日
+    kind         TEXT    NOT NULL,
+    query        TEXT    NOT NULL,
+    searches     INTEGER NOT NULL,              -- 只算 page = 1
+    zero_result  INTEGER NOT NULL,              -- ok 且 result_total = 0
+    errors       INTEGER NOT NULL,              -- outcome = 'error'
+    latency_sum  BIGINT  NOT NULL,              -- 只算 ok
+    ok_count     INTEGER NOT NULL,              -- 只算 ok
+
+    PRIMARY KEY (day, kind, query),
+
+    CONSTRAINT search_daily_kind_known   CHECK (kind IN ('oirf', 'report')),
+    CONSTRAINT search_daily_counts_valid CHECK (searches >= 0
+                                                AND zero_result >= 0
+                                                AND errors >= 0
+                                                AND ok_count >= 0
+                                                AND zero_result <= searches
+                                                AND errors <= searches),
+    -- query 进主键，防超长检索词撑爆 btree 单键上限
+    CONSTRAINT search_daily_query_len    CHECK (length(query) <= 500)
+);
+
+
 --   DELETE FROM search_log WHERE created_at < now() - interval '90 days'

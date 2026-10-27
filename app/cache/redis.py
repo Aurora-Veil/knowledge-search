@@ -121,6 +121,47 @@ def store(key: str, value: Any, *, now: datetime | None = None) -> None:
         _note("set", key, exc)
 
 
+def load_json(key: str) -> dict[str, Any] | None:
+    """通用读取：只要求是 JSON 对象，不校验业务形状。"""
+    client = get_redis()
+    if client is None:
+        return None
+
+    try:
+        raw = client.get(key)
+    except Exception as exc:                      # noqa: BLE001
+        _note("get", key, exc)
+        return None
+    if raw is None:
+        return None
+
+    try:
+        value = json.loads(raw)
+    except ValueError as exc:
+        logger.warning("cache value %s is not json: %s", key, exc)
+        drop(key)
+        return None
+
+    if not isinstance(value, dict):
+        logger.warning("cache value %s is not an object, dropping", key)
+        drop(key)
+        return None
+
+    return value
+
+
+def store_json(key: str, value: Any, ttl: int) -> None:
+    """通用写入，ttl 由调用方决定（秒）。"""
+    client = get_redis()
+    if client is None:
+        return
+
+    try:
+        client.set(key, json.dumps(value, ensure_ascii=False), ex=max(1, int(ttl)))
+    except Exception as exc:                      # noqa: BLE001
+        _note("set", key, exc)
+
+
 def drop(key: str) -> None:
     client = get_redis()
     if client is None:
@@ -149,4 +190,5 @@ def status() -> dict[str, Any]:
     return body
 
 
-__all__ = ["enabled", "get_redis", "load", "store", "drop", "errors", "status"]
+__all__ = ["enabled", "get_redis", "load", "load_json", "store", "store_json",
+           "drop", "errors", "status"]

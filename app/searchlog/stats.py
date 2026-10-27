@@ -1,8 +1,13 @@
-"""search_log 的只读聚合：只出统计值，不暴露单条请求。"""
+"""search_daily 的只读聚合：只出统计值，不读 search_log。
+
+仪表只能查这张汇总表 —— 任何参数组合都不会落到 search_log 上。
+汇总表由 app/searchlog/rollup.py 每天凌晨维护，口径见那里。
+"""
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 import psycopg
 from psycopg.rows import dict_row
@@ -18,28 +23,25 @@ DEFAULT_LIMIT = 5
 
 _CONNECT_TIMEOUT = 2.0
 
-UNAVAILABLE = (psycopg.OperationalError, RuntimeError)
+TZ = ZoneInfo("Asia/Shanghai")
+
+UNAVAILABLE = (psycopg.Error, RuntimeError)
 
 Granularity = Literal["day", "week", "month"]
 
 _FILTER = """
-    WHERE page = 1
-      AND (created_at AT TIME ZONE 'Asia/Shanghai')::date BETWEEN %(start)s AND %(end)s
+    WHERE day BETWEEN %(start)s AND %(end)s
       AND (%(kind)s::text IS NULL OR kind = %(kind)s)
-      AND (%(only_me)s::boolean = false OR user_id = %(user_id)s)
 """
 
-# 不带 CTE 和日期序列：直接 group by 才能走并行顺序扫描。
-# 空桶在 Python 里补，日期序列放在 SQL 里会让计划退回单进程。
 _DAILY = f"""
-SELECT date_trunc(%(granularity)s::text,
-                  (created_at AT TIME ZONE 'Asia/Shanghai')::timestamp)::date AS bucket,
-       count(*) AS searches,
-       count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0) AS zero_result,
-       count(*) FILTER (WHERE outcome = 'error') AS errors,
-       sum(latency_ms) FILTER (WHERE outcome = 'ok') AS latency_sum,
-       count(*) FILTER (WHERE outcome = 'ok') AS ok_count
-FROM search_log
+SELECT date_trunc(%(granularity)s::text, day::timestamp)::date AS bucket,
+       sum(searches)::bigint    AS searches,
+       sum(zero_result)::bigint AS zero_result,
+       sum(errors)::bigint      AS errors,
+       sum(latency_sum)::bigint AS latency_sum,
+       sum(ok_count)::bigint    AS ok_count
+FROM search_daily
 {_FILTER}
   AND (%(queries)s::text[] IS NULL OR query = ANY(%(queries)s))
 GROUP BY 1
@@ -47,8 +49,8 @@ ORDER BY 1
 """
 
 _TOP = f"""
-SELECT query, count(*) AS count
-FROM search_log
+SELECT query, sum(searches)::bigint AS count
+FROM search_daily
 {_FILTER}
 GROUP BY query
 ORDER BY count DESC, query ASC
@@ -56,14 +58,42 @@ LIMIT %(limit)s
 """
 
 _SELECTED = f"""
-SELECT query, count(*) AS count
-FROM search_log
+SELECT query, sum(searches)::bigint AS count
+FROM search_daily
 {_FILTER}
   AND query = ANY(%(queries)s)
 GROUP BY query
 """
 
-_TODAY = "SELECT (now() AT TIME ZONE 'Asia/Shanghai')::date AS today"
+_DATA_UNTIL = "SELECT max(day) AS day FROM search_daily"
+
+
+def today() -> date:
+    return datetime.now(TZ).date()
+
+
+def resolve_range(days: int, start: date | None, end: date | None,
+                  *, now: date | None = None) -> tuple[date, date]:
+    """解析并校验日期区间。路由层先调它，缓存键才用得上解析后的区间。"""
+    if days < 1:
+        raise ValueError("days must be >= 1")
+
+    end = end or now or today()
+    start = start or end - timedelta(days=days - 1)
+
+    if start > end:
+        raise ValueError("start must be <= end")
+    if (end - start).days + 1 > MAX_SPAN_DAYS:
+        raise ValueError(f"span: at most {MAX_SPAN_DAYS} days")
+    return start, end
+
+
+def normalize_queries(queries: list[str] | None) -> list[str]:
+    picked = [item.strip() for item in (queries or []) if item.strip()]
+    picked = list(dict.fromkeys(picked))
+    if len(picked) > MAX_QUERIES:
+        raise ValueError(f"queries: at most {MAX_QUERIES} items")
+    return picked
 
 
 def _bucket_start(day: date, granularity: Granularity) -> date:
@@ -84,79 +114,71 @@ def _next_bucket(day: date, granularity: Granularity) -> date:
     return day + timedelta(days=1)
 
 
-def _normalize_queries(queries: list[str] | None) -> list[str]:
-    picked = [item.strip() for item in (queries or []) if item.strip()]
-    picked = list(dict.fromkeys(picked))
-    if len(picked) > MAX_QUERIES:
-        raise ValueError(f"queries: at most {MAX_QUERIES} items")
-    return picked
-
-
-def overview(user_id: int | None, days: int = DEFAULT_DAYS,
+def overview(days: int = DEFAULT_DAYS,
              start: date | None = None, end: date | None = None,
-             queries: list[str] | None = None, scope: Literal["all", "me"] = "all",
+             queries: list[str] | None = None,
              kind: Literal["oirf", "report"] | None = None,
              granularity: Granularity = "day",
              limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
-    if scope == "me" and user_id is None:
-        raise ValueError("scope=me needs a user_id")
-    if days < 1:
-        raise ValueError("days must be >= 1")
     if granularity not in ("day", "week", "month"):
         raise ValueError("granularity must be day, week or month")
 
-    queries = _normalize_queries(queries)
+    queries = normalize_queries(queries)
     limit = max(1, min(limit, MAX_TOP_QUERIES))
+
+    now = today()
+    start, end = resolve_range(days, start, end, now=now)
 
     with get_pg().connection(timeout=_CONNECT_TIMEOUT) as conn:
         with conn.cursor(row_factory=dict_row) as cur:
-            cur.execute(_TODAY)
-            today = cur.fetchone()["today"]
+            cur.execute(_DATA_UNTIL)
+            data_until = cur.fetchone()["day"]
 
-            end = end or today
-            start = start or end - timedelta(days=days - 1)
+            # 今天的数据还没汇总，末端截到汇总表最新的那一天。
+            stop = min(end, data_until) if data_until else None
+            in_range = stop is not None and stop >= start
 
-            if start > end:
-                raise ValueError("start must be <= end")
-            if (end - start).days + 1 > MAX_SPAN_DAYS:
-                raise ValueError(f"span: at most {MAX_SPAN_DAYS} days")
-
-            params = {
-                "start": start,
-                "end": end,
-                "granularity": granularity,
-                "queries": queries or None,
-                "kind": kind,
-                "only_me": scope == "me",
-                "user_id": user_id,
-                "limit": limit,
-            }
-
-            cur.execute(_DAILY, params)
-            rows = cur.fetchall()
-            cur.execute(_TOP, params)
-            top = cur.fetchall()
-
+            rows: list[dict[str, Any]] = []
+            top: list[dict[str, Any]] = []
             selected: dict[str, int] = {}
-            if queries:
-                cur.execute(_SELECTED, params)
-                selected = {row["query"]: int(row["count"]) for row in cur.fetchall()}
+
+            if in_range:
+                params = {
+                    "start": start,
+                    "end": stop,
+                    "granularity": granularity,
+                    "queries": queries or None,
+                    "kind": kind,
+                    "limit": limit,
+                }
+
+                cur.execute(_DAILY, params)
+                rows = cur.fetchall()
+                cur.execute(_TOP, params)
+                top = cur.fetchall()
+
+                if queries:
+                    cur.execute(_SELECTED, params)
+                    selected = {row["query"]: int(row["count"]) for row in cur.fetchall()}
 
     by_bucket = {row["bucket"]: row for row in rows}
     buckets: list[dict[str, Any]] = []
     cursor = _bucket_start(start, granularity)
-    while cursor <= end:
+    while in_range and cursor <= stop:
         row = by_bucket.get(cursor)
         buckets.append({
             "date": cursor.isoformat(),
             "searches": int(row["searches"]) if row else 0,
             "zero_result": int(row["zero_result"]) if row else 0,
             "errors": int(row["errors"]) if row else 0,
+            "latency_sum": int(row["latency_sum"]) if row else 0,
+            "ok_count": int(row["ok_count"]) if row else 0,
         })
         cursor = _next_bucket(cursor, granularity)
 
-    searches = sum(item["searches"] for item in buckets)
-    zero_result = sum(item["zero_result"] for item in buckets)
+    searches = sum(int(row["searches"]) for row in rows)
+    zero_result = sum(int(row["zero_result"]) for row in rows)
+    errors = sum(int(row["errors"]) for row in rows)
     latency_sum = sum(int(row["latency_sum"]) for row in rows)
     ok_count = sum(int(row["ok_count"]) for row in rows)
 
@@ -166,6 +188,7 @@ def overview(user_id: int | None, days: int = DEFAULT_DAYS,
             "end": end.isoformat(),
             "granularity": granularity,
         },
+        "data_until": data_until.isoformat() if data_until else None,
         "daily": buckets,
         "top_queries": [
             {"query": row["query"], "count": int(row["count"])}
@@ -177,7 +200,11 @@ def overview(user_id: int | None, days: int = DEFAULT_DAYS,
         ],
         "totals": {
             "searches": searches,
+            "zero_result": zero_result,
+            "errors": errors,
             "zero_result_rate": round(zero_result / searches, 4) if searches else 0.0,
+            "latency_sum": latency_sum,
+            "ok_count": ok_count,
             "avg_latency_ms": int(round(latency_sum / ok_count)) if ok_count else 0,
         },
     }

@@ -197,16 +197,19 @@ function reportStats() {
   }
 }
 
-function searchStats(user, { days, start, end, queries, scope, kind, granularity, limit }) {
+function searchStats({ days, start, end, queries, kind, granularity, limit }) {
+  // 汇总表只到昨天，今天的数据不在范围内
+  const dataUntil = dateKey(addDays(dayStart(0), -1))
   const rangeEnd = end ?? dayStart(0)
   const rangeStart = start ?? addDays(rangeEnd, -(days - 1))
   const startKey = dateKey(rangeStart)
   const endKey = dateKey(rangeEnd)
+  const stopKey = endKey < dataUntil ? endKey : dataUntil
+  const stop = dateFromKey(stopKey)
 
   const all = events.filter((event) => {
-    if (event.date < startKey || event.date > endKey) return false
+    if (event.date < startKey || event.date > stopKey) return false
     if (kind && event.kind !== kind) return false
-    if (scope === 'me' && event.userId !== user.id) return false
     return true
   })
 
@@ -217,17 +220,20 @@ function searchStats(user, { days, start, end, queries, scope, kind, granularity
   const daily = []
   const byBucket = new Map()
   for (let cursor = bucketStart(rangeStart, granularity);
-       cursor <= rangeEnd;
+       cursor <= stop;
        cursor = nextBucket(cursor, granularity)) {
     const key = dateKey(cursor)
-    const row = { date: key, searches: 0, zero_result: 0, errors: 0 }
+    const row = {
+      date: key,
+      searches: 0,
+      zero_result: 0,
+      errors: 0,
+      latency_sum: 0,
+      ok_count: 0,
+    }
     daily.push(row)
     byBucket.set(key, row)
   }
-
-  let zeroResult = 0
-  let latencySum = 0
-  let latencyCount = 0
 
   for (const event of hits) {
     const key = dateKey(bucketStart(dateFromKey(event.date), granularity))
@@ -241,13 +247,10 @@ function searchStats(user, { days, start, end, queries, scope, kind, granularity
       continue
     }
 
-    if (event.total === 0) {
-      row.zero_result += 1
-      zeroResult += 1
-    }
+    if (event.total === 0) row.zero_result += 1
 
-    latencySum += event.latencyMs
-    latencyCount += 1
+    row.latency_sum += event.latencyMs
+    row.ok_count += 1
   }
 
   const queryCounts = new Map()
@@ -260,10 +263,16 @@ function searchStats(user, { days, start, end, queries, scope, kind, granularity
     .sort((a, b) => b.count - a.count || a.query.localeCompare(b.query, 'zh'))
     .slice(0, limit)
 
-  const searches = daily.reduce((sum, row) => sum + row.searches, 0)
+  const sum = (field) => daily.reduce((total, row) => total + row[field], 0)
+  const searches = sum('searches')
+  const zeroResult = sum('zero_result')
+  const errors = sum('errors')
+  const latencySum = sum('latency_sum')
+  const okCount = sum('ok_count')
 
   return {
     range: { start: startKey, end: endKey, granularity },
+    data_until: dataUntil,
     daily,
     top_queries: topQueries,
     selected: queries.map((query) => ({
@@ -272,14 +281,17 @@ function searchStats(user, { days, start, end, queries, scope, kind, granularity
     })),
     totals: {
       searches,
+      zero_result: zeroResult,
+      errors,
       zero_result_rate: searches ? Number((zeroResult / searches).toFixed(4)) : 0,
-      avg_latency_ms: latencyCount ? Math.round(latencySum / latencyCount) : 0,
+      latency_sum: latencySum,
+      ok_count: okCount,
+      avg_latency_ms: okCount ? Math.round(latencySum / okCount) : 0,
     },
   }
 }
 
 function parseSearchParams(params) {
-  const scope = params.get('scope') ?? 'all'
   const kind = params.get('kind')
   const granularity = params.get('granularity') ?? 'day'
   const daysText = params.get('days')
@@ -306,14 +318,6 @@ function parseSearchParams(params) {
       loc: ['query', 'limit'],
       msg: `Input should be between 1 and ${MAX_TOP_QUERIES}`,
       type: 'less_than_equal',
-    })
-  }
-
-  if (scope !== 'all' && scope !== 'me') {
-    errors.push({
-      loc: ['query', 'scope'],
-      msg: "Input should be 'all' or 'me'",
-      type: 'literal_error',
     })
   }
 
@@ -370,7 +374,6 @@ function parseSearchParams(params) {
     start,
     end,
     queries,
-    scope,
     kind,
     granularity,
     limit,
@@ -388,8 +391,8 @@ export default function devStatsMock() {
         const url = new URL(req.url, 'http://localhost')
         if (req.method !== 'GET') return next()
 
-        const isReports = url.pathname === '/api/v1/stats/reports'
-        const isSearch = url.pathname === '/api/v1/stats/search'
+        const isReports = url.pathname === '/api/v1/stats/report-library'
+        const isSearch = url.pathname === '/api/v1/stats/search-activity'
         if (!isReports && !isSearch) return next()
 
         await delay(180)
@@ -403,11 +406,11 @@ export default function devStatsMock() {
         if (parsed.errors.length) return send(res, 422, { detail: parsed.errors })
         if (parsed.error) return send(res, 422, { detail: parsed.error })
 
-        return send(res, 200, searchStats(user, parsed))
+        return send(res, 200, searchStats(parsed))
       })
 
       server.config.logger.info(
-        '  stats mock 已启用：GET /api/v1/stats/reports、GET /api/v1/stats/search（只算 page = 1）',
+        '  stats mock 已启用：GET /api/v1/stats/report-library、GET /api/v1/stats/search-activity（只算 page = 1）',
       )
     },
   }

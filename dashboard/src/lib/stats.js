@@ -1,7 +1,7 @@
 import { apiFetch, errorText, readJson } from "./api.js";
 
 export async function getReportStats() {
-  const res = await apiFetch("/api/v1/stats/reports");
+  const res = await apiFetch("/api/v1/stats/report-library");
 
   const data = await readJson(res);
   if (!res.ok) {
@@ -15,14 +15,12 @@ export async function getSearchStats({
   end = "",
   days = 14,
   queries = [],
-  scope = "all",
   kind = "",
   granularity = "day",
   limit = 5,
 } = {}) {
   const params = new URLSearchParams({
     days: String(days),
-    scope,
     granularity,
     limit: String(limit),
   });
@@ -33,7 +31,7 @@ export async function getSearchStats({
     params.append("queries", query);
   }
 
-  const res = await apiFetch(`/api/v1/stats/search?${params}`);
+  const res = await apiFetch(`/api/v1/stats/search-activity?${params}`);
 
   const data = await readJson(res);
   if (!res.ok) {
