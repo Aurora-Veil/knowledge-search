@@ -1,8 +1,6 @@
 # Dashboard
 
-knowledge-search 的新前端，React 19 + Vite + React Router。
-
-`static/` 里是构建后的产物，此处为源码。
+knowledge-search 的新前端源码，React 19 + Vite + React Router。
 
 ## 开发步骤
 

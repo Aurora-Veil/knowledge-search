@@ -10,6 +10,8 @@ logs/
 _tmp/
 scratch/
 
+deploy/
+
 .env
 .env.*
 

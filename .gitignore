@@ -27,6 +27,9 @@ _tmp/
 scratch/
 *.log
 
+# deploy：本地运行产物，含 token、公网 IP、解压出来的二进制，整目录不进仓库
+deploy/
+
 # 压测结果
 stress/*.json
 stress/archive/
