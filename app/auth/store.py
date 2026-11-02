@@ -167,28 +167,6 @@ class UserStore:
                 self._cache.pop(user_id, None)
             return cur.rowcount > 0
 
-    def set_active(self, user_id: int, active: bool) -> bool:
-        with _connection() as conn:
-            cur = conn.execute(
-                "UPDATE users SET is_active = %s, updated_at = now() WHERE id = %s",
-                (active, user_id),
-            )
-            if cur.rowcount > 0:
-                self._cache.pop(user_id, None)
-            return cur.rowcount > 0
-
-    def set_role(self, user_id: int, role: str) -> bool:
-        if role not in ROLES:
-            raise ValueError(f"unknown role: {role}")
-        with _connection() as conn:
-            cur = conn.execute(
-                "UPDATE users SET role = %s, updated_at = now() WHERE id = %s",
-                (role, user_id),
-            )
-            if cur.rowcount > 0:
-                self._cache.pop(user_id, None)
-            return cur.rowcount > 0
-
     def count(self) -> int:
         with _connection() as conn:
             return conn.execute("SELECT count(*) FROM users").fetchone()[0]

@@ -103,3 +103,10 @@
 - `/ui/` 改为只提供 React 构建产物，旧手写静态页面删除；开发期 mock 后端移除，开发需连接真实 FastAPI
 - Vite 增加 `/docs` 与 `/openapi.json` 代理；登录页移除“回到概览”
 - 重构文档：重写 README、`dashboard/README.md` 与搜索 API 文档，新增概览统计 API 文档
+
+### 2026-11-02 · 后台拆分与用户管理
+
+- 后台拆分：`users` 加 `role`，新增 `AdminUser` 守卫和 `admin_actions` 留痕，区分管理员与正常用户
+- 统计与用户管理接口全部收进管理员账号 `/api/v1/admin/*`，普通账号返回 `403`
+- 检索端新增 `GET /api/v1/stats/summary`，只给报告库概览数字
+- 新增 `deploy/`：VPS 用 nginx 托管前端，`/api` 经 frp 隧道回本地 8000，含初始化与发布脚本，整个目录不进仓库

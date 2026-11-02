@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 
 from ...auth.deps import get_current_admin
-from . import stats
+from . import actions, stats, users
 
 router = APIRouter(
     prefix="/api/v1/admin",
@@ -11,3 +11,5 @@ router = APIRouter(
 )
 
 router.include_router(stats.router)
+router.include_router(users.router)
+router.include_router(actions.router)
