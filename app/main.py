@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import db
 from .mcp import mcp
-from .routers import associations, auth, health, objects, projects, reports, search, history, stats
+from .routers import admin, associations, auth, health, objects, projects, reports, search, history, stats
 from .search.encoder import _start_warmup
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -42,15 +42,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# @app.middleware("http")
-# async def ui_no_cache(request: Request, call_next):
-#     """静态页面每次都回源校验。"""
-#     response = await call_next(request)
-#     if request.url.path.startswith(("/ui", "/ui/")):
-#         response.headers["Cache-Control"] = "no-cache"
-#     return response
-
 app.include_router(auth.router)
 app.include_router(health.router)
 app.include_router(search.router)
@@ -59,6 +50,7 @@ app.include_router(objects.router)
 app.include_router(associations.router)
 app.include_router(projects.router)
 app.include_router(history.router)
+app.include_router(admin.router)
 app.include_router(stats.router)
 
 app.mount("/ui", StaticFiles(directory="static", html=True))

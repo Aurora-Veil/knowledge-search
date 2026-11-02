@@ -44,6 +44,7 @@ class User:
     id: int
     username: str
     password_hash: str
+    role: str = "user"
     is_active: bool = True
     created_at: datetime | None = None
 
@@ -77,12 +78,12 @@ def _connection() -> Generator[psycopg.Connection, None, None]:
         raise UserStoreUnavailable("database unavailable") from exc
 
 
-_USER_COLUMNS = "id, username, password_hash, is_active, created_at"
+ROLE_USER = "user"
+ROLE_ADMIN = "admin"
+ROLES = (ROLE_USER, ROLE_ADMIN)
 
-# The auth dependency calls get() once per request, so the same few rows are
-# re-read thousands of times a second. Five seconds is long enough that a hot
-# account is read once per TTL instead of once per request, and short enough
-# that disabling an account takes effect within five seconds.
+_USER_COLUMNS = "id, username, password_hash, role, is_active, created_at"
+
 _USER_CACHE_TTL = 5.0
 _USER_CACHE_MAX = 1024
 
@@ -176,6 +177,18 @@ class UserStore:
                 self._cache.pop(user_id, None)
             return cur.rowcount > 0
 
+    def set_role(self, user_id: int, role: str) -> bool:
+        if role not in ROLES:
+            raise ValueError(f"unknown role: {role}")
+        with _connection() as conn:
+            cur = conn.execute(
+                "UPDATE users SET role = %s, updated_at = now() WHERE id = %s",
+                (role, user_id),
+            )
+            if cur.rowcount > 0:
+                self._cache.pop(user_id, None)
+            return cur.rowcount > 0
+
     def count(self) -> int:
         with _connection() as conn:
             return conn.execute("SELECT count(*) FROM users").fetchone()[0]
@@ -186,8 +199,9 @@ def _row_to_user(row: tuple) -> User:
         id=row[0],
         username=row[1],
         password_hash=row[2],
-        is_active=row[3],
-        created_at=row[4],
+        role=row[3],
+        is_active=row[4],
+        created_at=row[5],
     )
 
 

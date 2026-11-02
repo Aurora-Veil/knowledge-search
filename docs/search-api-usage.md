@@ -36,8 +36,9 @@ TOKEN=$(curl -s -X POST "$API/auth/token" \
 | `GET /api/v1/history` | 检索记录 |
 | `POST /api/v1/reports/search` | 报告检索 |
 | `GET /api/v1/reports/{report_id}` | 报告详情 |
-| `GET /api/v1/stats/report-library` | 报告库统计 |
-| `GET /api/v1/stats/search-activity` | 检索统计 |
+| `GET /api/v1/stats/summary` | 报告库概览数字 |
+| `GET /api/v1/admin/stats/report-library` | 报告库统计，仅管理员 |
+| `GET /api/v1/admin/stats/search-activity` | 检索统计，仅管理员 |
 
 `object_type` 取 `source`、`evidence`、`viewpoint`。对象与关联属于图谱，报告是独立数据集。
 
@@ -63,10 +64,6 @@ TOKEN=$(curl -s -X POST "$API/auth/token" \
 | `confidence_level`、`publisher` | source、evidence |
 | `claim_type`、`applicable_scenario`、`cross_validation_mode`、`evidence_ids` | viewpoint |
 | `source_ids` | evidence、viewpoint |
-
-`type=all` 时，筛选对某类不适用，该类直接排除。`source_ids` 和 `evidence_ids` 用于引用溯源。筛选取值以实际入库数据为准。
-
-`q` 同时走词法和向量。向量比对整篇拼接文本，词法只匹配固定的名称、标题、指标等字段，所以 `total` 只代表词法命中，可能小于 `hits` 条数。
 
 ```bash
 curl -s -X POST "$API/search" \
@@ -99,8 +96,6 @@ curl -s -X POST "$API/search" \
 }
 ```
 
-带 `q` 时 `score` 是 RRF 名次分，`raw_score` 是 BM25，`knn_score` 是向量分，不要跨查询比较；纯筛选时 `score` 为 0。编码不可用且本次需要向量时，`degraded=true`，`match_source` 只剩 `bm25`。
-
 列表只返回卡片。长文本用对象详情取。
 
 ## 完整对象
@@ -114,7 +109,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   "$API/objects/viewpoint/viewpoint:V001?project_id=1"
 ```
 
-响应包含 `identity`、`presentation`、`reasoning`、`experience`、`responsibility`、`lifecycle` 等完整字段。
+响应包含完整字段。
 
 ## 关联子图
 
@@ -174,8 +169,6 @@ curl -H "Authorization: Bearer $TOKEN" \
 | `page`、`size` | 默认 `1`、`20`，`page * size` 不超过 `200` |
 | `highlight` | 默认 `true` |
 
-`q` 的词法权重是 `title` 3、`industry.text` 2、`summary` 1，向量文本是 `title + summary`。`time_weight` 只改排序，不改变命中文档。
-
 ```bash
 curl -s -X POST "$API/reports/search" \
   -H "Authorization: Bearer $TOKEN" \
@@ -207,16 +200,12 @@ curl -s -X POST "$API/reports/search" \
 }
 ```
 
-`total` 同样只统计词法命中，`degraded` 含义与对象检索相同。列表不含 `summary`。
-
 详情：
 
 ```bash
 curl -H "Authorization: Bearer $TOKEN" \
   "$API/reports/62e33fbc2f669532f23e1cd8"
 ```
-
-详情比列表多 `summary`，少 `score`、`raw_score`、`knn_score`、`match_source`、`highlight`。
 
 ## 检索记录
 
@@ -241,7 +230,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ]
 ```
 
-`kind`、`query`、`filters` 相同就是同一条记录。翻页不新增行，只更新 `last_page` 和 `result_total`；`search_count` 只在 `page=1` 时加一。
+对同一检索词的翻页阅读不记为一次检索，即`search_count` 只在 `page=1` 时加一。
 
 ## 错误
 

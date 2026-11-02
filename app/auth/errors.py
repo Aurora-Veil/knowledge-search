@@ -21,6 +21,14 @@ def inactive() -> HTTPException:
     )
 
 
+def forbidden(detail: str = "Admin privilege required") -> HTTPException:
+    """403: the caller is an active user, but not an admin."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=detail,
+    )
+
+
 def unavailable() -> HTTPException:
     """503 for a database outage."""
     return HTTPException(

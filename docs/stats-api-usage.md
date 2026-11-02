@@ -1,24 +1,27 @@
 # 概览统计 API
 
-两个只读接口，返回聚合值，不带单条日志和用户身份。都要带 `Authorization: Bearer <token>`。
+三个只读接口，返回聚合值，不带单条日志和用户身份。两个全站统计在 `/api/v1/admin` 下，只有管理员能调；检索端只有一个概览数字。
+
+都要带 `Authorization: Bearer <token>`。普通账号调 `/api/v1/admin/*` 返回 `403`。
 
 `$API` 指 `http://127.0.0.1:8000/api/v1`。
 
 | 接口 | 数据源 | 用途 |
 | --- | --- | --- |
-| `GET /api/v1/stats/report-library` | Elasticsearch 聚合 | 报告总量、年份、行业、版式、发布区间 |
-| `GET /api/v1/stats/search-activity` | `search_daily` | 检索量、零结果、失败、Top 词 |
+| `GET /api/v1/stats/summary` | Elasticsearch 聚合 | 报告总量、行业数、发布区间 |
+| `GET /api/v1/admin/stats/report-library` | Elasticsearch 聚合 | 报告总量、年份、行业、版式、发布区间 |
+| `GET /api/v1/admin/stats/search-activity` | `search_daily` | 检索量、零结果、失败、Top 词 |
 
 `search-activity` 只读 `search_daily`，不读 `search_log`。汇总表通常只到昨天，`data_until` 是实际最后一天。
 
 结果会缓存：报告库 10 分钟；检索行为结束日早于今天时缓存 24 小时，否则 60 秒。
 
-## 报告库
+## 报告库（管理员）
 
-`GET /api/v1/stats/report-library`，无参数。
+`GET /api/v1/admin/stats/report-library`，无参数。
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" "$API/stats/report-library"
+curl -H "Authorization: Bearer $TOKEN" "$API/admin/stats/report-library"
 ```
 
 ```jsonc
@@ -78,9 +81,9 @@ curl -H "Authorization: Bearer $TOKEN" "$API/stats/report-library"
 
 ES 不可用时返回 `503`。
 
-## 检索行为
+## 检索行为（管理员）
 
-`GET /api/v1/stats/search-activity`
+`GET /api/v1/admin/stats/search-activity`
 
 | 参数 | 默认 | 说明 |
 | --- | --- | --- |
@@ -93,7 +96,7 @@ ES 不可用时返回 `503`。
 | `limit` | `5` | `top_queries` 条数，`1` 到 `20` |
 
 ```bash
-curl -G -H "Authorization: Bearer $TOKEN" "$API/stats/search-activity" \
+curl -G -H "Authorization: Bearer $TOKEN" "$API/admin/stats/search-activity" \
   --data-urlencode "days=1" \
   --data-urlencode "queries=储能" \
   --data-urlencode "limit=3"
@@ -155,6 +158,25 @@ curl -G -H "Authorization: Bearer $TOKEN" "$API/stats/search-activity" \
 - `latency_sum` 和 `ok_count` 可以按桶相加；不要对 `avg_latency_ms` 求平均。
 
 `start > end`、跨度超过 366 天、`queries` 超过 20 个时返回 `422`。数据库不可用返回 `503`。
+
+## 检索端概览数字
+
+`GET /api/v1/stats/summary`，无参数。登录即可调，检索首页那一行字用它。
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" "$API/stats/summary"
+```
+
+```jsonc
+{
+  "total": 5514,
+  "industry_count": 1789,
+  "publish_range": { "from": "2018-03-05", "to": "2026-08-21" },
+  "generated_at": "2026-11-02T07:12:40+00:00"
+}
+```
+
+只跑总量、行业去重数和发布区间三个聚合，缓存 10 分钟。ES 不可用返回 `503`。
 
 ## 维护
 

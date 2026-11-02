@@ -7,7 +7,7 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from . import errors
-from .store import User, UserStoreUnavailable, user_store
+from .store import ROLE_ADMIN, User, UserStoreUnavailable, user_store
 from .token import decode_access_token
 
 
@@ -41,5 +41,14 @@ def get_current_active_user(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-# 端点签名写 `user: ActiveUser`，即"必须已登录且账号未停用"。
 ActiveUser = Annotated[User, Depends(get_current_active_user)]
+
+
+def get_current_admin(user: User = Depends(get_current_active_user)) -> User:
+    """在已登录、未停用的前提下，只放行管理员。"""
+    if user.role != ROLE_ADMIN:
+        raise errors.forbidden()
+    return user
+
+
+AdminUser = Annotated[User, Depends(get_current_admin)]

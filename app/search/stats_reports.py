@@ -65,6 +65,29 @@ def _industry_years(names: list[str]) -> dict[str, dict[str, Any]]:
     }
 
 
+_SUMMARY_AGGS = {
+    "industry_total": {"cardinality": {"field": "industry"}},
+    "publish_min": {"min": {"field": "publish_date", "format": "yyyy-MM-dd"}},
+    "publish_max": {"max": {"field": "publish_date", "format": "yyyy-MM-dd"}},
+}
+
+
+def summary() -> dict[str, Any]:
+    """给检索首页"""
+    res = get_es().search(index=INDEX, size=0, track_total_hits=True,
+                          aggs=_SUMMARY_AGGS)
+    aggs = res["aggregations"]
+    return {
+        "total": int(res["hits"]["total"]["value"]),
+        "industry_count": int(aggs["industry_total"]["value"]),
+        "publish_range": {
+            "from": aggs["publish_min"].get("value_as_string"),
+            "to": aggs["publish_max"].get("value_as_string"),
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def overview() -> dict[str, Any]:
     res = get_es().search(index=INDEX, size=0, track_total_hits=True, aggs=_AGGS)
     aggs = res["aggregations"]

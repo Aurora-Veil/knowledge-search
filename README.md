@@ -51,7 +51,7 @@ python scripts/ingest_reports.py
 
 ## 接口
 
-除注册、登录和健康检查外，都需要 `Authorization: Bearer <token>`。
+除注册、登录和健康检查外，都需要 `Authorization: Bearer <token>`。`/api/v1/admin/*` 另需管理员角色，普通账号返回 403。
 
 | 接口 | 用途 |
 | --- | --- |
@@ -65,8 +65,9 @@ python scripts/ingest_reports.py
 | `GET /api/v1/associations/{object_type}/{oirf_id}` | 关联子图 |
 | `GET /api/v1/projects` | 项目列表 |
 | `GET /api/v1/history` | 检索记录 |
-| `GET /api/v1/stats/report-library` | 报告库概览 |
-| `GET /api/v1/stats/search-activity` | 检索趋势 |
+| `GET /api/v1/stats/summary` | 报告库概览数字 |
+| `GET /api/v1/admin/stats/report-library` | 报告库概览，仅管理员 |
+| `GET /api/v1/admin/stats/search-activity` | 检索趋势，仅管理员 |
 | `GET /api/v1/health` | 健康检查 |
 | `GET /api/v1/health/ready` | 依赖就绪检查 |
 

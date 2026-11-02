@@ -54,6 +54,7 @@ class UserResponse(BaseModel):
 
     id: int
     username: str
+    role: str = "user"
     is_active: bool
     created_at: datetime | None = None
 
@@ -71,10 +72,6 @@ class TokenResponse(BaseModel):
 def register(payload: RegisterRequest) -> User:
     """Create an account."""
     try:
-        # Look the name up before hashing: a duplicate would otherwise burn a whole
-        # Argon2id (64 MiB, ~50 ms) for nothing, and any caller can ask for that on
-        # purpose. The unique index still decides, so a race that slips past this
-        # pre-check costs one wasted hash at most, not one per attempt.
         existing = user_store.find_by_username(payload.username)
     except UserStoreUnavailable as exc:
         raise errors.unavailable() from exc
