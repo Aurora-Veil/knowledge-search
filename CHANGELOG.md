@@ -110,3 +110,10 @@
 - 统计与用户管理接口全部收进管理员账号 `/api/v1/admin/*`，普通账号返回 `403`
 - 检索端新增 `GET /api/v1/stats/summary`，只给报告库概览数字
 - 新增 `deploy/`：VPS 用 nginx 托管前端，`/api` 经 frp 隧道回本地 8000，含初始化与发布脚本，整个目录不进仓库
+
+### 2026-11-03 · 检索统计接口
+
+- 统计功能拆到管理员：检索请求明细与汇总挂在 `/api/v1/admin/search-logs`，普通账号返回 `403`
+- 新增明细与汇总两个接口，汇总表扩到延迟直方图、错误类型、按用户三张，`rollup.py` 一次扫描写四张
+- 更新文档：新增 `docs/admin-api-usage.md`，`docs/stats-api-usage.md` 只留检索端概览，README 补接口表
+
