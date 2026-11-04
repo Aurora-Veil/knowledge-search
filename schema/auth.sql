@@ -139,4 +139,58 @@ CREATE TABLE IF NOT EXISTS search_daily (
 );
 
 
+-- 按天的延迟直方图：桶宽 50 ms，0..1000 ms 落在 1..20，超过 1000 落 21
+-- 由 app/searchlog/rollup.py 维护，口径同 search_daily：只算 page = 1 且成功的请求
+CREATE TABLE IF NOT EXISTS search_latency_daily (
+    day    DATE    NOT NULL,
+    kind   TEXT    NOT NULL,
+    bucket INTEGER NOT NULL,
+    count  INTEGER NOT NULL,
+
+    PRIMARY KEY (day, kind, bucket),
+
+    CONSTRAINT search_latency_daily_kind_known   CHECK (kind IN ('oirf', 'report')),
+    CONSTRAINT search_latency_daily_bucket_range CHECK (bucket BETWEEN 0 AND 21),
+    CONSTRAINT search_latency_daily_count_pos    CHECK (count > 0)
+);
+
+
+-- 按天的失败原因，口径同 search_daily
+CREATE TABLE IF NOT EXISTS search_error_daily (
+    day        DATE    NOT NULL,
+    kind       TEXT    NOT NULL,
+    error_type TEXT    NOT NULL,
+    count      INTEGER NOT NULL,
+
+    PRIMARY KEY (day, kind, error_type),
+
+    CONSTRAINT search_error_daily_kind_known CHECK (kind IN ('oirf', 'report')),
+    CONSTRAINT search_error_daily_type_len    CHECK (length(error_type) <= 100),
+    CONSTRAINT search_error_daily_count_pos   CHECK (count > 0)
+);
+
+
+-- 按天按用户，口径同 search_daily
+CREATE TABLE IF NOT EXISTS search_user_daily (
+    day         DATE    NOT NULL,
+    user_id     BIGINT  NOT NULL,
+    kind        TEXT    NOT NULL,
+    searches    INTEGER NOT NULL,
+    zero_result INTEGER NOT NULL,
+    errors      INTEGER NOT NULL,
+    latency_sum BIGINT  NOT NULL,
+    ok_count    INTEGER NOT NULL,
+
+    PRIMARY KEY (day, user_id, kind),
+
+    CONSTRAINT search_user_daily_kind_known   CHECK (kind IN ('oirf', 'report')),
+    CONSTRAINT search_user_daily_counts_valid CHECK (searches >= 0
+                                                     AND zero_result >= 0
+                                                     AND errors >= 0
+                                                     AND ok_count >= 0
+                                                     AND zero_result <= searches
+                                                     AND errors <= searches)
+);
+
+
 --   DELETE FROM search_log WHERE created_at < now() - interval '90 days'

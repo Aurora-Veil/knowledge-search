@@ -1,4 +1,4 @@
-"""把 search_log 折叠成 search_daily。"""
+"""把 search_log 折叠成四张按天的汇总表。"""
 from __future__ import annotations
 
 import argparse
@@ -14,34 +14,81 @@ TZ = ZoneInfo("Asia/Shanghai")
 
 MAX_QUERY_CHARS = 500
 
+_BUCKET_MAX_MS = 1000
+_BUCKET_COUNT = 20
+
 _CONNECT_TIMEOUT = 5.0
 
-_DELETE = "DELETE FROM search_daily WHERE day = %(day)s"
+_DELETE = (
+    "DELETE FROM search_daily WHERE day = %(day)s",
+    "DELETE FROM search_latency_daily WHERE day = %(day)s",
+    "DELETE FROM search_error_daily WHERE day = %(day)s",
+    "DELETE FROM search_user_daily WHERE day = %(day)s",
+)
 
-_AGGREGATE = """
+# 四个 INSERT 共用一次 search_log 扫描：src 被引用四次，会被物化。
+_AGGREGATE = f"""
 WITH src AS (
-    SELECT kind,
+    SELECT user_id,
+           kind,
            left(query, %(chars)s) AS query,
            outcome,
            result_total,
-           latency_ms
+           error_type,
+           latency_ms,
+           width_bucket(latency_ms, 0, {_BUCKET_MAX_MS}, {_BUCKET_COUNT}) AS bucket
     FROM search_log
     WHERE page = 1
       AND created_at >= (%(day)s::date::timestamp AT TIME ZONE 'Asia/Shanghai')
       AND created_at <  ((%(day)s::date + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+),
+by_query AS (
+    INSERT INTO search_daily
+           (day, kind, query, searches, zero_result, errors, latency_sum, ok_count)
+    SELECT %(day)s::date,
+           kind,
+           query,
+           count(*),
+           count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0),
+           count(*) FILTER (WHERE outcome = 'error'),
+           coalesce(sum(latency_ms) FILTER (WHERE outcome = 'ok'), 0),
+           count(*) FILTER (WHERE outcome = 'ok')
+    FROM src
+    GROUP BY kind, query
+    RETURNING 1
+),
+by_latency AS (
+    INSERT INTO search_latency_daily (day, kind, bucket, count)
+    SELECT %(day)s::date, kind, bucket, count(*)
+    FROM src
+    WHERE outcome = 'ok'
+    GROUP BY kind, bucket
+    RETURNING 1
+),
+by_error AS (
+    INSERT INTO search_error_daily (day, kind, error_type, count)
+    SELECT %(day)s::date, kind, error_type, count(*)
+    FROM src
+    WHERE outcome = 'error'
+    GROUP BY kind, error_type
+    RETURNING 1
+),
+by_user AS (
+    INSERT INTO search_user_daily
+           (day, user_id, kind, searches, zero_result, errors, latency_sum, ok_count)
+    SELECT %(day)s::date,
+           user_id,
+           kind,
+           count(*),
+           count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0),
+           count(*) FILTER (WHERE outcome = 'error'),
+           coalesce(sum(latency_ms) FILTER (WHERE outcome = 'ok'), 0),
+           count(*) FILTER (WHERE outcome = 'ok')
+    FROM src
+    GROUP BY user_id, kind
+    RETURNING 1
 )
-INSERT INTO search_daily
-       (day, kind, query, searches, zero_result, errors, latency_sum, ok_count)
-SELECT %(day)s::date,
-       kind,
-       query,
-       count(*),
-       count(*) FILTER (WHERE outcome = 'ok' AND result_total = 0),
-       count(*) FILTER (WHERE outcome = 'error'),
-       coalesce(sum(latency_ms) FILTER (WHERE outcome = 'ok'), 0),
-       count(*) FILTER (WHERE outcome = 'ok')
-FROM src
-GROUP BY kind, query
+SELECT count(*) FROM by_query
 """
 
 _FIRST_LOG_DAY = """
@@ -62,12 +109,13 @@ def first_log_day() -> date | None:
 
 
 def rebuild(day: date) -> int:
-    """重算一天：先删后插，同一个事务。幂等。返回写入的行数。"""
+    """重算一天：先删后插，同一个事务。幂等。返回写入的检索词行数。"""
     with get_pg().connection(timeout=_CONNECT_TIMEOUT) as conn:
         with conn.cursor() as cur:
-            cur.execute(_DELETE, {"day": day})
+            for statement in _DELETE:
+                cur.execute(statement, {"day": day})
             cur.execute(_AGGREGATE, {"day": day, "chars": MAX_QUERY_CHARS})
-            return cur.rowcount
+            return cur.fetchone()[0]
 
 
 def rebuild_range(start: date, end: date) -> int:

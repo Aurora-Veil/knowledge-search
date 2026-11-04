@@ -1,8 +1,4 @@
-"""search_daily 的只读聚合：只出统计值，不读 search_log。
-
-仪表只能查这张汇总表 —— 任何参数组合都不会落到 search_log 上。
-汇总表由 app/searchlog/rollup.py 每天凌晨维护，口径见那里。
-"""
+"""search_daily 的只读聚合：只出统计值，不读 search_log。"""
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
@@ -73,7 +69,8 @@ def today() -> date:
 
 
 def resolve_range(days: int, start: date | None, end: date | None,
-                  *, now: date | None = None) -> tuple[date, date]:
+                  *, now: date | None = None,
+                  max_span: int = MAX_SPAN_DAYS) -> tuple[date, date]:
     """解析并校验日期区间。路由层先调它，缓存键才用得上解析后的区间。"""
     if days < 1:
         raise ValueError("days must be >= 1")
@@ -83,8 +80,8 @@ def resolve_range(days: int, start: date | None, end: date | None,
 
     if start > end:
         raise ValueError("start must be <= end")
-    if (end - start).days + 1 > MAX_SPAN_DAYS:
-        raise ValueError(f"span: at most {MAX_SPAN_DAYS} days")
+    if (end - start).days + 1 > max_span:
+        raise ValueError(f"span: at most {max_span} days")
     return start, end
 
 
