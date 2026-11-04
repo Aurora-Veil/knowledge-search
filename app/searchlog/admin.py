@@ -21,6 +21,7 @@ DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
 
 MAX_TOP_ERRORS = 10
+MAX_TOP_USERS = 5
 
 _BUCKET_MS = 50
 _BUCKET_MAX_MS = 1000
@@ -95,6 +96,20 @@ LIMIT %(limit)s
 """
 
 _DATA_UNTIL = "SELECT max(day) AS day FROM search_daily"
+
+# search_user_daily 只有 user_id，用户名要回 users 表取；账号被删时 username 为空。
+_TOP_USERS = """
+SELECT d.user_id,
+       u.username,
+       sum(d.searches)::bigint AS searches
+FROM search_user_daily d
+LEFT JOIN users u ON u.id = d.user_id
+WHERE d.day BETWEEN %(start)s AND %(end)s
+  AND (%(kind)s::text IS NULL OR d.kind = %(kind)s)
+GROUP BY d.user_id, u.username
+ORDER BY searches DESC, d.user_id ASC
+LIMIT %(user_limit)s
+"""
 
 
 def _bounds(start: date, end: date) -> tuple[datetime, datetime]:
@@ -192,6 +207,7 @@ def summary(*, days: int = DEFAULT_DAYS,
             counts: list[dict[str, Any]] = []
             buckets: list[dict[str, Any]] = []
             top_errors: list[dict[str, Any]] = []
+            top_users: list[dict[str, Any]] = []
 
             if in_range:
                 params = {
@@ -200,6 +216,7 @@ def summary(*, days: int = DEFAULT_DAYS,
                     "kind": kind,
                     "user_id": user_id,
                     "limit": MAX_TOP_ERRORS,
+                    "user_limit": MAX_TOP_USERS,
                 }
                 cur.execute(_COUNTS_USER if user_id else _COUNTS_ALL, params)
                 counts = cur.fetchall()
@@ -209,6 +226,8 @@ def summary(*, days: int = DEFAULT_DAYS,
                     buckets = cur.fetchall()
                     cur.execute(_TOP_ERRORS, params)
                     top_errors = cur.fetchall()
+                    cur.execute(_TOP_USERS, params)
+                    top_users = cur.fetchall()
 
     searches = sum(int(row["searches"]) for row in counts)
     zero_result = sum(int(row["zero_result"]) for row in counts)
@@ -253,5 +272,13 @@ def summary(*, days: int = DEFAULT_DAYS,
         "top_errors": [
             {"error_type": row["error_type"], "count": int(row["count"])}
             for row in top_errors
+        ],
+        "top_users": [
+            {
+                "user_id": row["user_id"],
+                "username": row["username"],
+                "searches": int(row["searches"]),
+            }
+            for row in top_users
         ],
     }

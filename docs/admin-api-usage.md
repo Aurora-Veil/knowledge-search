@@ -247,7 +247,10 @@ curl -H "Authorization: Bearer $TOKEN" \
     { "kind": "oirf", "searches": 30, "errors": 0, "zero_result": 18,
       "error_rate": 0, "zero_result_rate": 0.6, "avg_latency_ms": 70 }
   ],
-  "top_errors": [{ "error_type": "ValueError", "count": 3 }]
+  "top_errors": [{ "error_type": "ValueError", "count": 3 }],
+  "top_users": [
+    { "user_id": 2, "username": "stress1", "searches": 2910780 }
+  ]
 }
 ```
 
@@ -256,6 +259,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 - `latency_ms` 从 50 毫秒一档的直方图估算，超过 1000 毫秒一律报 `1000`。
 - 今天的数据还没汇总，`end` 截到 `data_until`，`requested_end` 是请求的结束日。
 - 带 `user_id` 时读 `search_user_daily`，`latency_ms` 和 `top_errors` 不适用，返回 `null` 和空列表。
+- `top_users` 按首页请求数取前 5，读 `search_user_daily`；账号删掉后 `username` 为 `null`，用 `user_id` 兜底。
+- 统计不区分角色，管理员账号的检索同样计入；今天的数据要等第二天汇总后才出现。
 
 ## 数据更新
 
