@@ -68,10 +68,16 @@ python scripts/ingest_reports.py
 | `GET /api/v1/stats/summary` | 报告库概览数字 |
 | `GET /api/v1/admin/stats/report-library` | 报告库概览，仅管理员 |
 | `GET /api/v1/admin/stats/search-activity` | 检索趋势，仅管理员 |
+| `GET /api/v1/admin/users` | 用户列表，仅管理员 |
+| `GET /api/v1/admin/users/{id}` | 用户详情，仅管理员 |
+| `PATCH /api/v1/admin/users/{id}` | 改角色、启停，仅管理员 |
+| `GET /api/v1/admin/actions` | 管理员操作记录，仅管理员 |
+| `GET /api/v1/admin/search-logs` | 检索请求明细，仅管理员 |
+| `GET /api/v1/admin/search-logs/summary` | 检索请求汇总，仅管理员 |
 | `GET /api/v1/health` | 健康检查 |
 | `GET /api/v1/health/ready` | 依赖就绪检查 |
 
-参数与响应见 [docs/search-api-usage.md](docs/search-api-usage.md) 和 [docs/stats-api-usage.md](docs/stats-api-usage.md)。
+参数与响应见 [docs/search-api-usage.md](docs/search-api-usage.md)、[docs/stats-api-usage.md](docs/stats-api-usage.md) 和 [docs/admin-api-usage.md](docs/admin-api-usage.md)。
 
 MCP 服务在 `http://127.0.0.1:8000/mcp`，工具定义见 `app/mcp/server.py`。**MCP 目前没有鉴权。**
 
