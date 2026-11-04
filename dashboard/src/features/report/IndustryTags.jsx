@@ -14,12 +14,7 @@ export default function IndustryTags({ hits }) {
 
   return (
     <section className="industry">
-      <div className="industry-head">
-        <span>本页行业分布</span>
-        <span className="industry-note">
-          {hits.length} 条结果 · {tags.length} 个标签
-        </span>
-      </div>
+      <span className="industry-label">行业</span>
 
       <ul className={expanded ? "industry-tags is-expanded" : "industry-tags"}>
         {shown.map((tag) => (

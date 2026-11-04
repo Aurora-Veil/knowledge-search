@@ -3,6 +3,7 @@ import Chart from "../../components/Chart.jsx";
 import ChartCard from "./ChartCard.jsx";
 import { chartMotion, chartTheme } from "./chartTheme.js";
 import { formatDay, formatNumber, formatRate, formatWan } from "./format.js";
+import { DEFAULT_DAYS } from "./range.js";
 
 const EMPTY = [];
 
@@ -110,7 +111,7 @@ export default function ActivityChart({
   notes.push(
     dataUntil
       ? `数据截至 ${formatDay(dataUntil)} · ${activeDays}/${daily.length} 天有检索`
-      : "近 30 天",
+      : `近 ${DEFAULT_DAYS} 天`,
   );
   const note = notes.join(" · ");
 
@@ -121,7 +122,11 @@ export default function ActivityChart({
       loading={loading}
       error={error}
       empty={!daily.length || !totals?.searches}
-      emptyText="区间内还没有检索记录。"
+      emptyText={
+        scopeQuery
+          ? `区间内没有「${scopeQuery}」的检索记录。`
+          : "区间内还没有检索记录。"
+      }
       onRetry={onRetry}
     >
       <Chart

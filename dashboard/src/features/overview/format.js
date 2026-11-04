@@ -26,6 +26,15 @@ export function formatDay(value) {
   return typeof value === 'string' && value.length >= 10 ? value.slice(5, 10) : '—'
 }
 
+const KIND_LABEL = {
+  report: '报告检索',
+  oirf: 'OIRF 检索',
+}
+
+export function kindName(value) {
+  return KIND_LABEL[value] ?? value ?? '—'
+}
+
 const ESCAPES = {
   '&': '&amp;',
   '<': '&lt;',

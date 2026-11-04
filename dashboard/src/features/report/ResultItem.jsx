@@ -1,4 +1,3 @@
-import { formatScore } from "./format.js";
 import HighlightText from "./HighlightText.jsx";
 import { matchesTerm } from "./highlight.js";
 
@@ -10,6 +9,7 @@ export default function ResultItem({ hit, index, startIndex = 0, selected, onSel
   return (
     <li
       className={selected ? "result is-selected" : "result"}
+      style={{ "--i": Math.min(index, 10) }}
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
@@ -42,7 +42,6 @@ export default function ResultItem({ hit, index, startIndex = 0, selected, onSel
         ))}
         <span>{hit.layout}</span>
         <span>{hit.publish_date}</span>
-        <span className="result-score">{formatScore(hit.score)}</span>
       </div>
     </li>
   );

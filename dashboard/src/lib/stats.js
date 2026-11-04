@@ -1,48 +1,15 @@
 import { apiFetch, errorText, readJson } from "./api.js";
 
-function fail(res, data, fallback) {
-  if (res.status === 503) {
-    throw new Error("统计服务暂不可用，稍后再试");
-  }
-  throw new Error(errorText(data, fallback));
-}
-
-export async function getReportStats() {
-  const res = await apiFetch("/api/v1/stats/report-library");
+/** 检索端首页：报告总量、行业数、发布年份范围。需要登录。 */
+export async function getSummary() {
+  const res = await apiFetch("/api/v1/stats/summary");
 
   const data = await readJson(res);
   if (!res.ok) {
-    fail(res, data, `读取报告统计失败（HTTP ${res.status}）`);
-  }
-  return data;
-}
-
-export async function getSearchStats({
-  start = "",
-  end = "",
-  days = 14,
-  queries = [],
-  kind = "",
-  granularity = "day",
-  limit = 5,
-} = {}) {
-  const params = new URLSearchParams({
-    days: String(days),
-    granularity,
-    limit: String(limit),
-  });
-  if (start) params.set("start", start);
-  if (end) params.set("end", end);
-  if (kind) params.set("kind", kind);
-  for (const query of queries) {
-    params.append("queries", query);
-  }
-
-  const res = await apiFetch(`/api/v1/stats/search-activity?${params}`);
-
-  const data = await readJson(res);
-  if (!res.ok) {
-    fail(res, data, `读取检索统计失败（HTTP ${res.status}）`);
+    if (res.status === 503) {
+      throw new Error("统计服务暂不可用，稍后再试");
+    }
+    throw new Error(errorText(data, `读取报告统计失败（HTTP ${res.status}）`));
   }
   return data;
 }

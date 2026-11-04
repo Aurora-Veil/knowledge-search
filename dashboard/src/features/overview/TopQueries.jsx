@@ -3,6 +3,7 @@ import Chart from '../../components/Chart.jsx'
 import ChartCard from './ChartCard.jsx'
 import { barColor, chartMotion, chartTheme } from './chartTheme.js'
 import { escapeHtml, formatDay, formatNumber, formatWan } from './format.js'
+import { DEFAULT_DAYS } from './range.js'
 
 const TOP_N = 5
 const EMPTY = []
@@ -74,9 +75,9 @@ export default function TopQueries({
               value: item.count,
               itemStyle: {
                 color: barColor('azure', item.count, minCount, maxCount),
-                opacity: dim ? 0.28 : 1,
+                opacity: dim ? 0.42 : 1,
               },
-              label: { opacity: dim ? 0.35 : 1 },
+              label: { opacity: dim ? 0.5 : 1 },
             }
           }),
           barMaxWidth: 14,
@@ -105,7 +106,7 @@ export default function TopQueries({
   return (
     <ChartCard
       title="Top 5 检索词"
-      note={dataUntil ? `数据截至 ${formatDay(dataUntil)}` : '近 30 天'}
+      note={dataUntil ? `数据截至 ${formatDay(dataUntil)}` : `近 ${DEFAULT_DAYS} 天`}
       loading={loading}
       error={error}
       empty={!shown.length || !totals?.searches}

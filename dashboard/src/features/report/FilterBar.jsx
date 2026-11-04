@@ -2,26 +2,9 @@ import { YEAR_OPTIONS } from './searchParams.js'
 
 const DECAY_VALUES = ['0.1', '0.2', '0.35']
 
-export default function SearchCard({ values, onChange, onSubmit, loading }) {
-  const canSubmit = values.q.trim() !== '' && !loading
-
+export default function FilterBar({ values, onChange }) {
   return (
-    <form
-      className="search-card"
-      onSubmit={(event) => {
-        event.preventDefault()
-        onSubmit()
-      }}
-    >
-      <input
-        className="input"
-        type="search"
-        value={values.q}
-        onChange={(event) => onChange('q', event.target.value)}
-        placeholder="用一句话描述你想要的报告，例如：工业机器人应用场景"
-        aria-label="检索词"
-      />
-
+    <div className="filters">
       <select
         className="select"
         value={values.layout}
@@ -77,10 +60,6 @@ export default function SearchCard({ values, onChange, onSubmit, loading }) {
           <option value={values.decay}>自定义（{values.decay}）</option>
         )}
       </select>
-
-      <button className="btn btn-primary" type="submit" disabled={!canSubmit}>
-        {loading ? '检索中…' : '搜索'}
-      </button>
-    </form>
+    </div>
   )
 }

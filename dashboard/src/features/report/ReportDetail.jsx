@@ -2,10 +2,26 @@ import { formatScore, matchLabel, scoreLabel } from './format.js'
 import HighlightText from './HighlightText.jsx'
 import { markTerms, matchesTerm } from './highlight.js'
 
-export default function ReportDetail({ report, hit, terms = [], loading, error }) {
+function CloseButton({ onClose }) {
+  if (!onClose) return null
+  return (
+    <button
+      className="detail-close"
+      type="button"
+      onClick={onClose}
+      aria-label="关闭详情"
+      title="关闭详情"
+    >
+      ×
+    </button>
+  )
+}
+
+export default function ReportDetail({ report, hit, terms = [], loading, error, onClose }) {
   if (loading) {
     return (
       <div className="detail-empty">
+        <CloseButton onClose={onClose} />
         <p className="placeholder-note">正在读取摘要…</p>
       </div>
     )
@@ -14,6 +30,7 @@ export default function ReportDetail({ report, hit, terms = [], loading, error }
   if (error) {
     return (
       <div className="detail-empty">
+        <CloseButton onClose={onClose} />
         <p className="placeholder-title">摘要读取失败</p>
         <p className="placeholder-note">{error}</p>
       </div>
@@ -23,6 +40,7 @@ export default function ReportDetail({ report, hit, terms = [], loading, error }
   if (!report) {
     return (
       <div className="detail-empty">
+        <CloseButton onClose={onClose} />
         <p className="placeholder-title">还没有选中报告</p>
         <p className="placeholder-note">在左侧点一条，这里会显示摘要和原文链接。</p>
       </div>
@@ -31,6 +49,8 @@ export default function ReportDetail({ report, hit, terms = [], loading, error }
 
   return (
     <article>
+      <CloseButton onClose={onClose} />
+
       <h2 className="detail-title">
         <HighlightText html={markTerms(report.title, terms)} />
       </h2>

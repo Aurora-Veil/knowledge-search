@@ -5,9 +5,11 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/shell.css'
+import './styles/search.css'
 import './styles/pages.css'
 import './styles/report.css'
 import './styles/overview.css'
+import './styles/admin.css'
 import './styles/toast.css'
 
 createRoot(document.getElementById('root')).render(

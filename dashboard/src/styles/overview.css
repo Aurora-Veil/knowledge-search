@@ -1,8 +1,7 @@
 /* ---------- 概览看板 ---------- */
 
-.entries,
 .overview-section {
-  animation: overview-enter 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  animation: fade-rise var(--dur-3) var(--ease-out) backwards;
 }
 
 .overview-section:nth-of-type(2) {
@@ -54,14 +53,18 @@
   height: 26px;
   padding: 0 9px;
   border: 1px solid var(--accent-line);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--accent-weak);
   color: var(--accent);
   font-size: 11px;
   cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-out),
+    border-color var(--dur-1) var(--ease-out);
 }
 
 .filter-chip:hover {
+  border-color: var(--accent);
   background: #e3edff;
 }
 
@@ -91,19 +94,12 @@
   color: var(--text-2);
 }
 
-.search-sub {
+.chart-tools {
   display: flex;
-  flex-wrap: wrap;
-}
-
-.search-sub span {
-  white-space: nowrap;
-}
-
-.search-sub span + span::before {
-  content: "·";
-  margin: 0 6px;
-  color: var(--text-3);
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 26px;
+  margin-bottom: 10px;
 }
 
 .stat-strip {
@@ -123,7 +119,6 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
   text-align: center;
 }
 
@@ -344,17 +339,6 @@
   padding: 0 12px;
 }
 
-@keyframes overview-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes value-enter {
   from {
     opacity: 0;
@@ -378,17 +362,6 @@
 @keyframes chart-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .entries,
-  .overview-section,
-  .stat-value,
-  .stat-value-skeleton::after,
-  .chart-skeleton::before,
-  .chart-loading-spinner {
-    animation: none;
   }
 }
 
