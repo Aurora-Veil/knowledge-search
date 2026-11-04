@@ -21,7 +21,12 @@ export function clearSession() {
 
 export function safeNext(raw) {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/report";
+    return "";
   }
   return raw;
+}
+
+/** 没有 next 时的落点：管理员进后台，其余进检索页。 */
+export function landingFor(user) {
+  return user?.role === "admin" ? "/admin" : "/";
 }

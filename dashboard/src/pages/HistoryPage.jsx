@@ -111,112 +111,119 @@ export default function HistoryPage() {
   }
 
   return (
-    <section className="card">
-      <p className="lead">一行 = 一次检索，同样的条件重复搜只累加次数</p>
-
-      <div className="history-toolbar">
-        <div className="field">
-          <label className="field-label" htmlFor="history-kind">
-            类型
-          </label>
-          <select
-            id="history-kind"
-            className="select"
-            value={kind}
-            onChange={(event) => changeKind(event.target.value)}
-          >
-            <option value="report">报告检索</option>
-            <option value="oirf">OIRF 检索</option>
-          </select>
+    <div className="page">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">我的记录</h1>
+          <p className="page-sub">
+            一行 = 一次检索，同样的条件重复搜只累加次数
+          </p>
         </div>
-
-        <div className="field">
-          <label className="field-label" htmlFor="history-limit">
-            条数
-          </label>
-          <select
-            id="history-limit"
-            className="select"
-            value={limit}
-            onChange={(event) => changeLimit(event.target.value)}
-          >
-            {LIMIT_OPTIONS.map((value) => (
-              <option value={value} key={value}>
-                最近 {value} 条
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button type="button" className="btn" onClick={refresh}>
-          刷新
-        </button>
       </div>
 
-      {error && <p className="form-error">{error}</p>}
-      {!rows && !error && <p className="placeholder-note">正在读取…</p>}
+      <section className="card">
+        <div className="toolbar">
+          <label className="field-inline">
+            <span className="field-label">类型</span>
+            <select
+              className="select"
+              value={kind}
+              onChange={(event) => changeKind(event.target.value)}
+            >
+              <option value="report">报告检索</option>
+              <option value="oirf">OIRF 检索</option>
+            </select>
+          </label>
 
-      {rows && rows.length === 0 && (
-        <div className="placeholder">
-          <p className="placeholder-title">还没有搜索记录</p>
-          <p className="placeholder-note">去检索页搜一次，这里就会出现。</p>
-        </div>
-      )}
-
-      {rows && rows.length > 0 && (
-        <div className="history-scroll">
-          <table className="history-table">
-            <thead>
-              <tr>
-                <th>检索词</th>
-                <th>筛选条件</th>
-                <th>结果数</th>
-                <th>搜索次数</th>
-                <th>最后搜索</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td className="history-query">
-                    {(row.kind ?? kind) === "report" ? (
-                      <Link
-                        className="history-query-btn"
-                        to={searchUrlOf(row)}
-                        title="用这组条件重新检索"
-                      >
-                        {row.query}
-                      </Link>
-                    ) : (
-                      row.query
-                    )}
-                  </td>
-                  <td>
-                    <div className="history-filters">
-                      {describeFilters(row.filters).map((text) => (
-                        <span className="chip" key={text}>
-                          {text}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="history-num">
-                    {row.result_total === null ? (
-                      <span className="history-dash">—</span>
-                    ) : (
-                      row.result_total
-                    )}
-                  </td>
-                  <td className="history-num">{row.search_count}</td>
-                  <td className="history-time">
-                    {formatWhen(row.last_seen_at)}
-                  </td>
-                </tr>
+          <label className="field-inline">
+            <span className="field-label">条数</span>
+            <select
+              className="select"
+              value={limit}
+              onChange={(event) => changeLimit(event.target.value)}
+            >
+              {LIMIT_OPTIONS.map((value) => (
+                <option value={value} key={value}>
+                  最近 {value} 条
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </label>
+
+          <button type="button" className="btn" onClick={refresh}>
+            刷新
+          </button>
         </div>
-      )}
-    </section>
+
+        {error && <p className="form-error">{error}</p>}
+        {!rows && !error && (
+          <div className="skeleton-list">
+            <span className="skeleton skeleton-title" />
+            <span className="skeleton skeleton-text" />
+            <span className="skeleton skeleton-text" />
+          </div>
+        )}
+
+        {rows && rows.length === 0 && (
+          <div className="placeholder">
+            <p className="placeholder-title">还没有搜索记录</p>
+            <p className="placeholder-note">去检索页搜一次，这里就会出现。</p>
+          </div>
+        )}
+
+        {rows && rows.length > 0 && (
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>检索词</th>
+                  <th>筛选条件</th>
+                  <th>结果数</th>
+                  <th>搜索次数</th>
+                  <th>最后搜索</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="history-query">
+                      {(row.kind ?? kind) === "report" ? (
+                        <Link
+                          className="history-query-btn"
+                          to={searchUrlOf(row)}
+                          title="用这组条件重新检索"
+                        >
+                          {row.query}
+                        </Link>
+                      ) : (
+                        row.query
+                      )}
+                    </td>
+                    <td>
+                      <div className="history-filters">
+                        {describeFilters(row.filters).map((text) => (
+                          <span className="chip" key={text}>
+                            {text}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="cell-num">
+                      {row.result_total === null ? (
+                        <span className="history-dash">—</span>
+                      ) : (
+                        row.result_total
+                      )}
+                    </td>
+                    <td className="cell-num">{row.search_count}</td>
+                    <td className="cell-time">{formatWhen(row.last_seen_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

@@ -2,15 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useToast } from "../components/Toast.jsx";
-import { getUsername, safeNext } from "../lib/auth.js";
+import { getUsername, landingFor, safeNext } from "../lib/auth.js";
 
 export default function LoginPage() {
-  const { login, register } = useAuth();
+  const { user, loading, login, register } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
   const next = safeNext(params.get("next"));
+
+  const [submitted, setSubmitted] = useState(false);
 
   const [username, setUsername] = useState(getUsername());
   const [password, setPassword] = useState("");
@@ -22,6 +24,12 @@ export default function LoginPage() {
   useEffect(() => {
     document.title = `${isRegister ? "注册" : "登录"} · knowledge-search`;
   }, [isRegister]);
+
+  useEffect(() => {
+    if (!loading && user && !submitted) {
+      navigate(landingFor(user), { replace: true });
+    }
+  }, [loading, user, submitted, navigate]);
 
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
@@ -57,18 +65,20 @@ export default function LoginPage() {
     }
 
     setError("");
+    setSubmitted(true);
     setBusy(true);
 
     try {
+      let me;
       if (isRegister) {
         await register(name, password);
-        await login(name, password);
+        me = await login(name, password);
         showToast("注册成功，已登录");
       } else {
-        await login(name, password);
+        me = await login(name, password);
         showToast("登录成功");
       }
-      navigate(next, { replace: true });
+      navigate(next || landingFor(me), { replace: true });
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -82,6 +92,11 @@ export default function LoginPage() {
     : isRegister
       ? "注册并登录"
       : "登录";
+
+  // 校验登录态或准备跳走时不留表单，避免已登录的人看到一眼登录框。
+  if (loading || (!submitted && user)) {
+    return <p className="page-loading">正在检查登录状态…</p>;
+  }
 
   return (
     <div className="login-page">

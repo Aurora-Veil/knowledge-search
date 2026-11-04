@@ -52,7 +52,7 @@
 }
 
 .brand-sub {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-3);
 }
 
@@ -76,6 +76,9 @@
   color: var(--text-2);
   font-size: var(--text-sm);
   text-decoration: none;
+  transition:
+    background-color var(--dur-1) var(--ease-out),
+    color var(--dur-1) var(--ease-out);
 }
 
 .nav-item:hover {
@@ -112,53 +115,34 @@
   color: var(--accent);
 }
 
-.sidebar-version {
-  font-size: 11px;
-  color: var(--text-3);
-}
-
-.sidebar-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 10px 0;
-  border-top: 1px solid var(--line);
-}
-
-.sidebar-user .avatar {
-  flex: none;
-}
-
-.sidebar-user .user-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.user-logout {
-  flex: none;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text-3);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  cursor: pointer;
-}
-
-.user-logout:hover {
-  color: var(--accent);
-}
-
 /* ---------- 用户菜单 ---------- */
 
 .sidebar-user-wrap {
-  position: relative;
   padding-top: 12px;
   border-top: 1px solid var(--line);
+}
+
+/* ---------- 账号入口 ---------- */
+
+.user-entry {
+  position: relative;
+}
+
+.user-entry-login {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.user-entry-login:hover {
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
 .sidebar-user-trigger {
@@ -174,6 +158,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-out);
 }
 
 .sidebar-user-trigger:hover,
@@ -206,15 +191,35 @@
 
 .user-menu {
   position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  left: 0;
   z-index: 20;
   padding: 6px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow-md);
+  transform-origin: top right;
+  animation: menu-in var(--dur-2) var(--ease-out);
+}
+
+/* 侧栏底部：向上展开，宽度跟随触发器 */
+.user-menu--up {
+  top: auto;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  transform-origin: bottom left;
+  animation-name: menu-in-up;
+}
+
+/* 顶栏右上：向下展开，固定宽度。菜单贴视口右边缘，提示气泡改到左侧，
+   否则气泡会把文档撑宽，一打开菜单就冒出横向滚动条。 */
+.user-menu--down {
+  top: calc(100% + 8px);
+  right: 0;
+  width: 224px;
+  --tip-left: auto;
+  --tip-right: calc(100% + 8px);
+  --tip-max: 200px;
 }
 
 .user-menu-head {
@@ -302,10 +307,11 @@
   content: attr(data-tip);
   position: absolute;
   top: 50%;
-  left: calc(100% + 8px);
+  right: var(--tip-right, auto);
+  left: var(--tip-left, calc(100% + 8px));
   z-index: 30;
   width: max-content;
-  max-width: 240px;
+  max-width: var(--tip-max, 240px);
   padding: 6px 8px;
   border-radius: 6px;
   background: #1b1f26;
@@ -420,43 +426,6 @@
   min-width: 0;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  height: var(--topbar-h);
-  padding: 0 24px;
-  background: rgba(255, 255, 255, 0.86);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(10px);
-}
-
-.topbar-title {
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-left: auto;
-  font-size: var(--text-sm);
-  color: var(--text-2);
-}
-
-.topbar-link {
-  color: var(--text-2);
-  font-size: var(--text-sm);
-}
-
-.topbar-link:hover {
-  color: var(--accent);
-}
-
 .avatar {
   display: grid;
   place-items: center;
@@ -503,10 +472,6 @@
     margin-top: 0;
     margin-left: auto;
   }
-  .sidebar-user {
-    padding: 0;
-    border-top: 0;
-  }
   .nav {
     flex-direction: row;
     gap: 4px;
@@ -514,19 +479,13 @@
   .nav-item {
     white-space: nowrap;
   }
-  .topbar {
-    padding: 0 16px;
-  }
   .content {
     padding: 16px;
   }
 }
 
 @media (max-width: 600px) {
-  .topbar-actions {
-    display: none;
-  }
-  .sidebar-user .user-name {
+  .sidebar-user-trigger .user-name {
     display: none;
   }
 }
